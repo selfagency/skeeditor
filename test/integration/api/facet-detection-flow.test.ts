@@ -1,9 +1,9 @@
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { XrpcClient } from '../../../src/shared/api/xrpc-client';
-import { BSKY_PDS_URL } from '../../../src/shared/constants';
-import { buildFacets } from '../../../src/shared/utils/facets';
+import { XrpcClient } from '@src/shared/api/xrpc-client';
+import { BSKY_PDS_URL } from '@src/shared/constants';
+import { buildFacets } from '@src/shared/utils/facets';
 import { server } from '../../mocks/server';
 
 const TEST_DID = 'did:plc:facetflow123';

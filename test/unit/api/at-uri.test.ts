@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { AtUriParseError, parseAtUri, parseAtUriFromElement, parseBskyPostUrl } from '../../../src/shared/api/at-uri';
+import { AtUriParseError, parseAtUri, parseAtUriFromElement, parseBskyPostUrl } from '@src/shared/api/at-uri';
 
 describe('AT URI parser', () => {
   it('should parse an AT Protocol URI into repo, collection, and rkey', () => {

@@ -5,6 +5,11 @@ const projectRoot = process.cwd();
 const sourceRoot = resolve(projectRoot, 'src');
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@src': sourceRoot,
+    },
+  },
   base: './',
   publicDir: false,
   root: sourceRoot,

@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/dom';
 import { describe, expect, it } from 'vitest';
 
-import { APP_BSKY_FEED_POST_COLLECTION, APP_NAME, BSKY_APP_ORIGIN } from '../../../src/shared/constants';
+import { APP_BSKY_FEED_POST_COLLECTION, APP_NAME, BSKY_APP_ORIGIN } from '@src/shared/constants';
 
 describe('shared constants', () => {
   it('should expose the expected Bluesky extension constants', () => {

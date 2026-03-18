@@ -1,13 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { utf8ByteLength } from '../../../src/shared/utils/text';
-import {
-  buildFacets,
-  detectHashtags,
-  detectLinks,
-  detectMentions,
-  toByteOffsets,
-} from '../../../src/shared/utils/facets';
+import { utf8ByteLength } from '@src/shared/utils/text';
+import { buildFacets, detectHashtags, detectLinks, detectMentions, toByteOffsets } from '@src/shared/utils/facets';
 
 describe('facet detectors', () => {
   it('should detect HTTP/HTTPS links with start/end character indices', () => {
