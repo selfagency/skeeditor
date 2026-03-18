@@ -10,9 +10,6 @@
     "monorepo"
   ],
   "license": "MIT",
-  "dependencies": {
-    "@atproto/lex": "^0.0.20"
-  },
   "scripts": {
     "build": "pnpm run lex:build && tsx scripts/build.ts",
     "build:repo": "turbo run build",
@@ -25,6 +22,7 @@
     "lex:install": "pnpm exec lex install app.bsky.feed.post app.bsky.actor.profile com.atproto.repo.createRecord com.atproto.repo.deleteRecord com.atproto.repo.describeRepo com.atproto.repo.getRecord com.atproto.repo.listRecords com.atproto.repo.putRecord com.atproto.repo.uploadBlob",
     "lex:sync": "pnpm run lex:install && pnpm run lex:build",
     "lint": "oxlint .",
+    "lint:fix": "oxlint . --fix",
     "manifest:chrome": "tsx scripts/merge-manifest.ts chrome",
     "manifest:firefox": "tsx scripts/merge-manifest.ts firefox",
     "manifest:safari": "tsx scripts/merge-manifest.ts safari",
@@ -37,6 +35,9 @@
     "test:unit": "pnpm run lex:build && vitest run --project unit",
     "test:watch": "vitest --project unit --project integration",
     "typecheck": "pnpm run lex:build && tsc --project tsconfig.build.json --noEmit"
+  },
+  "dependencies": {
+    "@atproto/lex": "^0.0.20"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
@@ -58,9 +59,6 @@
     "vitest": "4.1.0",
     "web-ext": "10.0.0"
   },
-  "engines": {
-    "node": ">=20.19.0"
-  },
   "lint-staged": {
     "**/*.[ts|js]": [
       "oxfmt --write",
@@ -69,6 +67,9 @@
     "**/*.[json|md|yaml|yml]": [
       "oxfmt --write"
     ]
+  },
+  "engines": {
+    "node": ">=20.19.0"
   },
   "packageManager": "pnpm@10.32.1+sha512.a706938f0e89ac1456b6563eab4edf1d1faf3368d1191fc5c59790e96dc918e4456ab2e67d613de1043d2e8c81f87303e6b40d4ffeca9df15ef1ad567348f2be"
 }

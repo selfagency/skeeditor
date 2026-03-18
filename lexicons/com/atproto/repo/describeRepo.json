@@ -6,13 +6,7 @@
       "output": {
         "schema": {
           "type": "object",
-          "required": [
-            "handle",
-            "did",
-            "didDoc",
-            "collections",
-            "handleIsCorrect"
-          ],
+          "required": ["handle", "did", "didDoc", "collections", "handleIsCorrect"],
           "properties": {
             "did": {
               "type": "string",
@@ -44,9 +38,7 @@
       },
       "parameters": {
         "type": "params",
-        "required": [
-          "repo"
-        ],
+        "required": ["repo"],
         "properties": {
           "repo": {
             "type": "string",
