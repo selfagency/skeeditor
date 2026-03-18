@@ -62,12 +62,11 @@
   },
   "lint-staged": {
     "**/*.{ts,js}": [
-      "pnpm run typecheck",
-      "pnpm run lint:fix",
-      "pnpm run format"
+      "oxlint --fix",
+      "oxfmt --write"
     ],
     "**/*.{json,md,yaml,yml}": [
-      "pnpm run format"
+      "oxfmt --write"
     ]
   },
   "engines": {
