@@ -18,7 +18,9 @@ This repository is scaffolded as a strict TypeScript workspace managed with `pnp
 - `pnpm lint` — run `oxlint`
 - `pnpm format:check` — verify formatting with `oxfmt`
 - `pnpm typecheck` — run strict TypeScript checks
-- `pnpm build` — orchestrate builds with `turbo`
+- `pnpm build` — build extension assets with Vite
+- `pnpm build:repo` — orchestrate workspace builds with `turbo`
+- `pnpm dev` — run the Vite build in watch mode
 - `pnpm test` — run unit and integration test entry points
 
 ## Current status

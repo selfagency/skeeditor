@@ -5,7 +5,7 @@ status: in-progress
 type: epic
 priority: critical
 created_at: 2026-03-18T14:25:17Z
-updated_at: 2026-03-18T15:37:12Z
+updated_at: 2026-03-18T15:41:26Z
 parent: skeeditor-bmr4
 ---
 
@@ -14,7 +14,7 @@ Scaffold the monorepo, configure Vite multi-entry build, manifests, testing and 
 ## Todo
 
 - [x] Initialize repository structure and docs with `pnpm workspaces` and `turbo`
-- [ ] Configure Vite multi-entry build (content, background, popup, options)
+- [x] Configure Vite multi-entry build (content, background, popup, options)
 - [ ] Create `manifests/` base and browser overrides
 - [ ] Configure Vitest with browser API mocks (unit + integration)
 - [ ] Configure Playwright for E2E (Chrome + Firefox)

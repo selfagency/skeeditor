@@ -11,9 +11,11 @@
   ],
   "license": "MIT",
   "scripts": {
-    "build": "turbo run build",
+    "build": "tsx scripts/build.ts",
+    "build:repo": "turbo run build",
+    "build:watch": "tsx scripts/build.ts --watch",
     "clean": "node -e \"import('node:fs/promises').then(fs => Promise.all(['.turbo', 'coverage', 'dist', 'playwright-report', 'test-results'].map(path => fs.rm(path, { force: true, recursive: true }))))\"",
-    "dev": "turbo run dev --parallel",
+    "dev": "pnpm run build:watch",
     "format": "oxfmt . --write",
     "format:check": "oxfmt . --check",
     "lint": "oxlint .",
@@ -28,8 +30,10 @@
     "oxfmt": "^0.41.0",
     "oxlint": "^1.56.0",
     "oxlint-tsgolint": "^0.17.0",
+    "tsx": "^4.20.5",
     "turbo": "^2.5.6",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vite": "^7.1.7"
   },
   "engines": {
     "node": ">=20.19.0"
