@@ -8,6 +8,7 @@
  */
 
 const encoder = new TextEncoder();
+const decoder = new TextDecoder();
 
 /**
  * Returns the number of bytes required to encode `str` in UTF-8.
@@ -26,10 +27,11 @@ export function utf8ByteLength(str: string): number {
  * (e.g. an emoji with ZWJ sequences counts as 1, not several code-points).
  * Used for post-length counting displayed to the user, NOT for byte offsets.
  */
+const graphemeSegmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+
 export function graphemeLength(str: string): number {
-  const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
   let count = 0;
-  for (const _ of segmenter.segment(str)) {
+  for (const _ of graphemeSegmenter.segment(str)) {
     count++;
   }
   return count;
@@ -48,10 +50,39 @@ export function graphemeLength(str: string): number {
  * @returns The substring corresponding to the byte range, or an empty string
  *          if the range is out of bounds or invalid.
  */
+// UTF-8 continuation bytes have the form 10xxxxxx (0x80–0xBF).
+const isUtf8ContinuationByte = (byte: number): boolean => (byte & 0xc0) === 0x80;
+
+// Returns the length in bytes of the UTF-8 codepoint that starts at `bytes[i]`.
+const utf8SequenceLength = (byte: number): number => {
+  if ((byte & 0x80) === 0x00) return 1; // 0xxxxxxx
+  if ((byte & 0xe0) === 0xc0) return 2; // 110xxxxx
+  if ((byte & 0xf0) === 0xe0) return 3; // 1110xxxx
+  return 4; // 11110xxx
+};
+
+const alignToCodepointBoundaries = (bytes: Uint8Array, start: number, end: number): { start: number; end: number } => {
+  // Advance start past any leading continuation bytes (they belong to a codepoint
+  // whose lead byte is before `start`, so they must be excluded).
+  let s = start;
+  while (s < end && isUtf8ContinuationByte(bytes[s]!)) s++;
+
+  // Walk forward from s to find the last complete codepoint boundary ≤ end.
+  let e = s;
+  while (e < end) {
+    const seqLen = utf8SequenceLength(bytes[e]!);
+    if (e + seqLen > end) break; // This codepoint would extend past `end` — stop.
+    e += seqLen;
+  }
+
+  return { start: s, end: e };
+};
+
 export function byteSlice(str: string, startByte: number, endByte: number): string {
   const bytes = encoder.encode(str);
   const clampedStart = Math.max(0, Math.min(startByte, bytes.byteLength));
   const clampedEnd = Math.max(clampedStart, Math.min(endByte, bytes.byteLength));
-  const slice = bytes.slice(clampedStart, clampedEnd);
-  return new TextDecoder().decode(slice);
+  const { start, end } = alignToCodepointBoundaries(bytes, clampedStart, clampedEnd);
+  if (start >= end) return '';
+  return decoder.decode(bytes.slice(start, end));
 }
