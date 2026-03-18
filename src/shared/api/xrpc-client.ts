@@ -24,6 +24,12 @@ export interface PutRecordParams {
   record: Record<string, unknown> & { $type: string };
   /** CID of the record this update is based on; enables optimistic concurrency */
   swapRecord?: string;
+  /**
+   * Ask the PDS to validate the record against its Lexicon schema before writing.
+   * Defaults to `true`. Set to `false` only for records whose schema is not
+   * registered on the PDS (e.g. third-party Lexicons).
+   */
+  validate?: boolean;
 }
 
 export interface PutRecordResult {
@@ -129,14 +135,14 @@ export class XrpcClient {
    * Write a record to the PDS, optionally with optimistic concurrency via
    * `swapRecord` (CID of the record being replaced).
    *
-   * @param params - `{ repo, collection, rkey, record, swapRecord? }`
+   * @param params - `{ repo, collection, rkey, record, swapRecord?, validate? }`
    * @returns `{ uri, cid }` of the created/updated record
    * @throws `XrpcClientError` on any XRPC or network failure, including conflicts
    */
   public async putRecord(params: PutRecordParams): Promise<PutRecordResult> {
-    const { repo, collection, rkey, record, swapRecord } = params;
+    const { repo, collection, rkey, record, swapRecord, validate = true } = params;
 
-    const options: Record<string, unknown> = { repo };
+    const options: Record<string, unknown> = { repo, validate };
     if (swapRecord !== undefined) {
       options['swapRecord'] = swapRecord;
     }

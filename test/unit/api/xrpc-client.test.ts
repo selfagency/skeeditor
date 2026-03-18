@@ -115,7 +115,42 @@ describe('XrpcClient', () => {
 
       expect(mockPut).toHaveBeenCalledWith(record, 'rkey1', {
         repo: 'did:plc:abc123',
+        validate: true,
       });
+    });
+
+    it('should default validate to true for server-side Lexicon validation', async () => {
+      const mockPut = vi.fn().mockResolvedValue({
+        body: { uri: 'at://did:plc:abc123/app.bsky.feed.post/rkey1', cid: 'bafynew' },
+      });
+      const client = new XrpcClient({ service: 'https://bsky.social' });
+      client._client.putRecord = mockPut;
+
+      const record = { $type: 'app.bsky.feed.post', text: 'hello', createdAt: '2024-01-01T00:00:00Z' };
+
+      await client.putRecord({ repo: 'did:plc:abc123', collection: 'app.bsky.feed.post', rkey: 'rkey1', record });
+
+      expect(mockPut).toHaveBeenCalledWith(record, 'rkey1', expect.objectContaining({ validate: true }));
+    });
+
+    it('should pass validate: false when explicitly disabled', async () => {
+      const mockPut = vi.fn().mockResolvedValue({
+        body: { uri: 'at://did:plc:abc123/app.bsky.feed.post/rkey1', cid: 'bafynew' },
+      });
+      const client = new XrpcClient({ service: 'https://bsky.social' });
+      client._client.putRecord = mockPut;
+
+      const record = { $type: 'app.bsky.feed.post', text: 'hello', createdAt: '2024-01-01T00:00:00Z' };
+
+      await client.putRecord({
+        repo: 'did:plc:abc123',
+        collection: 'app.bsky.feed.post',
+        rkey: 'rkey1',
+        record,
+        validate: false,
+      });
+
+      expect(mockPut).toHaveBeenCalledWith(record, 'rkey1', expect.objectContaining({ validate: false }));
     });
 
     it('should pass swapRecord CID when provided for optimistic concurrency', async () => {
@@ -137,6 +172,7 @@ describe('XrpcClient', () => {
 
       expect(mockPut).toHaveBeenCalledWith(record, 'rkey1', {
         repo: 'did:plc:abc123',
+        validate: true,
         swapRecord: 'bafyold',
       });
     });
