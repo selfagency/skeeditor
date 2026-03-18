@@ -34,7 +34,8 @@
     "test:integration": "vitest run --project integration",
     "test:unit": "pnpm run lex:build && vitest run --project unit",
     "test:watch": "vitest --project unit --project integration",
-    "typecheck": "pnpm run lex:build && tsc --project tsconfig.build.json --noEmit"
+    "typecheck": "pnpm run lex:build && tsc --project tsconfig.build.json --noEmit",
+    "prepare": "husky"
   },
   "dependencies": {
     "@atproto/lex": "^0.0.20"
