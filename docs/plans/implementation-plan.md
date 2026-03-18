@@ -180,8 +180,10 @@ skeeditor/
 ├── tsconfig.json
 ├── tsconfig.build.json
 ├── package.json
-├── .eslintrc.cjs
-├── .prettierrc
+├── pnpm-workspace.yaml              # Workspace definitions for the monorepo
+├── turbo.json                       # Task pipeline orchestration for builds/tests/linting
+├── .oxlintrc.json                   # Oxlint configuration
+├── .oxfmtrc.json                    # Oxfmt configuration
 └── README.md
 ```
 
@@ -195,7 +197,7 @@ Dependencies listed below are mirrored in Beans through `blocked-by` relationshi
 
 #### Epic 1: Project Scaffolding & Build Pipeline
 
-- [ ] `Initialize project structure` — type=`task`, priority=`critical`, depends_on=`none`
+- [ ] `Initialize monorepo structure` — type=`task`, priority=`critical`, depends_on=`none`
 - [ ] `Configure Vite multi-entry build for content, background, popup` — type=`task`, priority=`critical`, depends_on=`none`
 - [ ] `Set up manifests (Chrome MV3, Firefox MV3 w/ gecko ID, Safari MV3)` — type=`task`, priority=`critical`, depends_on=`none`
 - [ ] `Configure Vitest with browser API mocks` — type=`task`, priority=`critical`, depends_on=`none`
@@ -261,18 +263,19 @@ Dependencies listed below are mirrored in Beans through `blocked-by` relationshi
 
 ## Key Technical Decisions
 
-| Decision          | Choice                                 | Rationale                                                                                                                                   |
-| :---------------- | :------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------ |
-| Language          | TypeScript (strict)                    | Type safety for AT Protocol records, facet byte math, cross-browser APIs                                                                    |
-| Bundler           | Vite                                   | Fast builds, multi-entry support, good extension ecosystem                                                                                  |
-| Test runner       | Vitest (unit & integration)            | Fast, native ESM/TS, compatible with Vite config; use Vitest for unit and integration tests                                                 |
-| E2E framework     | Playwright                             | Native extension loading support for Chrome + Firefox; Playwright is used only for E2E tests while Vitest covers unit and integration tests |
-| HTTP mocking      | MSW (Mock Service Worker)              | Intercepts at network level, works with any fetch-based client                                                                              |
-| AT Protocol SDK   | `@atproto/lex`                         | Official SDK, type-safe Lexicon tooling, `Client` with `get()`/`put()`                                                                      |
-| Browser polyfill  | `webextension-polyfill`                | Normalizes `chrome.*` ↔ `browser.*` with Promises                                                                                           |
-| Auth method       | OAuth with PKCE                        | Official recommendation for client apps, no password storage                                                                                |
-| Manifest version  | V3 (all browsers)                      | Required for Chrome, supported by Firefox and Safari                                                                                        |
-| Safari conversion | `xcrun safari-web-extension-converter` | Official Apple tooling, generates Xcode project from MV3 extension                                                                          |
+- **Language**: TypeScript (strict) — type safety for AT Protocol records, facet byte math, and cross-browser APIs.
+- **Bundler**: Vite — fast builds, multi-entry support, and a strong extension ecosystem.
+- **Monorepo manager**: `pnpm workspaces` + `turbo` — shared dependency management and task orchestration across packages/apps in the extension monorepo.
+- **Test runner**: Vitest (unit & integration) — fast native ESM/TS support compatible with Vite config.
+- **E2E framework**: Playwright — native extension loading support for Chrome + Firefox while Vitest covers unit and integration tests.
+- **Linting**: `oxlint` — fast linting with TypeScript-aware rules for the repository's JS/TS workflow.
+- **Formatting**: `oxfmt` — consistent formatting without relying on Prettier.
+- **HTTP mocking**: MSW (Mock Service Worker) — intercepts at network level and works with any fetch-based client.
+- **AT Protocol SDK**: `@atproto/lex` — official SDK with type-safe Lexicon tooling and `Client` helpers.
+- **Browser polyfill**: `webextension-polyfill` — normalizes `chrome.*` ↔ `browser.*` with Promises.
+- **Auth method**: OAuth with PKCE — official recommendation for client apps with no password storage.
+- **Manifest version**: V3 (all browsers) — required for Chrome and supported by Firefox and Safari.
+- **Safari conversion**: `xcrun safari-web-extension-converter` — official Apple tooling that generates an Xcode project from the MV3 extension.
 
 ---
 
