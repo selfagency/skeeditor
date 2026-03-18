@@ -7,6 +7,8 @@ priority: critical
 created_at: 2026-03-18T14:26:34Z
 updated_at: 2026-03-18T18:42:21Z
 parent: skeeditor-v67t
+branch: feature/i92m-at-uri-parser
+pr: 2
 ---
 
 Create utility to parse at:// URIs and extract did, collection, rkey; support input from DOM elements and AT Protocol URIs.
