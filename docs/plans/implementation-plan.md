@@ -2,7 +2,7 @@
 
 ## Product Goal
 
-A cross-browser extension (Chrome, Firefox, Safari) that allows authenticated Bluesky users to **edit their own previous posts** directly on `bsky.app`. The extension injects an "Edit" button into the post UI, opens an edit modal, and writes the updated record back to the user's AT Protocol data repository via `com.atproto.repo.putRecord`.
+A cross-browser extension (Chrome, Firefox, Safari) that allows authenticated Bluesky users to **edit their own previous posts** directly on `bsky.app`. The extension injects an "Edit" button into the post UI, opens an edit modal, and writes the updated record back to the user's AT Protocol data repository via `com.atproto.repo.putRecord`. Users can optionally enable a configurable edit window between 30 seconds and 5 minutes, and edited posts should surface an explicit `edited` label after a successful edit.
 
 ---
 
@@ -50,8 +50,10 @@ at://<did>/app.bsky.feed.post/<rkey>
 ### Important Constraints
 
 - **`swapRecord`**: If the record was modified between the read and the write (e.g., by another client), the PDS returns an error. The extension must catch this, re-fetch, and prompt the user.
+- **Optional edit window enforcement**: If the user enables the setting, the extension should only expose edit affordances for posts whose age falls within the configured 30-second to 5-minute window. If disabled, the extension keeps the broader edit behavior.
 - **Facet recalculation**: Facets use **byte offsets** into UTF-8 text, not character indices. Inserting a single emoji (multi-byte) shifts all subsequent facet offsets. This is a critical correctness concern.
 - **`createdAt` must be preserved**: Overwriting it would change timeline sort order.
+- **Edited label propagation**: Successful edits should emit or update an explicit `edited` marker/label so the changed state is visible after the post is modified.
 - **Embeds**: Images and external link cards are referenced via `BlobRef` and embed objects. Edits to text should not disturb embed references unless the user explicitly removes them.
 - **Validation**: The complete record must validate against `app.bsky.feed.post` Lexicon schema before submission.
 - **Read-after-write**: The PDS provides read-after-write semantics via `Atproto-Repo-Rev` headers. After a successful `putRecord`, subsequent reads from the same session will reflect the update even if the App View hasn't indexed it yet.
@@ -122,7 +124,7 @@ skeeditor/
 │   │   ├── popup.html
 │   │   ├── popup.ts
 │   │   └── popup.css
-│   ├── options/                     # Settings page (PDS URL override, preferences)
+│   ├── options/                     # Settings page (PDS URL override, edit window preferences)
 │   │   ├── options.html
 │   │   ├── options.ts
 │   │   └── options.css
@@ -214,6 +216,7 @@ Dependencies listed below are mirrored in Beans through `blocked-by` relationshi
 - [ ] `Implement facet byte-offset recalculation on text change` — type=`feature`, priority=`critical`, depends_on=`facet-detection`
 - [ ] `Implement XRPC client wrapper (getRecord, putRecord, validation)` — type=`feature`, priority=`critical`, depends_on=`uri-parser`
 - [ ] `Implement putRecord with swapRecord concurrency control and conflict handling` — type=`feature`, priority=`critical`, depends_on=`xrpc-client`
+- [ ] `Implement edited-post labeler integration` — type=`feature`, priority=`high`, depends_on=`putRecord-conflict`
 
 #### Epic 3: Authentication
 
@@ -227,10 +230,13 @@ Dependencies listed below are mirrored in Beans through `blocked-by` relationshi
 
 - [ ] `Implement MutationObserver to detect post elements on bsky.app` — type=`feature`, priority=`critical`, depends_on=`none`
 - [ ] `Implement post rkey extraction from DOM/URL` — type=`feature`, priority=`critical`, depends_on=`uri-parser`
+- [ ] `Add configurable edit window setting (30 seconds to 5 minutes)` — type=`feature`, priority=`high`, depends_on=`none`
+- [ ] `Honor configured edit window when rendering edit actions` — type=`feature`, priority=`high`, depends_on=`edit-window-setting, post-detection`
 - [ ] `Inject "Edit" button into own-post action menus` — type=`feature`, priority=`critical`, depends_on=`post-detection, auth`
 - [ ] `Build edit modal component (textarea, char count, save/cancel) as a Web Component` — type=`feature`, priority=`critical`, depends_on=`none`
 - [ ] `Wire edit modal to background service worker via message passing` — type=`feature`, priority=`critical`, depends_on=`edit-modal, xrpc-client`
 - [ ] `Display edit success/error feedback in modal` — type=`feature`, priority=`high`, depends_on=`wire-modal`
+- [ ] `Display edited label for extension-managed edited posts` — type=`feature`, priority=`high`, depends_on=`edited-labeler, wire-modal`
 - [ ] `Handle post text with existing facets in edit textarea` — type=`feature`, priority=`high`, depends_on=`facet-recalc, edit-modal`
 - [ ] `Style modal to match bsky.app design language (Web Component styles / Shadow DOM considerations)` — type=`task`, priority=`normal`, depends_on=`edit-modal`
 
@@ -289,6 +295,7 @@ UI components: We will implement interactive UI (edit modal, popup, options page
 | `putRecord` on posts causes unexpected side effects (broken threads, lost likes) | High   | Extensive integration testing; preserve all non-text fields; validate full record |
 | Facet byte-offset bugs corrupt rich text rendering                               | High   | Comprehensive unit tests with multi-byte chars (emoji, CJK, RTL); fuzzing         |
 | OAuth flow complexity in extension context                                       | Medium | Use official `@atproto/oauth-client`; fall back to app passwords                  |
+| Edited label semantics may require a dedicated labeler or metadata convention    | Medium | Decide label transport early; track it in the AT Protocol layer and UI separately |
 | Safari API incompatibilities block features                                      | Medium | Feature-detect and degrade gracefully; document known gaps                        |
 | bsky.app DOM changes break content script selectors                              | Medium | Use stable `data-testid` attributes where possible; MutationObserver resilience   |
 | `swapRecord` conflicts in high-activity scenarios                                | Low    | Retry loop with user confirmation; exponential backoff                            |
@@ -300,7 +307,9 @@ UI components: We will implement interactive UI (edit modal, popup, options page
 - [ ] Authenticated user can click "Edit" on their own post on `bsky.app`
 - [ ] Edit modal shows the current post text with correct rendering
 - [ ] User can modify text, save, and see the update reflected
+- [ ] Users can optionally restrict editing to a configurable window between 30 seconds and 5 minutes
 - [ ] Facets (mentions, links, tags) are correctly recalculated
+- [ ] Edited posts display a visible `edited` label after successful edits
 - [ ] Embeds are preserved through edits
 - [ ] Concurrent edit conflicts are handled gracefully
 - [ ] Extension works in Chrome, Firefox, and Safari

@@ -5,7 +5,7 @@ status: todo
 type: epic
 priority: critical
 created_at: 2026-03-18T14:25:30Z
-updated_at: 2026-03-18T14:43:34Z
+updated_at: 2026-03-18T16:00:56Z
 parent: skeeditor-bmr4
 ---
 
@@ -16,6 +16,12 @@ UI approach: Implement interactive UI pieces (edit modal, popup) as framework-ag
 ## Todo
 
 - [ ] Implement MutationObserver and post detection
-- [ ] Inject Edit button and wire to Web Component modal
+- [ ] Inject Edit button and wire to Web Component modal, honoring the configured edit window
 - [ ] Ensure message passing and background wiring works with Web Components
-- [ ] Preserve facets and embeds through edit flow
+- [ ] Preserve facets and embeds through edit flow, including visible edited labels
+
+### Planned follow-up beans
+
+- `skeeditor-mwhy` — add configurable edit window setting (30 seconds to 5 minutes)
+- `skeeditor-xojb` — honor the configured edit window when rendering edit actions
+- `skeeditor-n1ms` — display an edited label for extension-managed edited posts

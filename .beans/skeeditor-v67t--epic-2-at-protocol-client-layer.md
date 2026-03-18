@@ -5,7 +5,7 @@ status: todo
 type: epic
 priority: critical
 created_at: 2026-03-18T14:25:21Z
-updated_at: 2026-03-18T14:45:22Z
+updated_at: 2026-03-18T16:00:56Z
 parent: skeeditor-bmr4
 ---
 
@@ -18,8 +18,12 @@ Implement AT Protocol client layer: AT URI parsing, byte/grapheme utilities, fac
 - [ ] Implement facet detection and initial facet generation
 - [ ] Implement facet byte-offset recalculation and helpers
 - [ ] Implement XRPC client wrapper using `@atproto/lex` or fetch-based wrapper
-- [ ] Implement putRecord with `swapRecord` handling and structured errors
+- [ ] Implement putRecord with `swapRecord` handling, structured errors, and hooks for edited-post labeling
 - [ ] Add Lexicon validation step before `putRecord`
 - [ ] Write Vitest unit tests for all utilities (target: ≥90% coverage for `src/shared/`)
 - [ ] Add integration Vitest tests (MSW) for read→modify→write flows
 - [ ] Document API & public helpers in `src/shared/api/README.md`
+
+### Planned follow-up beans
+
+- `skeeditor-3g2u` — implement edited-post labeler integration
