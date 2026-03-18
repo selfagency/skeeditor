@@ -27,7 +27,7 @@ const main = async (): Promise<void> => {
     },
   });
 
-  await writeMergedManifest(browser, `dist/${browser}/manifest.json`, projectRoot);
+  await writeMergedManifest(browser, 'dist/manifest.json', projectRoot);
 };
 
 main().catch(error => {
