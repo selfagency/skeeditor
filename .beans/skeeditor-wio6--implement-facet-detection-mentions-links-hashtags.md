@@ -13,8 +13,8 @@ Detect mentions, links, and hashtags from text to produce initial facets array.
 
 ## Todo
 
-- [ ] Implement mention, link, and hashtag detectors with clear interfaces
-- [ ] Add unit tests (Vitest) for detection across languages and multi-byte characters
-- [ ] Integrate detection output with facet data model (NSID and indices)
-- [ ] Provide utility to convert detection ranges to byte-offset facets using `facet-offsets` helpers
-- [ ] Add integration test that runs detection then putRecord (MSW + Vitest)
+- [x] Implement mention, link, and hashtag detectors with clear interfaces
+- [x] Add unit tests (Vitest) for detection across languages and multi-byte characters
+- [x] Integrate detection output with facet data model (NSID and indices)
+- [x] Provide utility to convert detection ranges to byte-offset facets using `facet-offsets` helpers
+- [x] Add integration test that runs detection then putRecord (MSW + Vitest)

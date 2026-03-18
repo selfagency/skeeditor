@@ -31,6 +31,10 @@ const trimTrailingLinkPunctuation = (uri: string): string => {
   return uri.replace(trailingLinkPunctuationPattern, '');
 };
 
+const normalizeHandle = (handle: string): string => {
+  return handle.toLowerCase();
+};
+
 const overlaps = (left: FacetToken, right: FacetToken): boolean => {
   return left.start < right.end && right.start < left.end;
 };
@@ -78,13 +82,14 @@ export function detectMentions(text: string): FacetToken[] {
       continue;
     }
 
+    const normalizedHandle = normalizeHandle(handle);
     const matchStart = match.index ?? 0;
     const start = matchStart + prefix.length;
     const end = start + 1 + handle.length;
 
     tokens.push({
       kind: 'mention',
-      value: handle,
+      value: normalizedHandle,
       start,
       end,
     });

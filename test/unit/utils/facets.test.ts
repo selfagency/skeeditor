@@ -57,6 +57,26 @@ describe('facet detectors', () => {
       },
     ]);
   });
+
+  it('should normalize mixed-case handle mentions to lowercase', () => {
+    const text = 'Hey @Alice.Test and @BOB.Example';
+    const mentions = detectMentions(text);
+
+    expect(mentions).toEqual([
+      {
+        kind: 'mention',
+        value: 'alice.test',
+        start: 4,
+        end: 15,
+      },
+      {
+        kind: 'mention',
+        value: 'bob.example',
+        start: 20,
+        end: 32,
+      },
+    ]);
+  });
 });
 
 describe('facet byte offset helpers', () => {
