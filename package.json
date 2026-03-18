@@ -61,6 +61,7 @@
   },
   "lint-staged": {
     "**/*.{ts,js}": [
+      "pnpm run typecheck",
       "oxfmt --write",
       "oxlint"
     ],
