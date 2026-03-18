@@ -11,7 +11,7 @@ describe('utf8ByteLength', () => {
     expect(utf8ByteLength('hello')).toBe(5);
   });
 
-  it('should return 2 bytes per character for 2-byte UTF-8 sequences', () => {
+  it('should return correct byte length for a string containing a 2-byte UTF-8 character', () => {
     // é = U+00E9, encoded as 2 bytes in UTF-8
     expect(utf8ByteLength('café')).toBe(5);
   });
@@ -115,5 +115,20 @@ describe('byteSlice', () => {
   it('should handle slicing partial grapheme clusters gracefully', () => {
     // e + combining accent: bytes 0–1 is just "e" (without accent)
     expect(byteSlice('e\u0301', 0, 1)).toBe('e');
+  });
+
+  it('should drop a leading partial multi-byte codepoint at the start boundary', () => {
+    // "😀A" = 😀(4 bytes) A(1 byte); start at byte 1 (inside 😀)
+    expect(byteSlice('😀A', 1, 5)).toBe('A');
+  });
+
+  it('should drop a trailing partial multi-byte codepoint at the end boundary', () => {
+    // "A😀" = A(1 byte) 😀(4 bytes); end at byte 2 (inside 😀)
+    expect(byteSlice('A😀', 0, 2)).toBe('A');
+  });
+
+  it('should preserve only complete codepoints when both boundaries cut through multi-byte characters', () => {
+    // "😀A😀" = 😀(4) A(1) 😀(4); slice bytes 1–8 cuts both emoji
+    expect(byteSlice('😀A😀', 1, 8)).toBe('A');
   });
 });
