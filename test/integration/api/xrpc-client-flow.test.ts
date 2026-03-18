@@ -56,32 +56,26 @@ describe('XrpcClient integration flow', () => {
     it('should throw XrpcClientError on 404 response from getRecord', async () => {
       server.use(
         http.get(`${BSKY_PDS_URL}/xrpc/com.atproto.repo.getRecord`, () => {
-          return HttpResponse.json(
-            { error: 'RecordNotFound', message: 'Record not found' },
-            { status: 404 },
-          );
+          return HttpResponse.json({ error: 'RecordNotFound', message: 'Record not found' }, { status: 404 });
         }),
       );
 
-      await expect(
-        client.getRecord({ repo: TEST_DID, collection: TEST_COLLECTION, rkey: 'missing' }),
-      ).rejects.toThrow(XrpcClientError);
+      await expect(client.getRecord({ repo: TEST_DID, collection: TEST_COLLECTION, rkey: 'missing' })).rejects.toThrow(
+        XrpcClientError,
+      );
     });
 
     it('should report the HTTP status on the thrown XrpcClientError', async () => {
       server.use(
         http.get(`${BSKY_PDS_URL}/xrpc/com.atproto.repo.getRecord`, () => {
-          return HttpResponse.json(
-            { error: 'RecordNotFound', message: 'Record not found' },
-            { status: 404 },
-          );
+          return HttpResponse.json({ error: 'RecordNotFound', message: 'Record not found' }, { status: 404 });
         }),
       );
 
       let error!: XrpcClientError;
-      await client
-        .getRecord({ repo: TEST_DID, collection: TEST_COLLECTION, rkey: 'missing' })
-        .catch((e: unknown) => { error = e as XrpcClientError; });
+      await client.getRecord({ repo: TEST_DID, collection: TEST_COLLECTION, rkey: 'missing' }).catch((e: unknown) => {
+        error = e as XrpcClientError;
+      });
 
       expect(error.status).toBe(404);
     });
@@ -147,7 +141,9 @@ describe('XrpcClient integration flow', () => {
           record: TEST_VALUE,
           swapRecord: 'bafystale',
         })
-        .catch((e: unknown) => { error = e as XrpcClientError; });
+        .catch((e: unknown) => {
+          error = e as XrpcClientError;
+        });
 
       expect(error.status).toBe(409);
     });

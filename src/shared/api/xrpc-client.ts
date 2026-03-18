@@ -114,11 +114,9 @@ export class XrpcClient {
       // NsidString = `${string}.${string}.${string}` and AtIdentifierString = DidString | HandleString;
       // both are branded; we trust callers provide valid values and cast.
       type GetOpts = Parameters<Client['getRecord']>[2];
-      const response = await this._client.getRecord(
-        collection as `${string}.${string}.${string}`,
-        rkey,
-        { repo } as GetOpts,
-      );
+      const response = await this._client.getRecord(collection as `${string}.${string}.${string}`, rkey, {
+        repo,
+      } as GetOpts);
       const { value, cid } = response.body as { value: Record<string, unknown>; cid: string };
 
       return { value, cid };
