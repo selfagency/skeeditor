@@ -1,0 +1,19 @@
+---
+# skeeditor-32tc
+title: Style modal to match bsky.app design language
+status: todo
+type: task
+priority: normal
+created_at: 2026-03-18T14:29:32Z
+updated_at: 2026-03-18T14:43:41Z
+parent: skeeditor-02o8
+---
+
+Create CSS styles for modal and button to visually integrate with bsky.app while preserving accessibility and theme (dark/light). For Web Components, handle styling inside Shadow DOM and provide CSS variables for theming.
+
+## Todo
+
+- [ ] Implement base styles for `edit-modal` Web Component
+- [ ] Provide CSS variables for theme integration (dark/light)
+- [ ] Ensure accessible color contrast and focus states
+- [ ] Test styling in Chrome/Firefox/Safari (Shadow DOM behavior)
