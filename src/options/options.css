@@ -1,0 +1,19 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #0d1726;
+  color: #f4f8ff;
+}
+
+.shell {
+  padding: 1.5rem;
+}
+
+.status {
+  color: #9ed0ff;
+}

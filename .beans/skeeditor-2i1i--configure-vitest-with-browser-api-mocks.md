@@ -1,11 +1,11 @@
 ---
 # skeeditor-2i1i
 title: Configure Vitest with browser API mocks
-status: todo
+status: completed
 type: task
 priority: critical
 created_at: 2026-03-18T14:26:10Z
-updated_at: 2026-03-18T14:41:18Z
+updated_at: 2026-03-18T16:06:26Z
 parent: skeeditor-5atd
 ---
 
@@ -13,9 +13,17 @@ Install and configure Vitest; add MSW and stubs for browser APIs (chrome/browser
 
 ## Todo
 
-- [ ] Add `vitest` and related deps (`@vitest/ui`, `jsdom`, `@testing-library/dom`, `msw`)
-- [ ] Create `vitest.config.ts` integrated with Vite build
-- [ ] Implement browser API stubs (webextension-polyfill types/mocks) for unit tests
-- [ ] Add example unit test and integration test using MSW
-- [ ] Add package.json scripts: `test:unit`, `test:integration`, `test:watch`
-- [ ] Document how to run Vitest locally and in CI
+- [x] Review the current scaffold and identify the unit/integration test entry points to replace
+- [x] Add `vitest` and related deps (`@vitest/ui`, `jsdom`, `@testing-library/dom`, `msw`)
+- [x] Create `vitest.config.ts` integrated with the Vite build and separate unit/integration projects
+- [x] Implement browser API stubs and shared test setup files for unit tests
+- [x] Add example unit and integration tests, including an MSW-backed fetch flow
+- [x] Replace placeholder package scripts with real Vitest commands and document how to run them
+
+## Summary of Changes
+
+- added `vitest`, `@vitest/ui`, `jsdom`, `@testing-library/dom`, and `msw` to the workspace dev dependencies
+- added `vitest.config.ts` with separate `unit` (`jsdom`) and `integration` (`node`) projects
+- added shared test setup files, browser API mocks, MSW handlers, and starter unit/integration tests
+- replaced placeholder test scripts with `vitest` commands and documented local/CI usage in `README.md`
+- verified the setup with `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm build`, and `pnpm test`
