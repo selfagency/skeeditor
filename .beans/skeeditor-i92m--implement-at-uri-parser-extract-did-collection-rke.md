@@ -1,12 +1,13 @@
 ---
 # skeeditor-i92m
 title: Implement AT URI parser (extract did, collection, rkey)
-status: todo
+status: in-progress
 type: feature
 priority: critical
 created_at: 2026-03-18T14:26:34Z
-updated_at: 2026-03-18T14:45:27Z
+updated_at: 2026-03-18T18:15:01Z
 parent: skeeditor-v67t
+branch: feature/i92m-at-uri-parser
 ---
 
 Create utility to parse at:// URIs and extract did, collection, rkey; support input from DOM elements and AT Protocol URIs.
