@@ -6,6 +6,22 @@ import { writeMergedManifest } from './merge-manifest';
 const isWatchEnabled = process.argv.includes('--watch');
 const projectRoot = process.cwd();
 
+const browserArg =
+  process.argv.find(a => a.startsWith('--browser='))?.split('=')[1] ??
+  process.env.BROWSER ??
+  'chrome';
+
+const validBrowsers = ['chrome', 'firefox', 'safari'] as const;
+type Browser = (typeof validBrowsers)[number];
+
+if (!(validBrowsers as readonly string[]).includes(browserArg)) {
+  console.error(`Unknown browser target "${browserArg}". Valid values: ${validBrowsers.join(', ')}`);
+  process.exitCode = 1;
+  process.exit();
+}
+
+const browser = browserArg as Browser;
+
 const main = async (): Promise<void> => {
   await build({
     configFile: resolve(projectRoot, 'vite.config.ts'),
@@ -14,7 +30,7 @@ const main = async (): Promise<void> => {
     },
   });
 
-  await writeMergedManifest('chrome', 'dist/manifest.json', projectRoot);
+  await writeMergedManifest(browser, `dist/${browser}/manifest.json`, projectRoot);
 };
 
 main().catch(error => {

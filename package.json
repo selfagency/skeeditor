@@ -14,7 +14,7 @@
     "build": "pnpm run lex:build && tsx scripts/build.ts",
     "build:repo": "turbo run build",
     "build:watch": "tsx scripts/build.ts --watch",
-    "clean": "node -e \"import('node:fs/promises').then(fs => Promise.all(['.turbo', 'coverage', 'dist', 'playwright-report', 'test-results'].map(path => fs.rm(path, { force: true, recursive: true }))))\"",
+    "clean": "tsx scripts/clean.ts",
     "dev": "pnpm run build:watch",
     "format": "oxfmt . --write",
     "format:check": "oxfmt . --check",
@@ -60,11 +60,11 @@
     "web-ext": "10.0.0"
   },
   "lint-staged": {
-    "**/*.[ts|js]": [
+    "**/*.{ts,js}": [
       "oxfmt --write",
       "oxlint"
     ],
-    "**/*.[json|md|yaml|yml]": [
+    "**/*.{json,md,yaml,yml}": [
       "oxfmt --write"
     ]
   },

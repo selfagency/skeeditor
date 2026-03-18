@@ -27,10 +27,17 @@ const collectTypeScriptFiles = async (directoryPath: string): Promise<string[]> 
   return nestedFileGroups.flat();
 };
 
+const GENERATED_HEADER = 'THIS FILE WAS GENERATED';
+
 const annotateGeneratedFile = async (filePath: string): Promise<void> => {
   const existingContent = await readFile(filePath, 'utf8');
 
   if (existingContent.startsWith(tsNoCheckDirective)) {
+    return;
+  }
+
+  // Only annotate files that carry the generator header; skip hand-written files.
+  if (!existingContent.includes(GENERATED_HEADER)) {
     return;
   }
 
