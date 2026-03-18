@@ -1,18 +1,38 @@
 {
   "name": "skeeditor",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cross-browser Bluesky post editor extension.",
+  "keywords": [
+    "atproto",
+    "bluesky",
+    "browser-extension",
+    "monorepo"
+  ],
+  "license": "MIT",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "turbo run build",
+    "clean": "node -e \"import('node:fs/promises').then(fs => Promise.all(['.turbo', 'coverage', 'dist', 'playwright-report', 'test-results'].map(path => fs.rm(path, { force: true, recursive: true }))))\"",
+    "dev": "turbo run dev --parallel",
+    "format": "oxfmt . --write",
+    "format:check": "oxfmt . --check",
+    "lint": "oxlint .",
+    "test": "pnpm run test:unit && pnpm run test:integration",
+    "test:e2e": "node -e \"console.log('Playwright configuration lands in skeeditor-dsxj.')\"",
+    "test:integration": "node -e \"console.log('Integration test scaffolding lands in skeeditor-2i1i.')\"",
+    "test:unit": "node -e \"console.log('Unit test scaffolding lands in skeeditor-2i1i.')\"",
+    "typecheck": "tsc --project tsconfig.build.json --noEmit"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "packageManager": "pnpm@10.32.1+sha512.a706938f0e89ac1456b6563eab4edf1d1faf3368d1191fc5c59790e96dc918e4456ab2e67d613de1043d2e8c81f87303e6b40d4ffeca9df15ef1ad567348f2be",
   "devDependencies": {
+    "@types/node": "^24.5.2",
     "oxfmt": "^0.41.0",
     "oxlint": "^1.56.0",
-    "oxlint-tsgolint": "^0.17.0"
-  }
+    "oxlint-tsgolint": "^0.17.0",
+    "turbo": "^2.5.6",
+    "typescript": "^5.9.2"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "packageManager": "pnpm@10.32.1+sha512.a706938f0e89ac1456b6563eab4edf1d1faf3368d1191fc5c59790e96dc918e4456ab2e67d613de1043d2e8c81f87303e6b40d4ffeca9df15ef1ad567348f2be"
 }

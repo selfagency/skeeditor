@@ -1,14 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": [
-    "unicorn",
-    "typescript",
-    "oxc",
-    "import",
-    "promise",
-    "node",
-    "vitest"
-  ],
+  "plugins": ["unicorn", "typescript", "oxc", "import", "promise", "node", "vitest"],
   "categories": {},
   "rules": {},
   "settings": {
@@ -31,7 +23,15 @@
   },
   "globals": {},
   "ignorePatterns": [
+    ".beans",
+    ".beans.yml",
+    ".github",
+    ".vscode",
+    "docs",
     "node_modules",
-    "dist"
+    "dist",
+    "coverage",
+    "playwright-report",
+    "test-results"
   ]
 }
