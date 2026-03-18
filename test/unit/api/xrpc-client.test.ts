@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { XrpcClient, XrpcClientError } from '../../../src/shared/api/xrpc-client';
+import { XrpcClient, XrpcClientError } from '@src/shared/api/xrpc-client';
 
 describe('XrpcClient', () => {
   describe('construction', () => {

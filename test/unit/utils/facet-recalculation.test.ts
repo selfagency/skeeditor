@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Main as RichtextFacet } from '../../../src/lexicons/app/bsky/richtext/facet.defs';
-import { recalculateFacets } from '../../../src/shared/utils/facet-offsets';
+import type { Main as RichtextFacet } from '@src/lexicons/app/bsky/richtext/facet.defs';
+import { recalculateFacets } from '@src/shared/utils/facet-offsets';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -183,11 +183,11 @@ describe('recalculateFacets — multi-byte character insertions', () => {
 
 describe('recalculateFacets — deletions', () => {
   it('should shift facet left when ASCII text before it is deleted', () => {
-    // original: "Hello world #tag"  — "#tag" at byte 13–17
+    // original: "Hello world #tag"  — "#tag" at byte 12–16
     // edited:   "Hello #tag"  — " world" (6 bytes) deleted → "#tag" at byte 6–10
     const original = 'Hello world #tag';
     const edited = 'Hello #tag';
-    const facets = [tagFacet(13, 17, 'tag')];
+    const facets = [tagFacet(12, 16, 'tag')];
 
     const result = recalculateFacets(original, edited, facets);
 

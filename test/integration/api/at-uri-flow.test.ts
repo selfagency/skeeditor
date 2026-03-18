@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 
-import { parseAtUriFromElement } from '../../../src/shared/api/at-uri';
+import { parseAtUriFromElement } from '@src/shared/api/at-uri';
 
 describe('AT URI parser integration flow', () => {
   it('should resolve a post reference from DOM markup used by the content script', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { byteSlice, graphemeLength, utf8ByteLength } from '../../../src/shared/utils/text';
+import { byteSlice, graphemeLength, utf8ByteLength } from '@src/shared/utils/text';
 
 describe('utf8ByteLength', () => {
   it('should return 0 for an empty string', () => {
