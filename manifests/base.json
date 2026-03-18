@@ -3,8 +3,14 @@
   "name": "skeeditor",
   "version": "0.1.0",
   "description": "Edit your own Bluesky posts directly on bsky.app.",
-  "permissions": ["storage", "activeTab"],
-  "host_permissions": ["https://bsky.app/*", "https://*.bsky.network/*"],
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://bsky.app/*",
+    "https://*.bsky.network/*"
+  ],
   "action": {
     "default_title": "skeeditor",
     "default_popup": "popup/popup.html"
@@ -15,8 +21,12 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://bsky.app/*"],
-      "js": ["content/content-script.js"],
+      "matches": [
+        "https://bsky.app/*"
+      ],
+      "js": [
+        "content/content-script.js"
+      ],
       "run_at": "document_idle"
     }
   ]
