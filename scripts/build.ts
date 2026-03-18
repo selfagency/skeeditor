@@ -6,10 +6,7 @@ import { writeMergedManifest } from './merge-manifest';
 const isWatchEnabled = process.argv.includes('--watch');
 const projectRoot = process.cwd();
 
-const browserArg =
-  process.argv.find(a => a.startsWith('--browser='))?.split('=')[1] ??
-  process.env.BROWSER ??
-  'chrome';
+const browserArg = process.argv.find(a => a.startsWith('--browser='))?.split('=')[1] ?? process.env.BROWSER ?? 'chrome';
 
 const validBrowsers = ['chrome', 'firefox', 'safari'] as const;
 type Browser = (typeof validBrowsers)[number];

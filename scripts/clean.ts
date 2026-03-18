@@ -3,9 +3,7 @@ import { rm } from 'node:fs/promises';
 const CLEAN_TARGETS = ['.turbo', 'coverage', 'dist', 'playwright-report', 'test-results'];
 
 const main = async (): Promise<void> => {
-  const results = await Promise.allSettled(
-    CLEAN_TARGETS.map(path => rm(path, { force: true, recursive: true })),
-  );
+  const results = await Promise.allSettled(CLEAN_TARGETS.map(path => rm(path, { force: true, recursive: true })));
 
   let failed = false;
   for (let i = 0; i < results.length; i++) {
