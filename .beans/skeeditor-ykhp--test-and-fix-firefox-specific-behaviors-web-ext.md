@@ -5,8 +5,12 @@ status: todo
 type: task
 priority: high
 created_at: 2026-03-18T14:30:21Z
-updated_at: 2026-03-18T14:51:45Z
+updated_at: 2026-03-18T15:10:19Z
 parent: skeeditor-7d7e
+blocked_by:
+    - skeeditor-ra8t
+    - skeeditor-ku9o
+    - skeeditor-dsxj
 ---
 
 Use web-ext and Playwright fixtures to exercise Firefox behaviors and compatibility; fix platform differences.

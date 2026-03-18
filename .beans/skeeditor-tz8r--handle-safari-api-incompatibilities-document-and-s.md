@@ -5,8 +5,10 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-18T14:30:30Z
-updated_at: 2026-03-18T14:52:00Z
+updated_at: 2026-03-18T15:10:19Z
 parent: skeeditor-7d7e
+blocked_by:
+    - skeeditor-vklb
 ---
 
 Identify Safari API incompatibilities and add shims or graceful degradations in `src/platform/safari/` and docs.

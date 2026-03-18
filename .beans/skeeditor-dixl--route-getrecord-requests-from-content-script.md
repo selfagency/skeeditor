@@ -5,8 +5,11 @@ status: todo
 type: feature
 priority: critical
 created_at: 2026-03-18T14:29:45Z
-updated_at: 2026-03-18T14:50:22Z
+updated_at: 2026-03-18T15:10:11Z
 parent: skeeditor-618f
+blocked_by:
+    - skeeditor-noiw
+    - skeeditor-67ad
 ---
 
 Message handling path to execute getRecord via XRPC client and forward results to requesting content script/modal.

@@ -1,15 +1,17 @@
 ---
 # skeeditor-mjc5
-title: Implement putRecord with swapRecord concurrency control
+title: Implement putRecord with swapRecord concurrency control and conflict handling
 status: todo
 type: feature
 priority: critical
 created_at: 2026-03-18T14:27:01Z
-updated_at: 2026-03-18T14:48:21Z
+updated_at: 2026-03-18T15:10:01Z
 parent: skeeditor-v67t
+blocked_by:
+    - skeeditor-67ad
 ---
 
-Implement putRecord including swapRecord optimistic concurrency parameter and proper error handling for conflicts.
+Implement putRecord including the swapRecord optimistic concurrency parameter plus conflict detection and retry-oriented error handling for the edit flow.
 
 Note: Provide a high-level helper for the UI flow that returns conflict-specific results so the modal can show fetch-latest / retry options.
 

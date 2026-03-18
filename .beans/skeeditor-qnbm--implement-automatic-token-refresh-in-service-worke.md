@@ -5,8 +5,10 @@ status: todo
 type: feature
 priority: critical
 created_at: 2026-03-18T14:28:46Z
-updated_at: 2026-03-18T14:49:47Z
+updated_at: 2026-03-18T15:10:01Z
 parent: skeeditor-1e94
+blocked_by:
+    - skeeditor-4pqr
 ---
 
 Service worker task to refresh access tokens before expiry, queue background requests while refreshing, and retry on failure.

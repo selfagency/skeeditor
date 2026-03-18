@@ -5,8 +5,10 @@ status: todo
 type: feature
 priority: critical
 created_at: 2026-03-18T14:26:52Z
-updated_at: 2026-03-18T14:48:10Z
+updated_at: 2026-03-18T15:10:01Z
 parent: skeeditor-v67t
+blocked_by:
+    - skeeditor-wio6
 ---
 
 Recalculate facet byte offsets when text is edited, handling multi-byte characters and grapheme boundaries to preserve correct annotations.
