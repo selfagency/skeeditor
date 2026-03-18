@@ -1,14 +1,15 @@
 ---
 # skeeditor-67ad
 title: Implement XRPC client wrapper (getRecord, putRecord, validation)
-status: todo
+status: in-progress
 type: feature
 priority: critical
 created_at: 2026-03-18T14:26:56Z
-updated_at: 2026-03-18T15:10:01Z
+updated_at: 2026-03-18T18:45:02Z
 parent: skeeditor-v67t
 blocked_by:
     - skeeditor-i92m
+branch: feature/67ad-xrpc-client-wrapper
 ---
 
 Create an XRPC client wrapper (preferably using `@atproto/lex`) for getRecord and putRecord operations with typed helpers and record validation.
