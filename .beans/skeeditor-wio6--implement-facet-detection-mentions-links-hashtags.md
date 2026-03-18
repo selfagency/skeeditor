@@ -1,11 +1,11 @@
 ---
 # skeeditor-wio6
 title: Implement facet detection (mentions, links, hashtags)
-status: in-progress
+status: completed
 type: feature
 priority: critical
 created_at: 2026-03-18T14:26:46Z
-updated_at: 2026-03-18T18:15:57Z
+updated_at: 2026-03-18T19:59:51Z
 parent: skeeditor-v67t
 ---
 
@@ -13,8 +13,8 @@ Detect mentions, links, and hashtags from text to produce initial facets array.
 
 ## Todo
 
-- [ ] Implement mention, link, and hashtag detectors with clear interfaces
-- [ ] Add unit tests (Vitest) for detection across languages and multi-byte characters
-- [ ] Integrate detection output with facet data model (NSID and indices)
-- [ ] Provide utility to convert detection ranges to byte-offset facets using `facet-offsets` helpers
-- [ ] Add integration test that runs detection then putRecord (MSW + Vitest)
+- [x] Implement mention, link, and hashtag detectors with clear interfaces
+- [x] Add unit tests (Vitest) for detection across languages and multi-byte characters
+- [x] Integrate detection output with facet data model (NSID and indices)
+- [x] Provide utility to convert detection ranges to byte-offset facets using `facet-offsets` helpers
+- [x] Add integration test that runs detection then putRecord (MSW + Vitest)
