@@ -30,6 +30,14 @@ const decodeSegment = (segment: string, input: string): string => {
   }
 };
 
+const FORBIDDEN_SEGMENT_CHARS = /[/?#]/;
+
+const assertValidDecodedSegment = (segment: string, input: string, message: string): void => {
+  if (FORBIDDEN_SEGMENT_CHARS.test(segment)) {
+    throw new AtUriParseError(message, input);
+  }
+};
+
 const toParsedAtUri = (repo: string, collection: string, rkey: string): ParsedAtUri => {
   return {
     uri: `at://${repo}/${collection}/${rkey}`,
@@ -63,12 +71,26 @@ export const parseAtUri = (uri: string): ParsedAtUri => {
     throw new AtUriParseError(INVALID_AT_URI_MESSAGE, uri);
   }
 
+  assertValidDecodedSegment(repo, uri, INVALID_AT_URI_MESSAGE);
+  assertValidDecodedSegment(collection, uri, INVALID_AT_URI_MESSAGE);
+  assertValidDecodedSegment(rkey, uri, INVALID_AT_URI_MESSAGE);
+
   return toParsedAtUri(repo, collection, rkey);
 };
 
 export const parseBskyPostUrl = (url: string | URL): ParsedAtUri => {
   const input = typeof url === 'string' ? url : url.toString();
-  const parsedUrl = typeof url === 'string' ? new URL(url) : url;
+  let parsedUrl: URL;
+
+  if (typeof url === 'string') {
+    try {
+      parsedUrl = new URL(url, BSKY_APP_ORIGIN);
+    } catch {
+      throw new AtUriParseError(INVALID_BSKY_URL_MESSAGE, input);
+    }
+  } else {
+    parsedUrl = url;
+  }
 
   if (parsedUrl.origin !== BSKY_APP_ORIGIN) {
     throw new AtUriParseError('Unsupported Bluesky URL origin', input);
@@ -94,6 +116,9 @@ export const parseBskyPostUrl = (url: string | URL): ParsedAtUri => {
     throw new AtUriParseError(INVALID_BSKY_URL_MESSAGE, input);
   }
 
+  assertValidDecodedSegment(repo, input, INVALID_BSKY_URL_MESSAGE);
+  assertValidDecodedSegment(rkey, input, INVALID_BSKY_URL_MESSAGE);
+
   return toParsedAtUri(repo, APP_BSKY_FEED_POST_COLLECTION, rkey);
 };
 
@@ -114,7 +139,14 @@ const extractReferenceValue = (element: Element): string | null => {
 
   for (const candidate of getElementCandidates(element)) {
     for (const attributeName of attributeNames) {
-      const value = candidate.getAttribute(attributeName);
+      let value: string | null;
+
+      if (attributeName === 'href' && candidate instanceof HTMLAnchorElement) {
+        const rawHref = candidate.getAttribute('href');
+        value = rawHref && rawHref.startsWith('/') ? rawHref : candidate.href;
+      } else {
+        value = candidate.getAttribute(attributeName);
+      }
 
       if (value && value.trim().length > 0) {
         return value;
