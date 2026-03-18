@@ -5,8 +5,11 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-18T14:30:25Z
-updated_at: 2026-03-18T14:51:50Z
+updated_at: 2026-03-18T15:10:19Z
 parent: skeeditor-7d7e
+blocked_by:
+    - skeeditor-nbu0
+    - skeeditor-ku9o
 ---
 
 Run `xcrun safari-web-extension-converter`, open generated Xcode project, and test the extension on Safari — document any manual steps required.

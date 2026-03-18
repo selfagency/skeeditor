@@ -5,8 +5,11 @@ status: todo
 type: feature
 priority: critical
 created_at: 2026-03-18T14:29:50Z
-updated_at: 2026-03-18T14:50:26Z
+updated_at: 2026-03-18T15:10:11Z
 parent: skeeditor-618f
+blocked_by:
+    - skeeditor-noiw
+    - skeeditor-67ad
 ---
 
 Message handling path to execute putRecord with swapRecord, handle conflicts, and return structured success/error states.

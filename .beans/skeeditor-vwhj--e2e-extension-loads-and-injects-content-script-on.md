@@ -5,8 +5,11 @@ status: todo
 type: test
 priority: high
 created_at: 2026-03-18T14:30:40Z
-updated_at: 2026-03-18T14:53:55Z
+updated_at: 2026-03-18T15:10:19Z
 parent: skeeditor-965j
+blocked_by:
+    - skeeditor-dsxj
+    - skeeditor-03tp
 ---
 
 Playwright E2E test: extension loads, content script is injected, and initial DOM modifications are applied.

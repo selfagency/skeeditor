@@ -5,8 +5,12 @@ status: todo
 type: task
 priority: high
 created_at: 2026-03-18T14:30:16Z
-updated_at: 2026-03-18T14:51:38Z
+updated_at: 2026-03-18T15:10:19Z
 parent: skeeditor-7d7e
+blocked_by:
+    - skeeditor-ra8t
+    - skeeditor-ku9o
+    - skeeditor-dsxj
 ---
 
 Run manual and automated tests against Chrome, fix extension/service-worker/content-script behaviors specific to Chrome MV3.

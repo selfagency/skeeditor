@@ -5,8 +5,11 @@ status: todo
 type: feature
 priority: critical
 created_at: 2026-03-18T14:29:10Z
-updated_at: 2026-03-18T14:43:47Z
+updated_at: 2026-03-18T15:10:11Z
 parent: skeeditor-02o8
+blocked_by:
+    - skeeditor-03tp
+    - skeeditor-1e94
 ---
 
 Add an Edit action to the post action menu only for the current user's posts; ensure a11y and non-intrusive styling. The Edit action should open the `edit-modal` Web Component when clicked.

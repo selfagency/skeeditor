@@ -85,7 +85,7 @@ await client.put(Post, {
 ## Directory Structure
 
 ```txt
-bsky-post-editor/
+skeeditor/
 ├── .beans/                          # Beans task tracking directory
 ├── .github/
 │   ├── instructions/
@@ -94,7 +94,8 @@ bsky-post-editor/
 │   └── workflows/
 │       └── ci.yml                   # GitHub Actions CI pipeline
 ├── docs/
-│   └── implementation-plan.md       # This file
+│   └── plans/
+│       └── implementation-plan.md   # This file
 ├── src/
 │   ├── shared/                      # Cross-browser shared code (no browser API deps)
 │   │   ├── api/
@@ -188,11 +189,13 @@ bsky-post-editor/
 
 ## Epic Decomposition
 
+Dependencies listed below are mirrored in Beans through `blocked-by` relationships so the plan and bean graph stay aligned.
+
 ### Milestone: `v0.1.0 — MVP Post Editing`
 
 #### Epic 1: Project Scaffolding & Build Pipeline
 
-- [ ] `Initialize monorepo structure` — type=`task`, priority=`critical`, depends_on=`none`
+- [ ] `Initialize project structure` — type=`task`, priority=`critical`, depends_on=`none`
 - [ ] `Configure Vite multi-entry build for content, background, popup` — type=`task`, priority=`critical`, depends_on=`none`
 - [ ] `Set up manifests (Chrome MV3, Firefox MV3 w/ gecko ID, Safari MV3)` — type=`task`, priority=`critical`, depends_on=`none`
 - [ ] `Configure Vitest with browser API mocks` — type=`task`, priority=`critical`, depends_on=`none`
@@ -207,10 +210,8 @@ bsky-post-editor/
 - [ ] `Implement UTF-8 byte length and grapheme utilities` — type=`feature`, priority=`critical`, depends_on=`none`
 - [ ] `Implement facet detection (mentions, links, hashtags)` — type=`feature`, priority=`critical`, depends_on=`none`
 - [ ] `Implement facet byte-offset recalculation on text change` — type=`feature`, priority=`critical`, depends_on=`facet-detection`
-- [ ] `Implement XRPC client wrapper (getRecord, putRecord)` — type=`feature`, priority=`critical`, depends_on=`uri-parser`
-- [ ] `Implement putRecord with swapRecord concurrency control` — type=`feature`, priority=`critical`, depends_on=`xrpc-client`
-- [ ] `Implement swapRecord conflict detection and retry` — type=`feature`, priority=`high`, depends_on=`put-record`
-- [ ] `Add full-record Lexicon validation before putRecord` — type=`feature`, priority=`high`, depends_on=`put-record`
+- [ ] `Implement XRPC client wrapper (getRecord, putRecord, validation)` — type=`feature`, priority=`critical`, depends_on=`uri-parser`
+- [ ] `Implement putRecord with swapRecord concurrency control and conflict handling` — type=`feature`, priority=`critical`, depends_on=`xrpc-client`
 
 #### Epic 3: Authentication
 
@@ -242,19 +243,19 @@ bsky-post-editor/
 #### Epic 6: Cross-Browser Compatibility
 
 - [ ] `Integrate webextension-polyfill for browser.* normalization` — type=`task`, priority=`high`, depends_on=`none`
-- [ ] `Test and fix Chrome-specific behaviors` — type=`task`, priority=`high`, depends_on=`mvp-complete`
-- [ ] `Test and fix Firefox-specific behaviors (web-ext)` — type=`task`, priority=`high`, depends_on=`mvp-complete`
-- [ ] `Convert and test in Safari via Xcode` — type=`task`, priority=`normal`, depends_on=`mvp-complete`
+- [ ] `Test and fix Chrome-specific behaviors` — type=`task`, priority=`high`, depends_on=`polyfill, platform-shims, playwright-config`
+- [ ] `Test and fix Firefox-specific behaviors (web-ext)` — type=`task`, priority=`high`, depends_on=`polyfill, platform-shims, playwright-config`
+- [ ] `Convert and test in Safari via Xcode` — type=`task`, priority=`normal`, depends_on=`safari-build-script, platform-shims`
 - [ ] `Handle Safari API incompatibilities (document and shim)` — type=`task`, priority=`normal`, depends_on=`safari-convert`
 - [ ] `Add platform shims for identity/auth API differences` — type=`feature`, priority=`normal`, depends_on=`none`
 
 #### Epic 7: E2E Test Suite
 
-- [ ] `E2E: extension loads and injects content script on bsky.app` — type=`test`, priority=`high`, depends_on=`content-script`
-- [ ] `E2E: edit button appears on own posts only` — type=`test`, priority=`high`, depends_on=`edit-button`
-- [ ] `E2E: edit modal opens, shows current text, saves edit` — type=`test`, priority=`high`, depends_on=`edit-modal`
-- [ ] `E2E: unauthenticated user sees login prompt, not edit button` — type=`test`, priority=`normal`, depends_on=`auth`
-- [ ] `E2E: concurrent edit conflict shows retry prompt` — type=`test`, priority=`normal`, depends_on=`conflict-handling`
+- [ ] `E2E: extension loads and injects content script on bsky.app` — type=`test`, priority=`high`, depends_on=`playwright-config, content-script`
+- [ ] `E2E: edit button appears on own posts only` — type=`test`, priority=`high`, depends_on=`playwright-config, edit-button`
+- [ ] `E2E: edit modal opens, shows current text, saves edit` — type=`test`, priority=`high`, depends_on=`playwright-config, edit-modal-wiring`
+- [ ] `E2E: unauthenticated user sees login prompt, not edit button` — type=`test`, priority=`normal`, depends_on=`playwright-config, auth`
+- [ ] `E2E: concurrent edit conflict shows retry prompt` — type=`test`, priority=`normal`, depends_on=`playwright-config, conflict-handling`
 
 ---
 

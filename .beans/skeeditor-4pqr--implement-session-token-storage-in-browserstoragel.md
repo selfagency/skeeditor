@@ -5,8 +5,10 @@ status: todo
 type: feature
 priority: critical
 created_at: 2026-03-18T14:28:41Z
-updated_at: 2026-03-18T14:49:43Z
+updated_at: 2026-03-18T15:10:01Z
 parent: skeeditor-1e94
+blocked_by:
+    - skeeditor-v7k9
 ---
 
 Store OAuth tokens and session metadata securely in `browser.storage.local` with TTL and refresh metadata. Provide helper APIs for reading/writing and token encryption guidance.

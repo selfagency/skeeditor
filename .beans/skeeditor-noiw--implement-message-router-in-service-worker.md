@@ -5,8 +5,10 @@ status: todo
 type: feature
 priority: critical
 created_at: 2026-03-18T14:29:41Z
-updated_at: 2026-03-18T14:50:18Z
+updated_at: 2026-03-18T15:10:01Z
 parent: skeeditor-618f
+blocked_by:
+    - skeeditor-n1du
 ---
 
 Central message router to validate, authorize, and dispatch incoming messages to XRPC/client modules and return typed responses.
