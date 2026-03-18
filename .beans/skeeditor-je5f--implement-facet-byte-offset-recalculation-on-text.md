@@ -1,12 +1,13 @@
 ---
 # skeeditor-je5f
 title: Implement facet byte-offset recalculation on text change
-status: todo
+status: in-progress
 type: feature
 priority: critical
 created_at: 2026-03-18T14:26:52Z
-updated_at: 2026-03-18T15:10:01Z
+updated_at: 2026-03-18T21:22:40Z
 parent: skeeditor-v67t
+branch: feat/je5f-facet-offset-recalculation
 blocked_by:
     - skeeditor-wio6
 ---
