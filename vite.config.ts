@@ -13,6 +13,7 @@ export default defineConfig({
     outDir: resolve(projectRoot, 'dist'),
     sourcemap: true,
     target: 'es2022',
+    modulePreload: { polyfill: false },
     rollupOptions: {
       input: {
         background: resolve(sourceRoot, 'background/service-worker.ts'),

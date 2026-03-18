@@ -1,13 +1,12 @@
 ---
 # skeeditor-5atd
 title: 'Epic 1: Project Scaffolding & Build Pipeline'
-status: in-progress
+status: completed
 type: epic
 priority: critical
 created_at: 2026-03-18T14:25:17Z
-updated_at: 2026-03-18T16:06:26Z
+updated_at: 2026-03-18T17:30:46Z
 parent: skeeditor-bmr4
-branch: feature/skeeditor-5atd-project-scaffolding-build-pipeline
 ---
 
 Scaffold the monorepo, configure Vite multi-entry build, manifests, testing and CI (Vitest for unit & integration, Playwright for E2E, GitHub Actions), and standardize on `oxlint` / `oxfmt` for linting and formatting.
@@ -20,4 +19,4 @@ Scaffold the monorepo, configure Vite multi-entry build, manifests, testing and 
 - [x] Configure Vitest with browser API mocks (unit + integration)
 - [x] Configure Playwright for E2E (Chrome + Firefox)
 - [x] Add CI workflow to run `oxlint`, `oxfmt --check`, type-check, Vitest, build, and E2E
-- [ ] Install Lexicons and add lex build step
+- [x] Install Lexicons and add lex build step

@@ -28,6 +28,9 @@ This repository is scaffolded as a strict TypeScript workspace managed with `pnp
 - `pnpm test:e2e:list` — print the configured Playwright extension E2E tests
 - `pnpm test:e2e:chromium` — run Chromium extension smoke tests
 - `pnpm test:e2e:firefox` — run the Firefox extension scaffold project
+- `pnpm lex:install` — download / refresh AT Protocol lexicon JSON files
+- `pnpm lex:build` — generate TypeScript helpers from the installed lexicons
+- `pnpm lex:sync` — install lexicons then build (shorthand for both steps)
 
 ## Testing
 
