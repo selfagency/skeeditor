@@ -1,12 +1,13 @@
 ---
 # skeeditor-v67t
 title: 'Epic 2: AT Protocol Client Layer'
-status: todo
+status: in-progress
 type: epic
 priority: critical
 created_at: 2026-03-18T14:25:21Z
-updated_at: 2026-03-18T16:00:56Z
+updated_at: 2026-03-18T18:13:14Z
 parent: skeeditor-bmr4
+branch: feature/v67t-at-protocol-client-layer
 ---
 
 Implement AT Protocol client layer: AT URI parsing, byte/grapheme utilities, facet detection and recalculation, XRPC client wrapper, putRecord with swapRecord and validation.
