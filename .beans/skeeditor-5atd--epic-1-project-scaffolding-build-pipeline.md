@@ -19,5 +19,5 @@ Scaffold the monorepo, configure Vite multi-entry build, manifests, testing and 
 - [x] Create `manifests/` base and browser overrides
 - [x] Configure Vitest with browser API mocks (unit + integration)
 - [x] Configure Playwright for E2E (Chrome + Firefox)
-- [ ] Add CI workflow to run `oxlint`, `oxfmt --check`, type-check, Vitest, build, and E2E
+- [x] Add CI workflow to run `oxlint`, `oxfmt --check`, type-check, Vitest, build, and E2E
 - [ ] Install Lexicons and add lex build step

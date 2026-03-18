@@ -1,18 +1,26 @@
 import { vi } from 'vitest';
 
+interface BrowserMessage {
+  type: string;
+}
+
+interface BrowserPingResponse {
+  ok: true;
+}
+
 interface BrowserRuntimeMock {
   onMessage: {
-    addListener: ReturnType<typeof vi.fn>;
-    removeListener: ReturnType<typeof vi.fn>;
+    addListener: () => void;
+    removeListener: () => void;
   };
-  sendMessage: ReturnType<typeof vi.fn>;
+  sendMessage: (message: BrowserMessage) => Promise<BrowserPingResponse>;
 }
 
 interface BrowserStorageMock {
   local: {
-    get: ReturnType<typeof vi.fn>;
-    remove: ReturnType<typeof vi.fn>;
-    set: ReturnType<typeof vi.fn>;
+    get: (key: string) => Promise<Record<string, never>>;
+    remove: (key: string) => Promise<void>;
+    set: (value: Record<string, unknown>) => Promise<void>;
   };
 }
 
