@@ -1,0 +1,12 @@
+{
+  "background": {
+    "scripts": ["background/service-worker.js"],
+    "type": "module"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "skeeditor@selfagency.dev",
+      "strict_min_version": "121.0"
+    }
+  }
+}
