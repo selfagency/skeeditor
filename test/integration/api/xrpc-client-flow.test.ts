@@ -1,9 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { server } from '../../mocks/server';
 import { XrpcClient, XrpcClientError } from '../../../src/shared/api/xrpc-client';
 import { BSKY_PDS_URL } from '../../../src/shared/constants';
+import { server } from '../../mocks/server';
 
 const TEST_DID = 'did:plc:testuser123';
 const TEST_COLLECTION = 'app.bsky.feed.post';
