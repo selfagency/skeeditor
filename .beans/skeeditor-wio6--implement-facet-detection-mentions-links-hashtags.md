@@ -1,11 +1,11 @@
 ---
 # skeeditor-wio6
 title: Implement facet detection (mentions, links, hashtags)
-status: in-progress
+status: completed
 type: feature
 priority: critical
 created_at: 2026-03-18T14:26:46Z
-updated_at: 2026-03-18T18:15:57Z
+updated_at: 2026-03-18T19:59:51Z
 parent: skeeditor-v67t
 ---
 
