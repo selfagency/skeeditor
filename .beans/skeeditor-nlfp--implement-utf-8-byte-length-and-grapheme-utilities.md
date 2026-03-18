@@ -1,11 +1,11 @@
 ---
 # skeeditor-nlfp
 title: Implement UTF-8 byte length and grapheme utilities
-status: todo
+status: in-progress
 type: feature
 priority: critical
 created_at: 2026-03-18T14:26:42Z
-updated_at: 2026-03-18T14:45:31Z
+updated_at: 2026-03-18T18:15:38Z
 parent: skeeditor-v67t
 ---
 
