@@ -23,13 +23,17 @@
     "manifest:firefox": "tsx scripts/merge-manifest.ts firefox",
     "manifest:safari": "tsx scripts/merge-manifest.ts safari",
     "test": "pnpm run test:unit && pnpm run test:integration",
-    "test:e2e": "node -e \"console.log('Playwright configuration lands in skeeditor-dsxj.')\"",
+    "test:e2e": "playwright test",
+    "test:e2e:chromium": "playwright test --project=chromium-extension",
+    "test:e2e:firefox": "playwright test --project=firefox-extension",
+    "test:e2e:list": "playwright test --list",
     "test:integration": "vitest run --project integration",
     "test:unit": "vitest run --project unit",
     "test:watch": "vitest --project unit --project integration",
     "typecheck": "tsc --project tsconfig.build.json --noEmit"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@testing-library/dom": "^10.4.1",
     "@types/node": "^24.5.2",
     "@vitest/ui": "^3.2.4",
@@ -42,7 +46,8 @@
     "turbo": "^2.5.6",
     "typescript": "^5.9.2",
     "vite": "^7.1.7",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "web-ext": "^8.8.0"
   },
   "engines": {
     "node": ">=20.19.0"

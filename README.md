@@ -25,12 +25,21 @@ This repository is scaffolded as a strict TypeScript workspace managed with `pnp
 - `pnpm test:unit` — run the Vitest jsdom project
 - `pnpm test:integration` — run the Vitest + MSW node project
 - `pnpm test:watch` — run both Vitest projects in watch mode
+- `pnpm test:e2e:list` — print the configured Playwright extension E2E tests
+- `pnpm test:e2e:chromium` — run Chromium extension smoke tests
+- `pnpm test:e2e:firefox` — run the Firefox extension scaffold project
 
 ## Testing
 
 - Unit tests run in the `unit` Vitest project with a `jsdom` environment and browser API mocks.
 - Integration tests run in the `integration` Vitest project with `msw` intercepting network requests in Node.
 - CI can run `pnpm test:unit` and `pnpm test:integration` independently, or `pnpm test` to execute both.
+
+## E2E testing
+
+- Playwright E2E lives under `test/e2e/` and uses extension-specific fixtures.
+- Chromium extension tests launch a persistent Chromium context with the built `dist/` extension loaded.
+- Firefox extension tests are scaffolded behind `FIREFOX_EXTENSION_E2E=1`; the project stays listed for future `web-ext`-driven integration without failing by default.
 
 ## Current status
 
