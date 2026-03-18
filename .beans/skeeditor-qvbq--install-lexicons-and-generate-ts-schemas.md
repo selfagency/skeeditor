@@ -14,7 +14,8 @@ Install required lexicons (app.bsky.feed.post, com.atproto.repo.*) and run lex b
 
 ## Todo
 
-- [ ] Confirm the required `@atproto/lex` install/build workflow and output layout for this repo
+- [x] Confirm the required `@atproto/lex` install/build workflow and output layout for this repo
+- [x] Add a failing unit smoke test for generated Bluesky/atproto lexicon namespaces
 - [ ] Add the lexicon tooling dependencies and scripts
 - [ ] Install the required AT Protocol lexicons into the workspace
 - [ ] Generate TypeScript helpers from the installed lexicons and wire them into the build/typecheck flow
