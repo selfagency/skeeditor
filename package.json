@@ -60,15 +60,6 @@
     "vitest": "4.1.0",
     "web-ext": "10.0.0"
   },
-  "lint-staged": {
-    "**/*.{ts,js}": [
-      "oxlint --fix",
-      "oxfmt --write"
-    ],
-    "**/*.{json,md,yaml,yml}": [
-      "oxfmt --write"
-    ]
-  },
   "engines": {
     "node": ">=20.19.0"
   },
