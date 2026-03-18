@@ -24,19 +24,25 @@
     "manifest:safari": "tsx scripts/merge-manifest.ts safari",
     "test": "pnpm run test:unit && pnpm run test:integration",
     "test:e2e": "node -e \"console.log('Playwright configuration lands in skeeditor-dsxj.')\"",
-    "test:integration": "node -e \"console.log('Integration test scaffolding lands in skeeditor-2i1i.')\"",
-    "test:unit": "node -e \"console.log('Unit test scaffolding lands in skeeditor-2i1i.')\"",
+    "test:integration": "vitest run --project integration",
+    "test:unit": "vitest run --project unit",
+    "test:watch": "vitest --project unit --project integration",
     "typecheck": "tsc --project tsconfig.build.json --noEmit"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
     "@types/node": "^24.5.2",
+    "@vitest/ui": "^3.2.4",
+    "jsdom": "^26.1.0",
+    "msw": "^2.11.2",
     "oxfmt": "^0.41.0",
     "oxlint": "^1.56.0",
     "oxlint-tsgolint": "^0.17.0",
     "tsx": "^4.20.5",
     "turbo": "^2.5.6",
     "typescript": "^5.9.2",
-    "vite": "^7.1.7"
+    "vite": "^7.1.7",
+    "vitest": "^3.2.4"
   },
   "engines": {
     "node": ">=20.19.0"

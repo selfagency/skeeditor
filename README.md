@@ -22,6 +22,15 @@ This repository is scaffolded as a strict TypeScript workspace managed with `pnp
 - `pnpm build:repo` — orchestrate workspace builds with `turbo`
 - `pnpm dev` — run the Vite build in watch mode
 - `pnpm test` — run unit and integration test entry points
+- `pnpm test:unit` — run the Vitest jsdom project
+- `pnpm test:integration` — run the Vitest + MSW node project
+- `pnpm test:watch` — run both Vitest projects in watch mode
+
+## Testing
+
+- Unit tests run in the `unit` Vitest project with a `jsdom` environment and browser API mocks.
+- Integration tests run in the `integration` Vitest project with `msw` intercepting network requests in Node.
+- CI can run `pnpm test:unit` and `pnpm test:integration` independently, or `pnpm test` to execute both.
 
 ## Current status
 
