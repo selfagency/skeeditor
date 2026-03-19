@@ -60,8 +60,6 @@ describe('refreshAccessToken', () => {
       }),
     );
 
-    await expect(refreshAccessToken(TOKEN_ENDPOINT, 'expired_rt', CLIENT_ID)).rejects.toThrow(
-      'Refresh token expired',
-    );
+    await expect(refreshAccessToken(TOKEN_ENDPOINT, 'expired_rt', CLIENT_ID)).rejects.toThrow('Refresh token expired');
   });
 });
