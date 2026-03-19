@@ -70,10 +70,17 @@ class AuthPopup extends HTMLElement {
     });
 
     this.shadow.getElementById('sign-out')?.addEventListener('click', () => {
-      void sendMessage({ type: 'AUTH_SIGN_OUT' });
-      this.state = 'unauthenticated';
-      this.did = null;
-      this.render();
+      void (async () => {
+        try {
+          await sendMessage({ type: 'AUTH_SIGN_OUT' });
+          this.state = 'unauthenticated';
+          this.did = null;
+          this.render();
+        } catch {
+          // If sign-out fails (e.g. service worker suspended), reconcile from storage
+          await this.checkAuth();
+        }
+      })();
     });
 
     this.shadow.getElementById('reauthorize')?.addEventListener('click', () => {

@@ -1,12 +1,7 @@
 import { buildAuthorizationRequest } from '../shared/auth/auth-client';
 import { sessionStore } from '../shared/auth/session-store';
 import { XrpcClient } from '../shared/api/xrpc-client';
-import {
-  BSKY_OAUTH_AUTHORIZE_URL,
-  BSKY_OAUTH_CLIENT_ID,
-  BSKY_OAUTH_SCOPE,
-  BSKY_PDS_URL,
-} from '../shared/constants';
+import { BSKY_OAUTH_AUTHORIZE_URL, BSKY_OAUTH_CLIENT_ID, BSKY_OAUTH_SCOPE, BSKY_PDS_URL } from '../shared/constants';
 import type { XrpcClientConfig, GetRecordResult, PutRecordResult } from '../shared/api/xrpc-client';
 import type { AuthorizationRequest } from '../shared/auth/auth-client';
 
@@ -14,7 +9,13 @@ import type { AuthorizationRequest } from '../shared/auth/auth-client';
 
 interface XrpcInterface {
   getRecord: (params: { repo: string; collection: string; rkey: string }) => Promise<GetRecordResult>;
-  putRecord: (params: { repo: string; collection: string; rkey: string; record: Record<string, unknown> & { $type: string }; swapRecord?: string }) => Promise<PutRecordResult>;
+  putRecord: (params: {
+    repo: string;
+    collection: string;
+    rkey: string;
+    record: Record<string, unknown> & { $type: string };
+    swapRecord?: string;
+  }) => Promise<PutRecordResult>;
 }
 
 interface StoreInterface {
@@ -52,6 +53,21 @@ function isMessage(msg: unknown): msg is IncomingMessage {
     'type' in msg &&
     typeof (msg as Record<string, unknown>)['type'] === 'string' &&
     KNOWN_TYPES.has((msg as Record<string, unknown>)['type'] as string)
+  );
+}
+
+function isValidGetRecord(m: IncomingMessage): boolean {
+  return typeof m['repo'] === 'string' && typeof m['collection'] === 'string' && typeof m['rkey'] === 'string';
+}
+
+function isValidPutRecord(m: IncomingMessage): boolean {
+  return (
+    typeof m['repo'] === 'string' &&
+    typeof m['collection'] === 'string' &&
+    typeof m['rkey'] === 'string' &&
+    m['record'] !== null &&
+    typeof m['record'] === 'object' &&
+    typeof (m['record'] as Record<string, unknown>)['$type'] === 'string'
   );
 }
 
@@ -100,6 +116,9 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
     }
 
     case 'GET_RECORD': {
+      if (!isValidGetRecord(message)) {
+        return { error: 'Invalid request' };
+      }
       const stored = await deps.store.get();
       const valid = await deps.store.isAccessTokenValid();
       if (stored === null || !valid) {
@@ -118,6 +137,9 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
     }
 
     case 'PUT_RECORD': {
+      if (!isValidPutRecord(message)) {
+        return { error: 'Invalid request' };
+      }
       const stored = await deps.store.get();
       const valid = await deps.store.isAccessTokenValid();
       if (stored === null || !valid) {

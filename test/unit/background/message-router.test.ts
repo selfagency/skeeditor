@@ -125,6 +125,33 @@ describe('handleMessage', () => {
   });
 
   describe('GET_RECORD', () => {
+    it('returns Invalid request when repo field is missing', async () => {
+      const deps = makeDeps({ store: makeStoreMock(makeSession()) });
+
+      const result = await handleMessage({ type: 'GET_RECORD', collection: 'app.bsky.feed.post', rkey: 'abc' }, deps);
+
+      expect(result).toEqual({ error: 'Invalid request' });
+    });
+
+    it('returns Invalid request when collection field is missing', async () => {
+      const deps = makeDeps({ store: makeStoreMock(makeSession()) });
+
+      const result = await handleMessage({ type: 'GET_RECORD', repo: 'did:plc:alice', rkey: 'abc' }, deps);
+
+      expect(result).toEqual({ error: 'Invalid request' });
+    });
+
+    it('returns Invalid request when rkey field is missing', async () => {
+      const deps = makeDeps({ store: makeStoreMock(makeSession()) });
+
+      const result = await handleMessage(
+        { type: 'GET_RECORD', repo: 'did:plc:alice', collection: 'app.bsky.feed.post' },
+        deps,
+      );
+
+      expect(result).toEqual({ error: 'Invalid request' });
+    });
+
     it('returns Not authenticated when no valid session exists', async () => {
       const deps = makeDeps({ store: makeStoreMock(null) });
 
@@ -173,6 +200,34 @@ describe('handleMessage', () => {
   });
 
   describe('PUT_RECORD', () => {
+    it('returns Invalid request when record field is missing', async () => {
+      const deps = makeDeps({ store: makeStoreMock(makeSession()) });
+
+      const result = await handleMessage(
+        { type: 'PUT_RECORD', repo: 'did:plc:alice', collection: 'app.bsky.feed.post', rkey: 'abc' },
+        deps,
+      );
+
+      expect(result).toEqual({ error: 'Invalid request' });
+    });
+
+    it('returns Invalid request when record.$type field is missing', async () => {
+      const deps = makeDeps({ store: makeStoreMock(makeSession()) });
+
+      const result = await handleMessage(
+        {
+          type: 'PUT_RECORD',
+          repo: 'did:plc:alice',
+          collection: 'app.bsky.feed.post',
+          rkey: 'abc',
+          record: { text: 'hello' },
+        },
+        deps,
+      );
+
+      expect(result).toEqual({ error: 'Invalid request' });
+    });
+
     it('returns Not authenticated when no valid session exists', async () => {
       const deps = makeDeps({ store: makeStoreMock(null) });
 
