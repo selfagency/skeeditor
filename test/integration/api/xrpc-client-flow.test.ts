@@ -147,6 +147,45 @@ describe('XrpcClient integration flow', () => {
 
       expect(error.status).toBe(409);
     });
+
+    it('should return a structured conflict result with latest record details', async () => {
+      server.use(
+        http.post(`${BSKY_PDS_URL}/xrpc/com.atproto.repo.putRecord`, () => {
+          return HttpResponse.json(
+            { error: 'InvalidSwap', message: 'Record was updated by another actor' },
+            { status: 409 },
+          );
+        }),
+        http.get(`${BSKY_PDS_URL}/xrpc/com.atproto.repo.getRecord`, () => {
+          return HttpResponse.json({
+            uri: TEST_AT_URI,
+            cid: 'bafyreia4w4rnpdzud2l56x2egzvtg4l7s2b4q77m5e6sl6z4w2d6l7y5he',
+            value: { ...TEST_VALUE, text: 'Latest server text' },
+          });
+        }),
+      );
+
+      const result = await client.putRecordWithSwap({
+        repo: TEST_DID,
+        collection: TEST_COLLECTION,
+        rkey: TEST_RKEY,
+        record: { ...TEST_VALUE, text: 'Edited locally' },
+        swapRecord: 'bafystale',
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: {
+          kind: 'conflict',
+          message: `putRecord(${TEST_DID}/${TEST_COLLECTION}/${TEST_RKEY}): Record was updated by another actor`,
+          status: 409,
+        },
+        conflict: {
+          currentCid: 'bafyreia4w4rnpdzud2l56x2egzvtg4l7s2b4q77m5e6sl6z4w2d6l7y5he',
+          currentValue: { ...TEST_VALUE, text: 'Latest server text' },
+        },
+      });
+    });
   });
 
   describe('full read-modify-write flow', () => {

@@ -5,8 +5,8 @@ status: todo
 type: feature
 priority: high
 created_at: 2026-03-18T16:00:41Z
-updated_at: 2026-03-18T16:00:47Z
-parent: skeeditor-v67t
+updated_at: 2026-03-19T18:32:02Z
+parent: skeeditor-618f
 blocked_by:
     - skeeditor-mjc5
 ---

@@ -37,6 +37,43 @@ export interface PutRecordResult {
   cid: string;
 }
 
+export type PutRecordWithSwapErrorKind = 'auth' | 'conflict' | 'network' | 'validation';
+
+export interface PutRecordWithSwapError {
+  kind: PutRecordWithSwapErrorKind;
+  message: string;
+  status?: number;
+}
+
+export interface PutRecordConflictDetails {
+  currentCid: string;
+  currentValue: Record<string, unknown>;
+}
+
+export interface PutRecordWithSwapParams extends PutRecordParams {
+  swapRecord: NonNullable<PutRecordParams['swapRecord']>;
+}
+
+export interface PutRecordMergeAdvisory {
+  hasConflicts: boolean;
+  clientChanges: string[];
+  serverChanges: string[];
+  sharedChanges: string[];
+  conflictingFields: string[];
+}
+
+export type PutRecordWithSwapResult =
+  | {
+      success: true;
+      uri: string;
+      cid: string;
+    }
+  | {
+      success: false;
+      error: PutRecordWithSwapError;
+      conflict?: PutRecordConflictDetails;
+    };
+
 export interface XrpcClientErrorOptions {
   status?: number;
   cause?: unknown;
@@ -72,6 +109,116 @@ const mapXrpcError = (err: unknown, context: string): XrpcClientError => {
 
   return new XrpcClientError(`${context}: unknown error`, { cause: err });
 };
+
+const mapStructuredPutRecordError = (error: XrpcClientError): PutRecordWithSwapError => {
+  const withOptionalStatus = (kind: PutRecordWithSwapErrorKind): PutRecordWithSwapError => {
+    if (error.status === undefined) {
+      return { kind, message: error.message };
+    }
+
+    return { kind, message: error.message, status: error.status };
+  };
+
+  if (error.status === 409) {
+    return withOptionalStatus('conflict');
+  }
+
+  if (error.status === 400) {
+    return withOptionalStatus('validation');
+  }
+
+  if (error.status === 401 || error.status === 403) {
+    return withOptionalStatus('auth');
+  }
+
+  return withOptionalStatus('network');
+};
+
+const valuesEqual = (left: unknown, right: unknown): boolean => {
+  if (Object.is(left, right)) {
+    return true;
+  }
+
+  if (typeof left !== typeof right) {
+    return false;
+  }
+
+  if (left === null || right === null) {
+    return left === right;
+  }
+
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) {
+      return false;
+    }
+
+    return left.every((value, index) => valuesEqual(value, right[index]));
+  }
+
+  if (typeof left === 'object' && typeof right === 'object') {
+    const leftRecord = left as Record<string, unknown>;
+    const rightRecord = right as Record<string, unknown>;
+    const leftKeys = Object.keys(leftRecord).sort();
+    const rightKeys = Object.keys(rightRecord).sort();
+
+    if (!valuesEqual(leftKeys, rightKeys)) {
+      return false;
+    }
+
+    return leftKeys.every(key => valuesEqual(leftRecord[key], rightRecord[key]));
+  }
+
+  return false;
+};
+
+export function buildThreeWayMergeAdvisory(
+  baseRecord: Record<string, unknown>,
+  currentRecord: Record<string, unknown>,
+  attemptedRecord: Record<string, unknown>,
+): PutRecordMergeAdvisory {
+  const keys = new Set([...Object.keys(baseRecord), ...Object.keys(currentRecord), ...Object.keys(attemptedRecord)]);
+
+  const clientChanges: string[] = [];
+  const serverChanges: string[] = [];
+  const sharedChanges: string[] = [];
+  const conflictingFields: string[] = [];
+
+  for (const key of keys) {
+    const baseValue = baseRecord[key];
+    const currentValue = currentRecord[key];
+    const attemptedValue = attemptedRecord[key];
+
+    const clientChanged = !valuesEqual(attemptedValue, baseValue);
+    const serverChanged = !valuesEqual(currentValue, baseValue);
+    const bothNowMatch = valuesEqual(attemptedValue, currentValue);
+
+    if (clientChanged && serverChanged) {
+      if (bothNowMatch) {
+        sharedChanges.push(key);
+      } else {
+        conflictingFields.push(key);
+      }
+      continue;
+    }
+
+    if (clientChanged) {
+      clientChanges.push(key);
+      continue;
+    }
+
+    if (serverChanged) {
+      serverChanges.push(key);
+    }
+  }
+
+  return {
+    hasConflicts: conflictingFields.length > 0,
+    clientChanges,
+    serverChanges,
+    sharedChanges,
+    conflictingFields,
+  };
+}
 
 /**
  * Thin, testable wrapper around the `@atproto/lex` `Client` for the two XRPC
@@ -155,6 +302,49 @@ export class XrpcClient {
       return { uri, cid };
     } catch (err) {
       throw mapXrpcError(err, `putRecord(${repo}/${collection}/${rkey})`);
+    }
+  }
+
+  /**
+   * High-level optimistic-concurrency helper for edit flows.
+   *
+   * Returns structured success/error results instead of throwing so UI callers
+   * can distinguish retryable conflicts from validation/auth/network failures.
+   * On `409 InvalidSwap`, it attempts to fetch the latest server record and
+   * includes it in the result so the caller can show a retry / compare flow.
+   * Requires `swapRecord` to be provided so optimistic concurrency is always
+   * enforced for this helper.
+   */
+  public async putRecordWithSwap(params: PutRecordWithSwapParams): Promise<PutRecordWithSwapResult> {
+    try {
+      const result = await this.putRecord(params);
+      return { success: true, uri: result.uri, cid: result.cid };
+    } catch (err) {
+      const error = err instanceof XrpcClientError ? err : mapXrpcError(err, 'putRecordWithSwap');
+      const structuredError = mapStructuredPutRecordError(error);
+
+      if (structuredError.kind !== 'conflict') {
+        return { success: false, error: structuredError };
+      }
+
+      try {
+        const latest = await this.getRecord({
+          repo: params.repo,
+          collection: params.collection,
+          rkey: params.rkey,
+        });
+
+        return {
+          success: false,
+          error: structuredError,
+          conflict: {
+            currentCid: latest.cid,
+            currentValue: latest.value,
+          },
+        };
+      } catch {
+        return { success: false, error: structuredError };
+      }
     }
   }
 }
