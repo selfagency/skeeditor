@@ -29,12 +29,11 @@ class AuthPopup extends HTMLElement {
   }
 
   private async checkAuth(): Promise<void> {
-    const stored = await sessionStore.get();
-    const valid = await sessionStore.isAccessTokenValid();
+    const status = await sessionStore.getAuthStatus();
 
-    if (stored !== null && valid) {
+    if (status !== null && status.expiresAt > Date.now()) {
       this.state = 'authenticated';
-      this.did = stored.did;
+      this.did = status.did;
     } else {
       this.state = 'unauthenticated';
       this.did = null;
