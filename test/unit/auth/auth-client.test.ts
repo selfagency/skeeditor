@@ -105,4 +105,20 @@ describe('parseCallbackParams', () => {
 
     expect('error' in result).toBe(true);
   });
+
+  it('should return error when code is an empty string', () => {
+    const url = 'https://example.com/callback?code=&state=some_state';
+
+    const result = parseCallbackParams(url);
+
+    expect('error' in result).toBe(true);
+  });
+
+  it('should return error when state is an empty string', () => {
+    const url = 'https://example.com/callback?code=auth_code_123&state=';
+
+    const result = parseCallbackParams(url);
+
+    expect('error' in result).toBe(true);
+  });
 });

@@ -1,6 +1,5 @@
 import { AuthClientError } from './auth-client';
 import type { TokenResponse } from './types';
-import { sessionStore } from './session-store';
 import type { StoredSession } from './session-store';
 
 export type { TokenResponse };
@@ -74,7 +73,7 @@ export class TokenRefreshManager {
   private readonly config: TokenRefreshManagerConfig;
   private inflightRefresh: Promise<StoredSession> | null = null;
 
-  constructor(config: TokenRefreshManagerConfig) {
+  public constructor(config: TokenRefreshManagerConfig) {
     this.config = config;
   }
 
@@ -88,7 +87,7 @@ export class TokenRefreshManager {
   async refreshAndStore(
     current: StoredSession,
     refresh: RefreshFn = refreshAccessToken,
-    store: SessionStoreInterface = sessionStore,
+    store: SessionStoreInterface,
   ): Promise<StoredSession> {
     if (this.inflightRefresh !== null) {
       return this.inflightRefresh;
