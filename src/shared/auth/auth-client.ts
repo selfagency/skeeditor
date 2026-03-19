@@ -4,10 +4,10 @@ import type { AuthorizationRequest, CallbackParams, OAuthClientParams, TokenResp
 export type { AuthorizationRequest, CallbackParams, OAuthClientParams, TokenResponse };
 
 export class AuthClientError extends Error {
-  readonly kind: string;
-  readonly status: number | undefined;
+  public readonly kind: string;
+  public readonly status: number | undefined;
 
-  constructor(message: string, kind: string, status?: number) {
+  public constructor(message: string, kind: string, status?: number) {
     super(message);
     this.name = 'AuthClientError';
     this.kind = kind;
