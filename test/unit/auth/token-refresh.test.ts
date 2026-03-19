@@ -95,7 +95,7 @@ describe('TokenRefreshManager queuing', () => {
   it('should not issue a second refresh while one is already in-flight', async () => {
     const session = makeSession();
     let resolveFirst!: (v: unknown) => void;
-    const firstCallPromise = new Promise((res) => {
+    const firstCallPromise = new Promise(res => {
       resolveFirst = res;
     });
 
