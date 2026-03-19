@@ -1,11 +1,11 @@
 ---
 # skeeditor-1e94
 title: 'Epic 3: Authentication'
-status: todo
+status: in-progress
 type: epic
 priority: critical
 created_at: 2026-03-18T14:25:26Z
-updated_at: 2026-03-18T14:49:17Z
+updated_at: 2026-03-19T19:04:05Z
 parent: skeeditor-bmr4
 ---
 
