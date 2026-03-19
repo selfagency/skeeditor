@@ -1,10 +1,5 @@
 import { sessionStore } from '../shared/auth/session-store';
-
-/** Typed messages sent from the popup to the background service worker */
-export type AuthMessage =
-  | { type: 'AUTH_SIGN_IN' }
-  | { type: 'AUTH_SIGN_OUT' }
-  | { type: 'AUTH_REAUTHORIZE' };
+import { sendMessage } from '../shared/messages';
 
 type PopupState = 'loading' | 'unauthenticated' | 'authenticated';
 
@@ -72,18 +67,18 @@ class AuthPopup extends HTMLElement {
 
   private attachHandlers(): void {
     this.shadow.getElementById('sign-in')?.addEventListener('click', () => {
-      void browser.runtime.sendMessage({ type: 'AUTH_SIGN_IN' });
+      void sendMessage({ type: 'AUTH_SIGN_IN' });
     });
 
     this.shadow.getElementById('sign-out')?.addEventListener('click', () => {
-      void browser.runtime.sendMessage({ type: 'AUTH_SIGN_OUT' });
+      void sendMessage({ type: 'AUTH_SIGN_OUT' });
       this.state = 'unauthenticated';
       this.did = null;
       this.render();
     });
 
     this.shadow.getElementById('reauthorize')?.addEventListener('click', () => {
-      void browser.runtime.sendMessage({ type: 'AUTH_REAUTHORIZE' });
+      void sendMessage({ type: 'AUTH_REAUTHORIZE' });
     });
   }
 
