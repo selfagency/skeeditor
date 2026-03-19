@@ -73,7 +73,7 @@ This URL must be included in `redirect_uris` in the client metadata document (se
 Add `callback.html` to the extension build output and list it under `web_accessible_resources` if needed:
 
 ```json
-// manifests/shared.json
+// manifests/base.json
 {
   "web_accessible_resources": [
     {
