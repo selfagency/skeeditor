@@ -37,5 +37,5 @@ export async function fetchAuthStatus(): Promise<AuthStatus> {
  * Defaults to `{ authenticated: false }` until `fetchAuthStatus` has resolved.
  */
 export function getAuthStatus(): AuthStatus {
-  return cachedStatus;
+  return { ...cachedStatus };
 }
