@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { XrpcClient, XrpcClientError } from '@src/shared/api/xrpc-client';
+import { buildThreeWayMergeAdvisory, XrpcClient, XrpcClientError } from '@src/shared/api/xrpc-client';
 
 describe('XrpcClient', () => {
   describe('construction', () => {
@@ -219,6 +219,153 @@ describe('XrpcClient', () => {
     });
   });
 
+  describe('putRecordWithSwap', () => {
+    it('should return a success result when the write succeeds', async () => {
+      const client = new XrpcClient({ service: 'https://bsky.social' });
+      client._client.putRecord = vi.fn().mockResolvedValue({
+        body: { uri: 'at://did:plc:abc123/app.bsky.feed.post/rkey1', cid: 'bafynew' },
+      });
+
+      const record = { $type: 'app.bsky.feed.post', text: 'hello', createdAt: '2024-01-01T00:00:00Z' };
+      const result = await client.putRecordWithSwap({
+        repo: 'did:plc:abc123',
+        collection: 'app.bsky.feed.post',
+        rkey: 'rkey1',
+        record,
+        swapRecord: 'bafyold',
+      });
+
+      expect(result).toEqual({
+        success: true,
+        uri: 'at://did:plc:abc123/app.bsky.feed.post/rkey1',
+        cid: 'bafynew',
+      });
+    });
+
+    it('should return conflict details with the latest record when swapRecord is stale', async () => {
+      const { XrpcResponseError } = await import('@atproto/lex');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const conflictError = new XrpcResponseError(
+        { nsid: 'com.atproto.repo.putRecord' } as any,
+        { status: 409, headers: new Headers() } as any,
+        { body: { error: 'InvalidSwap', message: 'Record was updated by another actor' } } as any,
+      );
+      const client = new XrpcClient({ service: 'https://bsky.social' });
+      client._client.putRecord = vi.fn().mockRejectedValue(conflictError);
+      client._client.getRecord = vi.fn().mockResolvedValue({
+        body: {
+          uri: 'at://did:plc:abc123/app.bsky.feed.post/rkey1',
+          cid: 'bafycurrent',
+          value: { $type: 'app.bsky.feed.post', text: 'latest', createdAt: '2024-01-01T00:00:00Z' },
+        },
+      });
+
+      const record = { $type: 'app.bsky.feed.post', text: 'edited', createdAt: '2024-01-01T00:00:00Z' };
+      const result = await client.putRecordWithSwap({
+        repo: 'did:plc:abc123',
+        collection: 'app.bsky.feed.post',
+        rkey: 'rkey1',
+        record,
+        swapRecord: 'bafystale',
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: {
+          kind: 'conflict',
+          message: 'putRecord(did:plc:abc123/app.bsky.feed.post/rkey1): Record was updated by another actor',
+          status: 409,
+        },
+        conflict: {
+          currentCid: 'bafycurrent',
+          currentValue: { $type: 'app.bsky.feed.post', text: 'latest', createdAt: '2024-01-01T00:00:00Z' },
+        },
+      });
+    });
+
+    it('should map validation failures to a structured validation error result', async () => {
+      const { XrpcResponseError } = await import('@atproto/lex');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const validationError = new XrpcResponseError(
+        { nsid: 'com.atproto.repo.putRecord' } as any,
+        { status: 400, headers: new Headers() } as any,
+        { body: { error: 'InvalidRecord', message: 'Record validation failed' } } as any,
+      );
+      const client = new XrpcClient({ service: 'https://bsky.social' });
+      client._client.putRecord = vi.fn().mockRejectedValue(validationError);
+
+      const record = { $type: 'app.bsky.feed.post', text: 'bad', createdAt: '2024-01-01T00:00:00Z' };
+      const result = await client.putRecordWithSwap({
+        repo: 'did:plc:abc123',
+        collection: 'app.bsky.feed.post',
+        rkey: 'rkey1',
+        record,
+        swapRecord: 'bafystale',
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: {
+          kind: 'validation',
+          message: 'putRecord(did:plc:abc123/app.bsky.feed.post/rkey1): Record validation failed',
+          status: 400,
+        },
+      });
+    });
+
+    it('should map auth failures to a structured auth error result', async () => {
+      const { XrpcResponseError } = await import('@atproto/lex');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const authError = new XrpcResponseError(
+        { nsid: 'com.atproto.repo.putRecord' } as any,
+        { status: 401, headers: new Headers() } as any,
+        { body: { error: 'AuthRequired', message: 'Authentication required' } } as any,
+      );
+      const client = new XrpcClient({ service: 'https://bsky.social' });
+      client._client.putRecord = vi.fn().mockRejectedValue(authError);
+
+      const record = { $type: 'app.bsky.feed.post', text: 'bad', createdAt: '2024-01-01T00:00:00Z' };
+      const result = await client.putRecordWithSwap({
+        repo: 'did:plc:abc123',
+        collection: 'app.bsky.feed.post',
+        rkey: 'rkey1',
+        record,
+        swapRecord: 'bafystale',
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: {
+          kind: 'auth',
+          message: 'putRecord(did:plc:abc123/app.bsky.feed.post/rkey1): Authentication required',
+          status: 401,
+        },
+      });
+    });
+
+    it('should map transport failures without a status to a structured network error result', async () => {
+      const client = new XrpcClient({ service: 'https://bsky.social' });
+      client._client.putRecord = vi.fn().mockRejectedValue(new Error('socket hang up'));
+
+      const record = { $type: 'app.bsky.feed.post', text: 'bad', createdAt: '2024-01-01T00:00:00Z' };
+      const result = await client.putRecordWithSwap({
+        repo: 'did:plc:abc123',
+        collection: 'app.bsky.feed.post',
+        rkey: 'rkey1',
+        record,
+        swapRecord: 'bafystale',
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: {
+          kind: 'network',
+          message: 'putRecord(did:plc:abc123/app.bsky.feed.post/rkey1): socket hang up',
+        },
+      });
+    });
+  });
+
   describe('XrpcClientError', () => {
     it('should be an Error instance', () => {
       const error = new XrpcClientError('test message');
@@ -238,6 +385,56 @@ describe('XrpcClient', () => {
       const error = new XrpcClientError('wrapped', { cause });
 
       expect(error.cause).toBe(cause);
+    });
+  });
+
+  describe('buildThreeWayMergeAdvisory', () => {
+    it('should classify independent client and server changes as non-conflicting', () => {
+      const advisory = buildThreeWayMergeAdvisory(
+        { $type: 'app.bsky.feed.post', text: 'old text', langs: ['en'], createdAt: '2024-01-01T00:00:00Z' },
+        { $type: 'app.bsky.feed.post', text: 'old text', langs: ['en', 'fr'], createdAt: '2024-01-01T00:00:00Z' },
+        { $type: 'app.bsky.feed.post', text: 'new text', langs: ['en'], createdAt: '2024-01-01T00:00:00Z' },
+      );
+
+      expect(advisory).toEqual({
+        hasConflicts: false,
+        clientChanges: ['text'],
+        serverChanges: ['langs'],
+        sharedChanges: [],
+        conflictingFields: [],
+      });
+    });
+
+    it('should classify matching client/server edits as shared changes', () => {
+      const advisory = buildThreeWayMergeAdvisory(
+        { text: 'old text', langs: ['en'] },
+        { text: 'new text', langs: ['en'] },
+        { text: 'new text', langs: ['en'] },
+      );
+
+      expect(advisory).toEqual({
+        hasConflicts: false,
+        clientChanges: [],
+        serverChanges: [],
+        sharedChanges: ['text'],
+        conflictingFields: [],
+      });
+    });
+
+    it('should classify divergent edits to the same field as a conflict', () => {
+      const advisory = buildThreeWayMergeAdvisory(
+        { text: 'old text', langs: ['en'] },
+        { text: 'server text', langs: ['en'] },
+        { text: 'client text', langs: ['en'] },
+      );
+
+      expect(advisory).toEqual({
+        hasConflicts: true,
+        clientChanges: [],
+        serverChanges: [],
+        sharedChanges: [],
+        conflictingFields: ['text'],
+      });
     });
   });
 });
