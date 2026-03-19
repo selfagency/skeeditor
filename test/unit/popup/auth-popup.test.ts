@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import type { StoredSession } from '@src/shared/auth/session-store';
 
-const flushPromises = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+const flushPromises = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
 
 const makeSession = (overrides: Partial<StoredSession> = {}): StoredSession => ({
   accessToken: 'access-token',

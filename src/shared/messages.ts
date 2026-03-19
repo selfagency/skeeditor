@@ -35,9 +35,7 @@ export interface GetRecordRequest {
   rkey: string;
 }
 
-export type GetRecordResponse =
-  | GetRecordResult
-  | { error: string };
+export type GetRecordResponse = GetRecordResult | { error: string };
 
 export interface PutRecordRequest {
   type: 'PUT_RECORD';
@@ -48,9 +46,7 @@ export interface PutRecordRequest {
   swapRecord?: string;
 }
 
-export type PutRecordResponse =
-  | PutRecordResult
-  | { error: string };
+export type PutRecordResponse = PutRecordResult | { error: string };
 
 // ── Discriminated union of all inbound requests ───────────────────────────────
 
@@ -64,12 +60,15 @@ export type MessageRequest =
 
 // ── Conditional response type — maps each request to its expected response ────
 
-export type ResponseFor<T extends MessageRequest> =
-  T extends AuthGetStatusRequest ? AuthGetStatusResponse :
-  T extends AuthSignInRequest | AuthSignOutRequest | AuthReauthorizeRequest ? OkResponse :
-  T extends GetRecordRequest ? GetRecordResponse :
-  T extends PutRecordRequest ? PutRecordResponse :
-  never;
+export type ResponseFor<T extends MessageRequest> = T extends AuthGetStatusRequest
+  ? AuthGetStatusResponse
+  : T extends AuthSignInRequest | AuthSignOutRequest | AuthReauthorizeRequest
+    ? OkResponse
+    : T extends GetRecordRequest
+      ? GetRecordResponse
+      : T extends PutRecordRequest
+        ? PutRecordResponse
+        : never;
 
 /**
  * Type-safe wrapper around `browser.runtime.sendMessage`.
