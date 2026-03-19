@@ -1,20 +1,21 @@
+import type { GetRecordResult, PutRecordResult, XrpcClientConfig } from '../shared/api/xrpc-client';
+import { XrpcClient } from '../shared/api/xrpc-client';
+import type { AuthorizationRequest } from '../shared/auth/auth-client';
 import { buildAuthorizationRequest } from '../shared/auth/auth-client';
 import { sessionStore } from '../shared/auth/session-store';
-import { XrpcClient } from '../shared/api/xrpc-client';
-import {
-  BSKY_OAUTH_AUTHORIZE_URL,
-  BSKY_OAUTH_CLIENT_ID,
-  BSKY_OAUTH_SCOPE,
-  BSKY_PDS_URL,
-} from '../shared/constants';
-import type { XrpcClientConfig, GetRecordResult, PutRecordResult } from '../shared/api/xrpc-client';
-import type { AuthorizationRequest } from '../shared/auth/auth-client';
+import { BSKY_OAUTH_AUTHORIZE_URL, BSKY_OAUTH_CLIENT_ID, BSKY_OAUTH_SCOPE, BSKY_PDS_URL } from '../shared/constants';
 
 // ── Dependency injection types ────────────────────────────────────────────────
 
 interface XrpcInterface {
   getRecord: (params: { repo: string; collection: string; rkey: string }) => Promise<GetRecordResult>;
-  putRecord: (params: { repo: string; collection: string; rkey: string; record: Record<string, unknown> & { $type: string }; swapRecord?: string }) => Promise<PutRecordResult>;
+  putRecord: (params: {
+    repo: string;
+    collection: string;
+    rkey: string;
+    record: Record<string, unknown> & { $type: string };
+    swapRecord?: string;
+  }) => Promise<PutRecordResult>;
 }
 
 interface StoreInterface {
