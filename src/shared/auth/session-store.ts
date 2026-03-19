@@ -12,6 +12,14 @@ export interface StoredSession {
   did: string;
 }
 
+/** Non-sensitive session metadata safe to expose in popup context (no tokens) */
+export interface AuthStatus {
+  /** Authenticated user DID */
+  did: string;
+  /** Unix timestamp (ms) at which the access token expires */
+  expiresAt: number;
+}
+
 const STORAGE_KEY = 'session';
 
 /**
@@ -61,4 +69,17 @@ async function isAccessTokenValid(): Promise<boolean> {
   return session.expiresAt - bufferMs > Date.now();
 }
 
-export const sessionStore = { set, get, clear, isAccessTokenValid };
+/**
+ * Returns non-sensitive session metadata (DID and expiry) without exposing
+ * token credentials. Safe to call from the popup context.
+ *
+ * Returns null if no session exists.
+ */
+async function getAuthStatus(): Promise<AuthStatus | null> {
+  const session = await get();
+  if (session === null) return null;
+
+  return { did: session.did, expiresAt: session.expiresAt };
+}
+
+export const sessionStore = { set, get, clear, isAccessTokenValid, getAuthStatus };
