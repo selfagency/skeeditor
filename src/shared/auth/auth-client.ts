@@ -19,8 +19,9 @@ export class AuthClientError extends Error {
  * Build a PKCE authorization request URL.
  *
  * Returns the full authorization URL to open in the browser along with the
- * `state` and `codeVerifier` that must be persisted (e.g. in session storage)
- * before the redirect so they can be verified in the callback.
+ * `state` and `codeVerifier` that must be persisted (e.g. in an in-memory map,
+ * `browser.storage.session`, or `browser.storage.local`, depending on desired
+ * lifetime) before the redirect so they can be verified in the callback.
  *
  * This must be called from the background service worker, not from a content
  * script, since content scripts must not store sensitive auth material.
@@ -112,7 +113,7 @@ export function parseCallbackParams(url: string): CallbackParams {
   const code = parsed.searchParams.get('code');
   const state = parsed.searchParams.get('state');
 
-  if (code === null || state === null) {
+  if (!code || !state) {
     return { error: 'missing_params', errorDescription: 'Callback URL is missing required code or state parameters.' };
   }
 

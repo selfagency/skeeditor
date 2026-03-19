@@ -15,7 +15,7 @@ Implement OAuth PKCE authorization flow suitable for browser extensions (PKCE, r
 
 - [x] Implement PKCE code challenge/verifier helper functions
 - [x] Implement sign-in request builder that opens auth URL with state and code_challenge
-- [x] Implement callback page handler that posts code to background for token exchange
+- [ ] Implement callback page handler that posts code to background for token exchange
 - [x] Add Vitest unit tests for PKCE helpers
 - [x] Add MSW-based integration tests for token exchange logic where feasible
 - [x] Document client registration steps and required scopes in `docs/auth.md`

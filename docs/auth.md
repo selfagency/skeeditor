@@ -10,9 +10,9 @@ Skeeditor authenticates with the AT Protocol PDS via OAuth 2.0 with PKCE (Proof 
 2. Popup sends a `START_AUTH` message to the background service worker.
 3. Background builds a PKCE authorization request (`buildAuthorizationRequest`) and opens the authorization URL in a new tab.
 4. The PDS redirects the user to the extension-packaged `callback.html` page.
-5. `callback.html` reads the `code` and `state` URL parameters and posts them to the background via `browser.runtime.sendMessage`.
-6. Background verifies the `state`, calls `exchangeCodeForTokens`, and stores the resulting tokens in `browser.storage.local`.
-7. Background notifies the popup of the successful login.
+5. `callback.html` reads the `code` and `state` URL parameters and posts them to the background via `chrome.runtime.sendMessage`.
+6. Background verifies the `state`, calls `exchangeCodeForTokens`, and holds the resulting tokens in memory for the current session.
+7. Background notifies the popup of the successful login and returns the tokens (and derived session state). A follow-up bean (`skeeditor-4pqr`) will add persistence of these tokens to `browser.storage.local`.
 
 ---
 
@@ -28,7 +28,7 @@ AT Protocol OAuth requires the client to be identified by a **client ID that is 
   "client_name": "Skeeditor",
   "client_uri": "https://skeeditor.example.com",
   "redirect_uris": [
-    "https://skeeditor.example.com/callback"
+    "chrome-extension://<extension-id>/callback.html"
   ],
   "response_types": ["code"],
   "grant_types": ["authorization_code", "refresh_token"],
@@ -38,7 +38,7 @@ AT Protocol OAuth requires the client to be identified by a **client ID that is 
 }
 ```
 
-> **Note for development:** During development you may host the metadata document locally (e.g. with `npx serve`) and use its URL as the `client_id`. Never embed the client ID as a secret — it is a public identifier.
+> **Note for development:** The `client_id` **must still be an HTTPS URL**, even in development. You may serve the metadata document from a local dev server as long as it is exposed over HTTPS (for example via an HTTPS tunnel such as ngrok or Cloudflare Tunnel, e.g. `https://<random>.ngrok.io/client-metadata.json`). Never embed the client ID as a secret — it is a public identifier.
 
 ---
 
