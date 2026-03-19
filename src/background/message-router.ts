@@ -100,6 +100,13 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
     }
 
     case 'GET_RECORD': {
+      if (
+        typeof message['repo'] !== 'string' ||
+        typeof message['collection'] !== 'string' ||
+        typeof message['rkey'] !== 'string'
+      ) {
+        return { error: 'Invalid request: repo, collection, and rkey must be strings' };
+      }
       const stored = await deps.store.get();
       const valid = await deps.store.isAccessTokenValid();
       if (stored === null || !valid) {
@@ -108,9 +115,9 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
       try {
         const client = deps.createXrpc({ service: BSKY_PDS_URL, did: stored.did, accessJwt: stored.accessToken });
         return await client.getRecord({
-          repo: message['repo'] as string,
-          collection: message['collection'] as string,
-          rkey: message['rkey'] as string,
+          repo: message['repo'],
+          collection: message['collection'],
+          rkey: message['rkey'],
         });
       } catch (err) {
         return { error: err instanceof Error ? err.message : 'Failed to fetch record' };
@@ -118,6 +125,20 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
     }
 
     case 'PUT_RECORD': {
+      if (
+        typeof message['repo'] !== 'string' ||
+        typeof message['collection'] !== 'string' ||
+        typeof message['rkey'] !== 'string'
+      ) {
+        return { error: 'Invalid request: repo, collection, and rkey must be strings' };
+      }
+      if (
+        typeof message['record'] !== 'object' ||
+        message['record'] === null ||
+        typeof (message['record'] as Record<string, unknown>)['$type'] !== 'string'
+      ) {
+        return { error: 'Invalid request: record must be an object with a string $type field' };
+      }
       const stored = await deps.store.get();
       const valid = await deps.store.isAccessTokenValid();
       if (stored === null || !valid) {
@@ -127,9 +148,9 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
         const client = deps.createXrpc({ service: BSKY_PDS_URL, did: stored.did, accessJwt: stored.accessToken });
         const record = message['record'] as Record<string, unknown> & { $type: string };
         const params: Parameters<XrpcInterface['putRecord']>[0] = {
-          repo: message['repo'] as string,
-          collection: message['collection'] as string,
-          rkey: message['rkey'] as string,
+          repo: message['repo'],
+          collection: message['collection'],
+          rkey: message['rkey'],
           record,
         };
         if (typeof message['swapRecord'] === 'string') {
@@ -172,7 +193,7 @@ export function createDefaultDeps(): RouterDeps {
  * function removes the listener and is useful in tests.
  */
 export function registerMessageRouter(deps: RouterDeps = createDefaultDeps()): () => void {
-  const listener = (message: unknown): Promise<unknown> => handleMessage(message, deps);
+  const listener = (message: unknown, _sender: unknown): Promise<unknown> => handleMessage(message, deps);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   browser.runtime.onMessage.addListener(listener as any);
   return () => {

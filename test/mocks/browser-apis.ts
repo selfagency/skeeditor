@@ -1,5 +1,18 @@
 import { vi } from 'vitest';
 
+interface MessageSender {
+  id?: string;
+  tab?: { id?: number; url?: string };
+  url?: string;
+  origin?: string;
+}
+
+type MessageListener = (
+  message: unknown,
+  sender: MessageSender,
+  sendResponse: (response?: unknown) => void,
+) => boolean | Promise<unknown> | void;
+
 interface BrowserMessage {
   type: string;
 }
@@ -10,8 +23,8 @@ interface BrowserPingResponse {
 
 interface BrowserRuntimeMock {
   onMessage: {
-    addListener: (listener: (message: unknown) => unknown) => void;
-    removeListener: (listener: (message: unknown) => unknown) => void;
+    addListener: (listener: MessageListener) => void;
+    removeListener: (listener: MessageListener) => void;
   };
   sendMessage: (message: BrowserMessage) => Promise<BrowserPingResponse>;
   getURL: (path: string) => string;

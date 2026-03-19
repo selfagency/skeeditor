@@ -25,9 +25,15 @@ class AuthPopup extends HTMLElement {
 
   private async checkAuth(): Promise<void> {
     const stored = await sessionStore.get();
-    const valid = await sessionStore.isAccessTokenValid();
 
-    if (stored !== null && valid) {
+    const EXPIRY_BUFFER_MS = 30_000;
+    const now = Date.now();
+    const isValid =
+      stored !== null &&
+      typeof stored.expiresAt === 'number' &&
+      stored.expiresAt - now > EXPIRY_BUFFER_MS;
+
+    if (stored !== null && isValid) {
       this.state = 'authenticated';
       this.did = stored.did;
     } else {
@@ -71,15 +77,24 @@ class AuthPopup extends HTMLElement {
     });
 
     this.shadow.getElementById('sign-out')?.addEventListener('click', () => {
-      void sendMessage({ type: 'AUTH_SIGN_OUT' });
-      this.state = 'unauthenticated';
-      this.did = null;
-      this.render();
+      void this.handleSignOut();
     });
 
     this.shadow.getElementById('reauthorize')?.addEventListener('click', () => {
       void sendMessage({ type: 'AUTH_REAUTHORIZE' });
     });
+  }
+
+  private async handleSignOut(): Promise<void> {
+    try {
+      await sendMessage({ type: 'AUTH_SIGN_OUT' });
+      this.state = 'unauthenticated';
+      this.did = null;
+      this.render();
+    } catch {
+      // If sign-out fails (e.g. service worker suspended), reconcile from storage
+      await this.checkAuth();
+    }
   }
 
   /** Prevent XSS when interpolating user-controlled data (e.g. DIDs) into HTML */

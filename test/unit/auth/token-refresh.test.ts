@@ -47,29 +47,32 @@ describe('TokenRefreshManager.refreshAndStore', () => {
   });
 
   it('should calculate expiresAt from expires_in when provided', async () => {
-    vi.setSystemTime(NOW);
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(NOW);
 
-    const session = makeSession();
-    const newTokens = {
-      access_token: 'at_new',
-      token_type: 'Bearer',
-      expires_in: 3600,
-    };
+      const session = makeSession();
+      const newTokens = {
+        access_token: 'at_new',
+        token_type: 'Bearer',
+        expires_in: 3600,
+      };
 
-    const mockRefresh = vi.fn().mockResolvedValue(newTokens);
-    const mockStore = {
-      get: vi.fn().mockResolvedValue(session),
-      set: vi.fn().mockResolvedValue(undefined),
-      clear: vi.fn(),
-      isAccessTokenValid: vi.fn(),
-    };
+      const mockRefresh = vi.fn().mockResolvedValue(newTokens);
+      const mockStore = {
+        get: vi.fn().mockResolvedValue(session),
+        set: vi.fn().mockResolvedValue(undefined),
+        clear: vi.fn(),
+        isAccessTokenValid: vi.fn(),
+      };
 
-    const manager = new TokenRefreshManager({ tokenEndpoint: TOKEN_ENDPOINT, clientId: CLIENT_ID });
-    const result = await manager.refreshAndStore(session, mockRefresh, mockStore);
+      const manager = new TokenRefreshManager({ tokenEndpoint: TOKEN_ENDPOINT, clientId: CLIENT_ID });
+      const result = await manager.refreshAndStore(session, mockRefresh, mockStore);
 
-    expect(result.expiresAt).toBe(NOW + 3600 * 1000);
-
-    vi.useRealTimers();
+      expect(result.expiresAt).toBe(NOW + 3600 * 1000);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('should retain the existing refresh token when the response does not include a new one', async () => {

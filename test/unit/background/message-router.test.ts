@@ -136,6 +136,47 @@ describe('handleMessage', () => {
       expect(result).toEqual({ error: 'Not authenticated' });
     });
 
+    it('returns an invalid request error when required fields are missing', async () => {
+      const deps = makeDeps({ store: makeStoreMock(makeSession()) });
+
+      const result = await handleMessage({ type: 'GET_RECORD', repo: 'did:plc:alice' }, deps);
+
+      expect(result).toEqual({ error: 'Invalid request: repo, collection, and rkey must be strings' });
+    });
+
+    it('returns an invalid request error when repo has wrong type', async () => {
+      const deps = makeDeps({ store: makeStoreMock(makeSession()) });
+
+      const result = await handleMessage(
+        { type: 'GET_RECORD', repo: 123, collection: 'app.bsky.feed.post', rkey: 'abc' },
+        deps,
+      );
+
+      expect(result).toEqual({ error: 'Invalid request: repo, collection, and rkey must be strings' });
+    });
+
+    it('returns an invalid request error when collection has wrong type', async () => {
+      const deps = makeDeps({ store: makeStoreMock(makeSession()) });
+
+      const result = await handleMessage(
+        { type: 'GET_RECORD', repo: 'did:plc:alice', collection: null, rkey: 'abc' },
+        deps,
+      );
+
+      expect(result).toEqual({ error: 'Invalid request: repo, collection, and rkey must be strings' });
+    });
+
+    it('returns an invalid request error when rkey has wrong type', async () => {
+      const deps = makeDeps({ store: makeStoreMock(makeSession()) });
+
+      const result = await handleMessage(
+        { type: 'GET_RECORD', repo: 'did:plc:alice', collection: 'app.bsky.feed.post', rkey: true },
+        deps,
+      );
+
+      expect(result).toEqual({ error: 'Invalid request: repo, collection, and rkey must be strings' });
+    });
+
     it('calls xrpcClient.getRecord with the correct params when authenticated', async () => {
       const session = makeSession();
       const xrpc = makeXrpcMock();
@@ -188,6 +229,45 @@ describe('handleMessage', () => {
       );
 
       expect(result).toEqual({ error: 'Not authenticated' });
+    });
+
+    it('returns an invalid request error when required key fields are missing', async () => {
+      const deps = makeDeps({ store: makeStoreMock(makeSession()) });
+
+      const result = await handleMessage(
+        { type: 'PUT_RECORD', repo: 'did:plc:alice', record: { $type: 'app.bsky.feed.post' } },
+        deps,
+      );
+
+      expect(result).toEqual({ error: 'Invalid request: repo, collection, and rkey must be strings' });
+    });
+
+    it('returns an invalid request error when record is missing', async () => {
+      const deps = makeDeps({ store: makeStoreMock(makeSession()) });
+
+      const result = await handleMessage(
+        { type: 'PUT_RECORD', repo: 'did:plc:alice', collection: 'app.bsky.feed.post', rkey: 'abc' },
+        deps,
+      );
+
+      expect(result).toEqual({ error: 'Invalid request: record must be an object with a string $type field' });
+    });
+
+    it('returns an invalid request error when record has no $type', async () => {
+      const deps = makeDeps({ store: makeStoreMock(makeSession()) });
+
+      const result = await handleMessage(
+        {
+          type: 'PUT_RECORD',
+          repo: 'did:plc:alice',
+          collection: 'app.bsky.feed.post',
+          rkey: 'abc',
+          record: { text: 'no type here' },
+        },
+        deps,
+      );
+
+      expect(result).toEqual({ error: 'Invalid request: record must be an object with a string $type field' });
     });
 
     it('calls xrpcClient.putRecord with the correct params when authenticated', async () => {
