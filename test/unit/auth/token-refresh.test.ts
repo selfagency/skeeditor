@@ -47,29 +47,33 @@ describe('TokenRefreshManager.refreshAndStore', () => {
   });
 
   it('should calculate expiresAt from expires_in when provided', async () => {
-    vi.setSystemTime(NOW);
+    vi.useFakeTimers();
 
-    const session = makeSession();
-    const newTokens = {
-      access_token: 'at_new',
-      token_type: 'Bearer',
-      expires_in: 3600,
-    };
+    try {
+      vi.setSystemTime(NOW);
 
-    const mockRefresh = vi.fn().mockResolvedValue(newTokens);
-    const mockStore = {
-      get: vi.fn().mockResolvedValue(session),
-      set: vi.fn().mockResolvedValue(undefined),
-      clear: vi.fn(),
-      isAccessTokenValid: vi.fn(),
-    };
+      const session = makeSession();
+      const newTokens = {
+        access_token: 'at_new',
+        token_type: 'Bearer',
+        expires_in: 3600,
+      };
 
-    const manager = new TokenRefreshManager({ tokenEndpoint: TOKEN_ENDPOINT, clientId: CLIENT_ID });
-    const result = await manager.refreshAndStore(session, mockRefresh, mockStore);
+      const mockRefresh = vi.fn().mockResolvedValue(newTokens);
+      const mockStore = {
+        get: vi.fn().mockResolvedValue(session),
+        set: vi.fn().mockResolvedValue(undefined),
+        clear: vi.fn(),
+        isAccessTokenValid: vi.fn(),
+      };
 
-    expect(result.expiresAt).toBe(NOW + 3600 * 1000);
+      const manager = new TokenRefreshManager({ tokenEndpoint: TOKEN_ENDPOINT, clientId: CLIENT_ID });
+      const result = await manager.refreshAndStore(session, mockRefresh, mockStore);
 
-    vi.useRealTimers();
+      expect(result.expiresAt).toBe(NOW + 3600 * 1000);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('should retain the existing refresh token when the response does not include a new one', async () => {
@@ -95,7 +99,7 @@ describe('TokenRefreshManager queuing', () => {
   it('should not issue a second refresh while one is already in-flight', async () => {
     const session = makeSession();
     let resolveFirst!: (v: unknown) => void;
-    const firstCallPromise = new Promise((res) => {
+    const firstCallPromise = new Promise(res => {
       resolveFirst = res;
     });
 

@@ -4,16 +4,12 @@ interface BrowserMessage {
   type: string;
 }
 
-interface BrowserPingResponse {
-  ok: true;
-}
-
 interface BrowserRuntimeMock {
   onMessage: {
     addListener: () => void;
     removeListener: () => void;
   };
-  sendMessage: (message: BrowserMessage) => Promise<BrowserPingResponse>;
+  sendMessage: (message: BrowserMessage) => Promise<unknown>;
 }
 
 interface BrowserStorageMock {

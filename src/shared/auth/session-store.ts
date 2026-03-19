@@ -17,8 +17,10 @@ const STORAGE_KEY = 'session';
 /**
  * Persist a session to `browser.storage.local`.
  *
- * Must be called only from the background service worker — never from content
- * scripts or the page context.
+ * This write operation must be performed only from privileged extension
+ * contexts such as the background service worker. Read-only helpers in this
+ * module (for example `get` and `isAccessTokenValid`) may be safely used from
+ * popups or content scripts.
  */
 async function set(session: StoredSession): Promise<void> {
   await browser.storage.local.set({ [STORAGE_KEY]: session });

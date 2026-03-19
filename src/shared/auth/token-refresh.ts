@@ -1,6 +1,6 @@
 import { AuthClientError } from './auth-client';
 import type { TokenResponse } from './types';
-import type { sessionStore as SessionStore, StoredSession } from './session-store';
+import type { StoredSession } from './session-store';
 
 export type { TokenResponse };
 
@@ -87,13 +87,18 @@ export class TokenRefreshManager {
   async refreshAndStore(
     current: StoredSession,
     refresh: RefreshFn = refreshAccessToken,
-    store: SessionStoreInterface = globalThis.__sessionStore as SessionStoreInterface,
+    store?: SessionStoreInterface,
   ): Promise<StoredSession> {
+    const effectiveStore = store ?? globalThis.__sessionStore;
+    if (!effectiveStore) {
+      throw new AuthClientError('Session store is not configured', 'internal_error');
+    }
+
     if (this.inflightRefresh !== null) {
       return this.inflightRefresh;
     }
 
-    this.inflightRefresh = this.doRefresh(current, refresh, store).finally(() => {
+    this.inflightRefresh = this.doRefresh(current, refresh, effectiveStore).finally(() => {
       this.inflightRefresh = null;
     });
 
@@ -122,5 +127,5 @@ export class TokenRefreshManager {
 
 // Allow background script to inject the real sessionStore at module init
 declare global {
-  var __sessionStore: typeof SessionStore | undefined;
+  var __sessionStore: SessionStoreInterface | undefined;
 }

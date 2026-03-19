@@ -1,4 +1,3 @@
-import { sessionStore } from '../shared/auth/session-store';
 import { sendMessage } from '../shared/messages';
 
 type PopupState = 'loading' | 'unauthenticated' | 'authenticated';
@@ -24,12 +23,11 @@ class AuthPopup extends HTMLElement {
   }
 
   private async checkAuth(): Promise<void> {
-    const stored = await sessionStore.get();
-    const valid = await sessionStore.isAccessTokenValid();
+    const status = await sendMessage({ type: 'AUTH_GET_STATUS' });
 
-    if (stored !== null && valid) {
+    if (status.authenticated) {
       this.state = 'authenticated';
-      this.did = stored.did;
+      this.did = status.did;
     } else {
       this.state = 'unauthenticated';
       this.did = null;
@@ -66,19 +64,34 @@ class AuthPopup extends HTMLElement {
   }
 
   private attachHandlers(): void {
-    this.shadow.getElementById('sign-in')?.addEventListener('click', () => {
-      void sendMessage({ type: 'AUTH_SIGN_IN' });
+    this.shadow.getElementById('sign-in')?.addEventListener('click', async () => {
+      try {
+        await sendMessage({ type: 'AUTH_SIGN_IN' });
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to start sign-in flow', error);
+      }
     });
 
-    this.shadow.getElementById('sign-out')?.addEventListener('click', () => {
-      void sendMessage({ type: 'AUTH_SIGN_OUT' });
-      this.state = 'unauthenticated';
-      this.did = null;
-      this.render();
+    this.shadow.getElementById('sign-out')?.addEventListener('click', async () => {
+      try {
+        await sendMessage({ type: 'AUTH_SIGN_OUT' });
+        this.state = 'unauthenticated';
+        this.did = null;
+        this.render();
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to sign out', error);
+      }
     });
 
-    this.shadow.getElementById('reauthorize')?.addEventListener('click', () => {
-      void sendMessage({ type: 'AUTH_REAUTHORIZE' });
+    this.shadow.getElementById('reauthorize')?.addEventListener('click', async () => {
+      try {
+        await sendMessage({ type: 'AUTH_REAUTHORIZE' });
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to reauthorize session', error);
+      }
     });
   }
 
