@@ -50,6 +50,10 @@ export interface PutRecordConflictDetails {
   currentValue: Record<string, unknown>;
 }
 
+export interface PutRecordWithSwapParams extends PutRecordParams {
+  swapRecord: NonNullable<PutRecordParams['swapRecord']>;
+}
+
 export interface PutRecordMergeAdvisory {
   hasConflicts: boolean;
   clientChanges: string[];
@@ -131,7 +135,40 @@ const mapStructuredPutRecordError = (error: XrpcClientError): PutRecordWithSwapE
 };
 
 const valuesEqual = (left: unknown, right: unknown): boolean => {
-  return JSON.stringify(left) === JSON.stringify(right);
+  if (Object.is(left, right)) {
+    return true;
+  }
+
+  if (typeof left !== typeof right) {
+    return false;
+  }
+
+  if (left === null || right === null) {
+    return left === right;
+  }
+
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) {
+      return false;
+    }
+
+    return left.every((value, index) => valuesEqual(value, right[index]));
+  }
+
+  if (typeof left === 'object' && typeof right === 'object') {
+    const leftRecord = left as Record<string, unknown>;
+    const rightRecord = right as Record<string, unknown>;
+    const leftKeys = Object.keys(leftRecord).sort();
+    const rightKeys = Object.keys(rightRecord).sort();
+
+    if (!valuesEqual(leftKeys, rightKeys)) {
+      return false;
+    }
+
+    return leftKeys.every(key => valuesEqual(leftRecord[key], rightRecord[key]));
+  }
+
+  return false;
 };
 
 export function buildThreeWayMergeAdvisory(
@@ -275,8 +312,10 @@ export class XrpcClient {
    * can distinguish retryable conflicts from validation/auth/network failures.
    * On `409 InvalidSwap`, it attempts to fetch the latest server record and
    * includes it in the result so the caller can show a retry / compare flow.
+   * Requires `swapRecord` to be provided so optimistic concurrency is always
+   * enforced for this helper.
    */
-  public async putRecordWithSwap(params: PutRecordParams): Promise<PutRecordWithSwapResult> {
+  public async putRecordWithSwap(params: PutRecordWithSwapParams): Promise<PutRecordWithSwapResult> {
     try {
       const result = await this.putRecord(params);
       return { success: true, uri: result.uri, cid: result.cid };

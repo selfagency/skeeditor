@@ -26,7 +26,7 @@ Use the XRPC client wrapper for authenticated record reads/writes against the PD
 - `new XrpcClient({ service, did?, accessJwt? })`
 - `client.getRecord({ repo, collection, rkey })`
 - `client.putRecord({ repo, collection, rkey, record, swapRecord?, validate? })`
-- `client.putRecordWithSwap({ repo, collection, rkey, record, swapRecord, validate? })`
+- `client.putRecordWithSwap({ repo, collection, rkey, record, swapRecord, validate? })` — requires `swapRecord`
 
 ### `putRecordWithSwap` result shapes
 

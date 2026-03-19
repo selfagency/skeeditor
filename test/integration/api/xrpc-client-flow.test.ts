@@ -159,7 +159,7 @@ describe('XrpcClient integration flow', () => {
         http.get(`${BSKY_PDS_URL}/xrpc/com.atproto.repo.getRecord`, () => {
           return HttpResponse.json({
             uri: TEST_AT_URI,
-            cid: 'bafyrelatest',
+            cid: 'bafyreia4w4rnpdzud2l56x2egzvtg4l7s2b4q77m5e6sl6z4w2d6l7y5he',
             value: { ...TEST_VALUE, text: 'Latest server text' },
           });
         }),
@@ -179,6 +179,10 @@ describe('XrpcClient integration flow', () => {
           kind: 'conflict',
           message: `putRecord(${TEST_DID}/${TEST_COLLECTION}/${TEST_RKEY}): Record was updated by another actor`,
           status: 409,
+        },
+        conflict: {
+          currentCid: 'bafyreia4w4rnpdzud2l56x2egzvtg4l7s2b4q77m5e6sl6z4w2d6l7y5he',
+          currentValue: { ...TEST_VALUE, text: 'Latest server text' },
         },
       });
     });

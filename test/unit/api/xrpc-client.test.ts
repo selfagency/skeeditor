@@ -436,5 +436,21 @@ describe('XrpcClient', () => {
         conflictingFields: ['text'],
       });
     });
+
+    it('should treat nested objects with different key order as equal', () => {
+      const advisory = buildThreeWayMergeAdvisory(
+        { embed: { a: 1, b: 2 } },
+        { embed: { b: 2, a: 1 } },
+        { embed: { a: 1, b: 2 } },
+      );
+
+      expect(advisory).toEqual({
+        hasConflicts: false,
+        clientChanges: [],
+        serverChanges: [],
+        sharedChanges: [],
+        conflictingFields: [],
+      });
+    });
   });
 });
