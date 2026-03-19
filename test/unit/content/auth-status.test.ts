@@ -8,11 +8,16 @@ vi.mock('../../../src/shared/messages', () => ({
 }));
 
 import { sendMessage } from '../../../src/shared/messages';
-import { fetchAuthStatus, getAuthStatus } from '../../../src/content/auth-status';
 
-beforeEach(() => {
+let fetchAuthStatus: (typeof import('../../../src/content/auth-status'))['fetchAuthStatus'];
+let getAuthStatus: (typeof import('../../../src/content/auth-status'))['getAuthStatus'];
+
+beforeEach(async () => {
+  vi.resetModules();
   resetBrowserApiMocks();
-  vi.clearAllMocks();
+  const authModule = await import('../../../src/content/auth-status');
+  fetchAuthStatus = authModule.fetchAuthStatus;
+  getAuthStatus = authModule.getAuthStatus;
 });
 
 describe('fetchAuthStatus', () => {
