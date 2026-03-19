@@ -7,7 +7,7 @@ Skeeditor authenticates with the AT Protocol PDS via OAuth 2.0 with PKCE (Proof 
 ## Overview
 
 1. User clicks "Sign in" in the popup.
-2. Popup sends a `START_AUTH` message to the background service worker.
+2. Popup sends an `AUTH_SIGN_IN` message to the background service worker via `browser.runtime.sendMessage` (and uses `AUTH_SIGN_OUT` / `AUTH_REAUTHORIZE` for sign-out and reauthorization flows).
 3. Background builds a PKCE authorization request (`buildAuthorizationRequest`) and opens the authorization URL in a new tab.
 4. The PDS redirects the user to the extension-packaged `callback.html` page.
 5. `callback.html` reads the `code` and `state` URL parameters and posts them to the background via `chrome.runtime.sendMessage`.

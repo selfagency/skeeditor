@@ -247,3 +247,4 @@ test-results/
 web-ext-artifacts/
 SafariExtension/
 xcode/
+package-lock.json
