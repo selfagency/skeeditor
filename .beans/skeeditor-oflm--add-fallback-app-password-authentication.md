@@ -10,6 +10,7 @@ parent: skeeditor-1e94
 blocked_by:
     - skeeditor-v7k9
 branch: feat/oflm-app-password-auth
+pr: 23
 ---
 
 ##Todo
@@ -39,4 +40,5 @@ branch: feat/oflm-app-password-auth
   - Server error message propagated to thrown error
   - Correct JSON body sent to PDS endpoint
 - Branch: feat/oflm-app-password-auth
+- PR: #23
 - Security note: App passwords are less secure than OAuth PKCE (no expiry, no DPoP); OAuth PKCE remains preferred
