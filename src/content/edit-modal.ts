@@ -196,7 +196,7 @@ export class EditModal extends HTMLElement {
   private currentText = '';
   private maxLength = MAX_POST_LENGTH;
   private onCancel: (() => void) | undefined = undefined;
-  private onSave: ((text: string) => void) | undefined = undefined;
+  private onSave: ((text: string) => void | Promise<void>) | undefined = undefined;
   private handleInputBound = this.handleInput.bind(this);
   private handleSaveBound = this.handleSave.bind(this);
   private closeBound = this.close.bind(this);
@@ -255,7 +255,7 @@ export class EditModal extends HTMLElement {
     window.removeEventListener('keydown', this.handleKeydownBound);
   }
 
-  public open(text: string, onCancel?: () => void, onSave?: (text: string) => void): void {
+  public open(text: string, onCancel?: () => void, onSave?: (text: string) => void | Promise<void>): void {
     this.originalText = text;
     this.currentText = text;
     this.onCancel = onCancel ?? undefined;
@@ -292,6 +292,18 @@ export class EditModal extends HTMLElement {
 
   public setSuccess(message: string): void {
     this.showStatusMessage(message, 'success');
+  }
+
+  public markSaved(text: string): void {
+    this.originalText = text;
+    this.currentText = text;
+
+    if (this.textarea) {
+      this.textarea.value = text;
+    }
+
+    this.updateCharCount();
+    this.updateSaveButtonState();
   }
 
   private handleInput(): void {
@@ -365,8 +377,10 @@ export class EditModal extends HTMLElement {
       return;
     }
 
-    this.onSave?.(this.textarea!.value);
+    void this.onSave?.(this.textarea!.value);
   }
 }
 
-customElements.define('edit-modal', EditModal);
+if (!customElements.get('edit-modal')) {
+  customElements.define('edit-modal', EditModal);
+}

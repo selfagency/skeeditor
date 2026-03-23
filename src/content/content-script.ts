@@ -1,12 +1,16 @@
 import { APP_NAME } from '../shared/constants';
+import { sendMessage } from '../shared/messages';
 import './styles.css';
 import { EditModal } from './edit-modal';
 import { extractPostInfo, extractPostText, findPosts } from './post-detector';
+import { buildUpdatedPostRecord, type EditablePostRecord } from './post-editor';
 
 const POST_MARKER_ATTRIBUTE = 'data-skeeditor-processed';
 const EDIT_BUTTON_ATTRIBUTE = 'data-skeeditor-edit-button';
 
 let mutationObserver: MutationObserver | null = null;
+let currentDid: string | null = null;
+let domContentLoadedHandler: (() => void) | null = null;
 
 const getOrCreateEditModal = (): EditModal => {
   const existing = document.querySelector<EditModal>('edit-modal[data-skeeditor-modal="true"]');
@@ -22,14 +26,56 @@ const getOrCreateEditModal = (): EditModal => {
   return modal;
 };
 
-const handleEditClick = (postElement: HTMLElement): void => {
+const refreshAuthState = async (): Promise<void> => {
+  const status = await sendMessage({ type: 'AUTH_GET_STATUS' });
+  currentDid = status.authenticated ? status.did : null;
+};
+
+const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
   const info = extractPostInfo(postElement);
+  if (!info || currentDid !== info.repo) {
+    return;
+  }
+
   const modal = getOrCreateEditModal();
   const initialText = extractPostText(postElement);
 
-  modal.open(initialText, undefined, text => {
-    console.info(`${APP_NAME}: edit requested`, { atUri: info?.atUri, text });
-    modal.setSuccess('Edit captured locally. Background wiring comes next.');
+  const recordResponse = await sendMessage({
+    type: 'GET_RECORD',
+    repo: info.repo,
+    collection: info.collection,
+    rkey: info.rkey,
+  });
+
+  if ('error' in recordResponse) {
+    modal.open(initialText);
+    modal.setError(recordResponse.error);
+    return;
+  }
+
+  const currentRecord = recordResponse.value as EditablePostRecord;
+  const initialRecordText = typeof currentRecord.text === 'string' ? currentRecord.text : initialText;
+
+  modal.open(initialRecordText, undefined, async text => {
+    const updatedRecord = buildUpdatedPostRecord(currentRecord, text);
+
+    const writeResponse = await sendMessage({
+      type: 'PUT_RECORD',
+      repo: info.repo,
+      collection: info.collection,
+      rkey: info.rkey,
+      record: updatedRecord,
+      swapRecord: recordResponse.cid,
+    });
+
+    if ('error' in writeResponse) {
+      modal.setError(writeResponse.error);
+      return;
+    }
+
+    modal.markSaved(text);
+    modal.setSuccess('Edit saved.');
+    console.info(`${APP_NAME}: edit saved`, { atUri: info.atUri, uri: writeResponse.uri, cid: writeResponse.cid });
   });
 };
 
@@ -61,6 +107,10 @@ const injectEditButton = (postElement: HTMLElement): void => {
 
 const scanForPosts = (): void => {
   for (const postInfo of findPosts(document)) {
+    if (currentDid !== null && postInfo.repo !== currentDid) {
+      continue;
+    }
+
     injectEditButton(postInfo.element);
   }
 };
@@ -80,13 +130,35 @@ const ensureObserver = (): void => {
 };
 
 const start = (): void => {
-  scanForPosts();
   ensureObserver();
-  console.info(`${APP_NAME}: content script loaded`);
+
+  void refreshAuthState()
+    .then(() => {
+      scanForPosts();
+      console.info(`${APP_NAME}: content script loaded`);
+    })
+    .catch(error => {
+      console.error(`${APP_NAME}: failed to load auth state`, error);
+      scanForPosts();
+      console.info(`${APP_NAME}: content script loaded with anonymous state`);
+    });
 };
 
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', start, { once: true });
+  domContentLoadedHandler = start;
+  document.addEventListener('DOMContentLoaded', domContentLoadedHandler, { once: true });
 } else {
   start();
 }
+
+export const cleanupContentScript = (): void => {
+  mutationObserver?.disconnect();
+  mutationObserver = null;
+
+  if (domContentLoadedHandler) {
+    document.removeEventListener('DOMContentLoaded', domContentLoadedHandler);
+    domContentLoadedHandler = null;
+  }
+
+  currentDid = null;
+};
