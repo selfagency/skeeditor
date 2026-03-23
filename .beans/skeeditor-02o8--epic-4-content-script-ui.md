@@ -5,8 +5,9 @@ status: in-progress
 type: epic
 priority: critical
 created_at: 2026-03-18T14:25:30Z
-updated_at: 2026-03-23T17:17:28Z
+updated_at: 2026-03-23T17:19:00Z
 parent: skeeditor-bmr4
+branch: feat/02o8-content-script-ui
 ---
 
 Content script to detect posts, inject Edit button, build edit modal and wire to background via messaging. Preserve facets and embeds.
