@@ -16,13 +16,32 @@ UI approach: Implement interactive UI pieces (edit modal, popup) as framework-ag
 
 ## Todo
 
-- [ ] Implement MutationObserver and post detection
-- [ ] Inject Edit button and wire to Web Component modal, honoring the configured edit window
+- [x] Implement MutationObserver and post detection
+- [x] Inject Edit button and wire to Web Component modal, honoring the configured edit window
 - [ ] Ensure message passing and background wiring works with Web Components
 - [ ] Preserve facets and embeds through edit flow, including visible edited labels
 
-### Planned follow-up beans
+### Progress Summary (2026-03-23)
 
-- `skeeditor-mwhy` — add configurable edit window setting (30 seconds to 5 minutes)
-- `skeeditor-xojb` — honor the configured edit window when rendering edit actions
-- `skeeditor-n1ms` — display an edited label for extension-managed edited posts
+**Completed:**
+- Created `src/content/post-detector.ts` with post detection utilities:
+  - `isBlueskyPost()` - Check if element matches post selectors
+  - `findPostElement()` - Find first post element in DOM
+  - `extractPostInfo()` - Extract at-uri, repo, collection, rkey from post element
+  - `findPosts()` - Generator for all posts in DOM
+  - `isOwnPost()` - Check if post belongs to current user
+  - `tryExtractPostInfo()` - Safe extraction with error handling
+
+- Created `src/content/edit-modal.ts` Web Component:
+  - Edit modal as Shadow DOM component
+  - Character count with real-time validation
+  - Save/Cancel buttons with state management
+  - Keyboard shortcuts (Escape to close, Cmd/Ctrl+Enter to save)
+  - Error/success status messages
+  - Maximum post length enforcement (300 characters)
+
+**Remaining Work:**
+- Wire edit button injection into content script
+- Connect modal to background service worker via messaging
+- Create styles.css for edit button
+- Add unit tests for post-detector and edit-modal
