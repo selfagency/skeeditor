@@ -1,0 +1,38 @@
+.skeeditor-edit-button {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  margin-inline-start: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--bsky-color-border, #d0d7de);
+  border-radius: 9999px;
+  background: var(--bsky-color-white, #ffffff);
+  color: var(--bsky-color-text, #1d1d1d);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.skeeditor-edit-button:hover {
+  background: var(--bsky-color-hover, #f5f7fb);
+  border-color: var(--bsky-color-primary, #1185fb);
+  color: var(--bsky-color-primary, #1185fb);
+}
+
+.skeeditor-edit-button:focus-visible {
+  outline: 2px solid var(--bsky-color-primary, #1185fb);
+  outline-offset: 2px;
+}
+
+.skeeditor-edit-button:active {
+  transform: translateY(1px);
+}

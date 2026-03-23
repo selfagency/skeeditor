@@ -8,7 +8,15 @@ export interface PostInfo {
   element: HTMLElement;
 }
 
-const POST_CONTAINER_SELECTORS = ['[data-post]', '[data-testid*="post"]', '[role="article"]', '.post'].join(', ');
+const POST_CONTAINER_SELECTORS = [
+  '[data-at-uri]',
+  '[data-uri]',
+  '[data-post]',
+  '[data-testid*="post"]',
+  '[role="article"]',
+  'article',
+  '.post',
+].join(', ');
 
 export function isBlueskyPost(element: HTMLElement): boolean {
   return element.matches(POST_CONTAINER_SELECTORS);

@@ -24,6 +24,7 @@ UI approach: Implement interactive UI pieces (edit modal, popup) as framework-ag
 ### Progress Summary (2026-03-23)
 
 **Completed:**
+
 - Created `src/content/post-detector.ts` with post detection utilities:
   - `isBlueskyPost()` - Check if element matches post selectors
   - `findPostElement()` - Find first post element in DOM
@@ -40,8 +41,17 @@ UI approach: Implement interactive UI pieces (edit modal, popup) as framework-ag
   - Error/success status messages
   - Maximum post length enforcement (300 characters)
 
+- Added `src/content/content-script.ts` wiring:
+  - Scans for posts on startup and via `MutationObserver`
+  - Injects an `Edit` action into detected posts
+  - Opens the modal locally to close the UI loop for now
+
+- Added `src/content/styles.css` for the injected Edit button.
+
+- Added unit tests for `post-detector` and `edit-modal`.
+
 **Remaining Work:**
-- Wire edit button injection into content script
-- Connect modal to background service worker via messaging
-- Create styles.css for edit button
-- Add unit tests for post-detector and edit-modal
+
+- Connect modal and edit action to background service worker messaging
+- Restrict edit affordances to the current user's posts once auth is wired in
+- Preserve facets and embeds through the edit flow and handle `swapRecord` updates

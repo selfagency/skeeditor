@@ -198,6 +198,7 @@ export class EditModal extends HTMLElement {
   private onCancel: (() => void) | undefined = undefined;
   private onSave: ((text: string) => void) | undefined = undefined;
   private handleInputBound = this.handleInput.bind(this);
+  private handleSaveBound = this.handleSave.bind(this);
   private closeBound = this.close.bind(this);
   private handleBackgroundClickBound = this.handleBackgroundClick.bind(this);
   private handleKeydownBound = this.handleKeydown.bind(this);
@@ -223,6 +224,10 @@ export class EditModal extends HTMLElement {
       cancelButton.addEventListener('click', this.closeBound);
     }
 
+    if (this.saveButton) {
+      this.saveButton.addEventListener('click', this.handleSaveBound);
+    }
+
     this.addEventListener('click', this.handleBackgroundClickBound);
     window.addEventListener('keydown', this.handleKeydownBound);
   }
@@ -242,6 +247,10 @@ export class EditModal extends HTMLElement {
       cancelButton.removeEventListener('click', this.closeBound);
     }
 
+    if (this.saveButton) {
+      this.saveButton.removeEventListener('click', this.handleSaveBound);
+    }
+
     this.removeEventListener('click', this.handleBackgroundClickBound);
     window.removeEventListener('keydown', this.handleKeydownBound);
   }
@@ -259,16 +268,21 @@ export class EditModal extends HTMLElement {
       this.textarea.focus();
     }
 
-    this.querySelector<HTMLButtonElement>('.save-button')?.removeAttribute('disabled');
     this.hideStatusMessage();
 
-    document.body.appendChild(this);
+    if (!this.isConnected) {
+      document.body.appendChild(this);
+    }
+
     this.style.display = 'flex';
   }
 
   public close(): void {
     this.style.display = 'none';
-    document.body.removeChild(this);
+    if (this.isConnected) {
+      document.body.removeChild(this);
+    }
+
     this.onCancel?.();
   }
 
