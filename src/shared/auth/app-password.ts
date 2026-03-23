@@ -94,7 +94,7 @@ export async function authenticateWithAppPassword(
 
   return {
     accessToken: data.accessJwt,
-    refreshToken: data.refreshJwt ? data.refreshJwt : undefined,
+    ...(data.refreshJwt !== undefined ? { refreshToken: data.refreshJwt } : {}),
     expiresAt,
     did: data.did,
   } satisfies AppPasswordAuthResult;
