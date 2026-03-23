@@ -6,7 +6,9 @@ test('should load the extension popup in Chromium', async ({ extensionId, page }
   await page.goto(`chrome-extension://${extensionId}/popup/popup.html`);
 
   await expect(page.getByRole('heading', { name: 'skeeditor' })).toBeVisible();
-  await expect(page.getByText('Popup entry loaded.')).toBeVisible();
+  await expect(page.locator('auth-popup')).toBeAttached();
+  // auth-popup renders a sign-in button once the (empty) session check resolves
+  await expect(page.getByRole('button', { name: 'Sign in with Bluesky' })).toBeVisible({ timeout: 10000 });
 });
 
 test('should open the mock Bluesky fixture page for future content-script tests', async ({ page }) => {
