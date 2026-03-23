@@ -1,11 +1,11 @@
 ---
 # skeeditor-02o8
 title: 'Epic 4: Content Script & UI'
-status: todo
+status: in-progress
 type: epic
 priority: critical
 created_at: 2026-03-18T14:25:30Z
-updated_at: 2026-03-18T16:00:56Z
+updated_at: 2026-03-23T17:17:28Z
 parent: skeeditor-bmr4
 ---
 
