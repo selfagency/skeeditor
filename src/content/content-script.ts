@@ -1,7 +1,7 @@
 import { APP_NAME } from '../shared/constants';
 import './styles.css';
 import { EditModal } from './edit-modal';
-import { extractPostInfo, findPosts } from './post-detector';
+import { extractPostInfo, extractPostText, findPosts } from './post-detector';
 
 const POST_MARKER_ATTRIBUTE = 'data-skeeditor-processed';
 const EDIT_BUTTON_ATTRIBUTE = 'data-skeeditor-edit-button';
@@ -25,7 +25,7 @@ const getOrCreateEditModal = (): EditModal => {
 const handleEditClick = (postElement: HTMLElement): void => {
   const info = extractPostInfo(postElement);
   const modal = getOrCreateEditModal();
-  const initialText = postElement.textContent?.trim() ?? '';
+  const initialText = extractPostText(postElement);
 
   modal.open(initialText, undefined, text => {
     console.info(`${APP_NAME}: edit requested`, { atUri: info?.atUri, text });

@@ -8,6 +8,11 @@ export interface PostInfo {
   element: HTMLElement;
 }
 
+const POST_TEXT_SELECTORS = [
+  '[data-testid="post-text"]',
+  '[data-testid="postText"]',
+  '[data-testid="post-content"]',
+].join(', ');
 const POST_CONTAINER_SELECTORS = [
   '[data-at-uri]',
   '[data-uri]',
@@ -57,6 +62,17 @@ export function extractPostInfo(element: HTMLElement): PostInfo | null {
   }
 
   return null;
+}
+
+export function extractPostText(element: HTMLElement): string {
+  const textElement = element.querySelector<HTMLElement>(POST_TEXT_SELECTORS);
+  const text = textElement?.textContent?.trim();
+
+  if (text) {
+    return text;
+  }
+
+  return element.textContent?.trim() ?? '';
 }
 
 export function* findPosts(root: Document | HTMLElement = document): Generator<PostInfo> {
