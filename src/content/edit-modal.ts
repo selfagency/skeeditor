@@ -188,7 +188,7 @@ const EDIT_MODAL_TEMPLATE = `
 const MAX_POST_LENGTH = 300;
 
 export class EditModal extends HTMLElement {
-  private textArea: HTMLTextAreaElement | null = null;
+  private textarea: HTMLTextAreaElement | null = null;
   private charCount: HTMLElement | null = null;
   private saveButton: HTMLButtonElement | null = null;
   private statusMessage: HTMLElement | null = null;
@@ -197,44 +197,60 @@ export class EditModal extends HTMLElement {
   private maxLength = MAX_POST_LENGTH;
   private onCancel: (() => void) | undefined = undefined;
   private onSave: ((text: string) => void) | undefined = undefined;
-  private handleInputBound?: () => void;
-  private closeBound?: () => void;
-  private handleBackgroundClickBound?: (event: MouseEvent) => void;
-  private handleKeydownBound?: (event: KeyboardEvent) => void;
+  private handleInputBound = this.handleInput.bind(this);
+  private closeBound = this.close.bind(this);
+  private handleBackgroundClickBound = this.handleBackgroundClick.bind(this);
+  private handleKeydownBound = this.handleKeydown.bind(this);
 
   public connectedCallback(): void {
     this.innerHTML = EDIT_MODAL_TEMPLATE;
-    this.textArea = this.querySelector<HTMLTextAreaElement>('textarea');
+    this.textarea = this.querySelector<HTMLTextAreaElement>('textarea');
     this.charCount = this.querySelector<HTMLElement>('.char-count');
     this.saveButton = this.querySelector<HTMLButtonElement>('.save-button');
     this.statusMessage = this.querySelector<HTMLElement>('.status-message');
 
     if (this.textarea) {
-      this.textarea.addEventListener('input', this.handleInput.bind(this));
+      this.textarea.addEventListener('input', this.handleInputBound);
     }
 
-    this.querySelector<HTMLButtonElement>('.close-button')?.addEventListener('click', this.close.bind(this));
-    this.querySelector<HTMLButtonElement>('.cancel-button')?.addEventListener('click', this.close.bind(this));
-    this.addEventListener('click', this.handleBackgroundClick.bind(this));
-    window.addEventListener('keydown', this.handleKeydown.bind(this));
+    const closeButton = this.querySelector<HTMLButtonElement>('.close-button');
+    if (closeButton) {
+      closeButton.addEventListener('click', this.closeBound);
+    }
+
+    const cancelButton = this.querySelector<HTMLButtonElement>('.cancel-button');
+    if (cancelButton) {
+      cancelButton.addEventListener('click', this.closeBound);
+    }
+
+    this.addEventListener('click', this.handleBackgroundClickBound);
+    window.addEventListener('keydown', this.handleKeydownBound);
   }
 
   public disconnectedCallback(): void {
     if (this.textarea) {
-      this.textarea.removeEventListener('input', this.handleInput.bind(this));
+      this.textarea.removeEventListener('input', this.handleInputBound);
     }
 
-    this.querySelector<HTMLButtonElement>('.close-button')?.removeEventListener('click', this.close.bind(this));
-    this.querySelector<HTMLButtonElement>('.cancel-button')?.removeEventListener('click', this.close.bind(this));
-    this.removeEventListener('click', this.handleBackgroundClick.bind(this));
-    window.removeEventListener('keydown', this.handleKeydown.bind(this));
+    const closeButton = this.querySelector<HTMLButtonElement>('.close-button');
+    if (closeButton) {
+      closeButton.removeEventListener('click', this.closeBound);
+    }
+
+    const cancelButton = this.querySelector<HTMLButtonElement>('.cancel-button');
+    if (cancelButton) {
+      cancelButton.removeEventListener('click', this.closeBound);
+    }
+
+    this.removeEventListener('click', this.handleBackgroundClickBound);
+    window.removeEventListener('keydown', this.handleKeydownBound);
   }
 
   public open(text: string, onCancel?: () => void, onSave?: (text: string) => void): void {
     this.originalText = text;
     this.currentText = text;
-    this.onCancel = onCancel;
-    this.onSave = onSave;
+    this.onCancel = onCancel ?? undefined;
+    this.onSave = onSave ?? undefined;
 
     if (this.textarea) {
       this.textarea.value = text;
@@ -277,7 +293,7 @@ export class EditModal extends HTMLElement {
     if (!this.charCount || !this.textarea) return;
 
     const length = this.currentText.length;
-    constremaining = this.maxLength - length;
+    const remaining = this.maxLength - length;
     const isError = remaining < 0;
 
     this.charCount.textContent = `${length} / ${this.maxLength}`;
@@ -291,8 +307,8 @@ export class EditModal extends HTMLElement {
   }
 
   private updateSaveButtonState(): void {
-    if (this.saveButton) {
-      this.saveButton.disabled = !this.textarea || this.textarea.value === this.originalText;
+    if (this.saveButton && this.textarea) {
+      this.saveButton.disabled = this.textarea.value === this.originalText;
     }
   }
 
@@ -330,12 +346,12 @@ export class EditModal extends HTMLElement {
       return;
     }
 
-    if (this.textarea?.value.length > this.maxLength) {
+    if (this.textarea && this.textarea.value.length > this.maxLength) {
       this.setError(`Post exceeds maximum length of ${this.maxLength} characters`);
       return;
     }
 
-    this.onSave?.(this.textarea?.value ?? '');
+    this.onSave?.(this.textarea!.value);
   }
 }
 
