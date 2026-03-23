@@ -1,4 +1,4 @@
-import type { GetRecordResult, PutRecordResult } from './api/xrpc-client';
+import type { GetRecordResult, PutRecordResult, PutRecordWithSwapResult } from './api/xrpc-client';
 
 // ── Auth messages ─────────────────────────────────────────────────────────────
 
@@ -46,7 +46,7 @@ export interface PutRecordRequest {
   swapRecord?: string;
 }
 
-export type PutRecordResponse = PutRecordResult | { error: string };
+export type PutRecordResponse = PutRecordResult | PutRecordWithSwapResult | { error: string };
 
 // ── Discriminated union of all inbound requests ───────────────────────────────
 

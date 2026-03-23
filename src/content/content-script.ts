@@ -2,8 +2,10 @@ import { APP_NAME } from '../shared/constants';
 import { sendMessage } from '../shared/messages';
 import './styles.css';
 import { EditModal } from './edit-modal';
+import { markPostAsEdited } from './post-badges';
 import { extractPostInfo, extractPostText, findPosts } from './post-detector';
 import { buildUpdatedPostRecord, type EditablePostRecord } from './post-editor';
+import type { PutRecordWithSwapResult } from '../shared/api/xrpc-client';
 
 const POST_MARKER_ATTRIBUTE = 'data-skeeditor-processed';
 const EDIT_BUTTON_ATTRIBUTE = 'data-skeeditor-edit-button';
@@ -24,6 +26,16 @@ const getOrCreateEditModal = (): EditModal => {
   document.body.appendChild(modal);
 
   return modal;
+};
+
+const isPutRecordWithSwapResult = (response: unknown): response is PutRecordWithSwapResult => {
+  return typeof response === 'object' && response !== null && 'success' in response;
+};
+
+const isPutRecordConflictResult = (
+  response: PutRecordWithSwapResult,
+): response is Extract<PutRecordWithSwapResult, { success: false }> => {
+  return response.success === false;
 };
 
 const refreshAuthState = async (): Promise<void> => {
@@ -69,11 +81,31 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
     });
 
     if ('error' in writeResponse) {
-      modal.setError(writeResponse.error);
+      const errorMessage = typeof writeResponse.error === 'string' ? writeResponse.error : writeResponse.error.message;
+      modal.setError(errorMessage);
+      return;
+    }
+
+    if (isPutRecordWithSwapResult(writeResponse)) {
+      if (isPutRecordConflictResult(writeResponse)) {
+        const conflictResponse = writeResponse as Extract<PutRecordWithSwapResult, { success: false }>;
+        const conflictMessage = conflictResponse.conflict
+          ? 'This post changed while you were editing. Reload to compare the latest version.'
+          : 'This post changed while you were editing. Please reload and try again.';
+
+        modal.setError(conflictMessage);
+        return;
+      }
+
+      modal.markSaved(text);
+      markPostAsEdited(postElement);
+      modal.setSuccess('Edit saved.');
+      console.info(`${APP_NAME}: edit saved`, { atUri: info.atUri, uri: writeResponse.uri, cid: writeResponse.cid });
       return;
     }
 
     modal.markSaved(text);
+    markPostAsEdited(postElement);
     modal.setSuccess('Edit saved.');
     console.info(`${APP_NAME}: edit saved`, { atUri: info.atUri, uri: writeResponse.uri, cid: writeResponse.cid });
   });

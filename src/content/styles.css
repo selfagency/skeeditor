@@ -36,3 +36,16 @@
 .skeeditor-edit-button:active {
   transform: translateY(1px);
 }
+
+.skeeditor-edited-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-inline-start: 0.5rem;
+  padding: 0.1875rem 0.5rem;
+  border-radius: 9999px;
+  background: var(--bsky-color-hover, #f5f7fb);
+  color: var(--bsky-color-text-light, #666666);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+}

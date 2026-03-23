@@ -1,4 +1,9 @@
-import type { GetRecordResult, PutRecordResult, XrpcClientConfig } from '../shared/api/xrpc-client';
+import type {
+  GetRecordResult,
+  PutRecordResult,
+  PutRecordWithSwapResult,
+  XrpcClientConfig,
+} from '../shared/api/xrpc-client';
 import { XrpcClient } from '../shared/api/xrpc-client';
 import type { AuthorizationRequest } from '../shared/auth/auth-client';
 import { buildAuthorizationRequest } from '../shared/auth/auth-client';
@@ -16,6 +21,14 @@ interface XrpcInterface {
     record: Record<string, unknown> & { $type: string };
     swapRecord?: string;
   }) => Promise<PutRecordResult>;
+  putRecordWithSwap: (params: {
+    repo: string;
+    collection: string;
+    rkey: string;
+    record: Record<string, unknown> & { $type: string };
+    swapRecord: string;
+    validate?: boolean;
+  }) => Promise<PutRecordWithSwapResult>;
 }
 
 interface StoreInterface {
@@ -134,7 +147,13 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
           record,
         };
         if (typeof message['swapRecord'] === 'string') {
-          params.swapRecord = message['swapRecord'];
+          return await client.putRecordWithSwap({
+            repo: message['repo'] as string,
+            collection: message['collection'] as string,
+            rkey: message['rkey'] as string,
+            record,
+            swapRecord: message['swapRecord'],
+          });
         }
         return await client.putRecord(params);
       } catch (err) {
