@@ -36,4 +36,29 @@ describe('post-editor', () => {
 
     expect(nextRecord).not.toHaveProperty('facets');
   });
+
+  it('should preserve mention facets when the current record already resolved the DID', () => {
+    const currentRecord = {
+      $type: 'app.bsky.feed.post' as const,
+      text: 'Hello @alice.test',
+      createdAt: '2026-03-18T12:00:00.000Z',
+      facets: [
+        {
+          $type: 'app.bsky.richtext.facet' as const,
+          index: { byteStart: 6, byteEnd: 17 },
+          features: [{ $type: 'app.bsky.richtext.facet#mention' as const, did: 'did:plc:alice123' }],
+        },
+      ],
+    };
+
+    const nextRecord = buildUpdatedPostRecord(currentRecord, 'Hi @alice.test and #tag');
+
+    expect(nextRecord.facets).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          features: [expect.objectContaining({ $type: 'app.bsky.richtext.facet#mention', did: 'did:plc:alice123' })],
+        }),
+      ]),
+    );
+  });
 });

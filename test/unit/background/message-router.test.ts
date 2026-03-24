@@ -1,10 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { handleMessage } from '@src/background/message-router';
 import type { RouterDeps } from '@src/background/message-router';
-import type { StoredSession } from '@src/shared/auth/session-store';
-import type { AuthorizationRequest } from '@src/shared/auth/auth-client';
+import { handleMessage } from '@src/background/message-router';
 import type { GetRecordResult, PutRecordResult, PutRecordWithSwapResult } from '@src/shared/api/xrpc-client';
+import type { AuthorizationRequest } from '@src/shared/auth/auth-client';
+import type { StoredSession } from '@src/shared/auth/session-store';
 
 const makeSession = (overrides: Partial<StoredSession> = {}): StoredSession => ({
   accessToken: 'at-token',
@@ -192,7 +192,7 @@ describe('handleMessage', () => {
         deps,
       );
 
-      expect(result).toEqual({ error: 'Not authenticated' });
+      expect(result).toEqual({ type: 'PUT_RECORD_ERROR', message: 'Not authenticated' });
     });
 
     it('calls xrpcClient.putRecordWithSwap with the correct params when authenticated', async () => {
@@ -224,7 +224,7 @@ describe('handleMessage', () => {
         swapRecord: 'bafyreiabc',
       });
       expect(result).toEqual({
-        success: true,
+        type: 'PUT_RECORD_SUCCESS',
         uri: 'at://did:plc:testuser/app.bsky.feed.post/abc',
         cid: 'bafyreinew',
       });
@@ -263,7 +263,7 @@ describe('handleMessage', () => {
       );
 
       expect(result).toEqual({
-        success: false,
+        type: 'PUT_RECORD_CONFLICT',
         error: {
           kind: 'conflict',
           message: 'stale write',

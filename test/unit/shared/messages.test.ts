@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { sendMessage } from '@src/shared/messages';
 
@@ -41,7 +41,7 @@ describe('sendMessage', () => {
 
   it('forwards PUT_RECORD with the full record payload', async () => {
     const mockResponse = {
-      success: true as const,
+      type: 'PUT_RECORD_SUCCESS' as const,
       uri: 'at://did:plc:testuser/app.bsky.feed.post/abc123',
       cid: 'bafyreiabc',
     };
@@ -63,12 +63,33 @@ describe('sendMessage', () => {
 
   it('forwards PUT_RECORD conflict responses without losing details', async () => {
     const mockResponse = {
-      success: false as const,
+      type: 'PUT_RECORD_CONFLICT' as const,
       error: { kind: 'conflict' as const, message: 'stale write', status: 409 },
       conflict: {
         currentCid: 'bafyrelatest',
         currentValue: { $type: 'app.bsky.feed.post', text: 'latest' },
       },
+    };
+    vi.mocked(browser.runtime.sendMessage).mockResolvedValueOnce(mockResponse as never);
+
+    const request = {
+      type: 'PUT_RECORD' as const,
+      repo: 'did:plc:testuser',
+      collection: 'app.bsky.feed.post',
+      rkey: 'abc123',
+      record: { $type: 'app.bsky.feed.post', text: 'edited' },
+      swapRecord: 'bafyreiabc',
+    };
+    const result = await sendMessage(request);
+
+    expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith(request);
+    expect(result).toEqual(mockResponse);
+  });
+
+  it('forwards PUT_RECORD transport errors with a typed error response', async () => {
+    const mockResponse = {
+      type: 'PUT_RECORD_ERROR' as const,
+      message: 'Failed to update record',
     };
     vi.mocked(browser.runtime.sendMessage).mockResolvedValueOnce(mockResponse as never);
 

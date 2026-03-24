@@ -1,4 +1,4 @@
-import type { GetRecordResult, PutRecordResult, PutRecordWithSwapResult } from './api/xrpc-client';
+import type { GetRecordResult, PutRecordConflictDetails, PutRecordWithSwapError } from './api/xrpc-client';
 
 // ── Auth messages ─────────────────────────────────────────────────────────────
 
@@ -37,6 +37,23 @@ export interface GetRecordRequest {
 
 export type GetRecordResponse = GetRecordResult | { error: string };
 
+export interface PutRecordSuccessResponse {
+  type: 'PUT_RECORD_SUCCESS';
+  uri: string;
+  cid: string;
+}
+
+export interface PutRecordErrorResponse {
+  type: 'PUT_RECORD_ERROR';
+  message: string;
+}
+
+export interface PutRecordConflictResponse {
+  type: 'PUT_RECORD_CONFLICT';
+  error: PutRecordWithSwapError;
+  conflict?: PutRecordConflictDetails;
+}
+
 export interface PutRecordRequest {
   type: 'PUT_RECORD';
   repo: string;
@@ -46,7 +63,7 @@ export interface PutRecordRequest {
   swapRecord?: string;
 }
 
-export type PutRecordResponse = PutRecordResult | PutRecordWithSwapResult | { error: string };
+export type PutRecordResponse = PutRecordSuccessResponse | PutRecordErrorResponse | PutRecordConflictResponse;
 
 // ── Discriminated union of all inbound requests ───────────────────────────────
 

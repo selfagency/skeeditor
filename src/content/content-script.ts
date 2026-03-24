@@ -1,11 +1,11 @@
 import { APP_NAME } from '../shared/constants';
+import type { PutRecordConflictResponse, PutRecordResponse } from '../shared/messages';
 import { sendMessage } from '../shared/messages';
-import './styles.css';
 import { EditModal } from './edit-modal';
 import { markPostAsEdited } from './post-badges';
 import { extractPostInfo, extractPostText, findPosts } from './post-detector';
 import { buildUpdatedPostRecord, type EditablePostRecord } from './post-editor';
-import type { PutRecordWithSwapResult } from '../shared/api/xrpc-client';
+import './styles.css';
 
 const POST_MARKER_ATTRIBUTE = 'data-skeeditor-processed';
 const EDIT_BUTTON_ATTRIBUTE = 'data-skeeditor-edit-button';
@@ -13,6 +13,7 @@ const EDIT_BUTTON_ATTRIBUTE = 'data-skeeditor-edit-button';
 let mutationObserver: MutationObserver | null = null;
 let currentDid: string | null = null;
 let domContentLoadedHandler: (() => void) | null = null;
+let scanScheduled = false;
 
 const getOrCreateEditModal = (): EditModal => {
   const existing = document.querySelector<EditModal>('edit-modal[data-skeeditor-modal="true"]');
@@ -28,14 +29,8 @@ const getOrCreateEditModal = (): EditModal => {
   return modal;
 };
 
-const isPutRecordWithSwapResult = (response: unknown): response is PutRecordWithSwapResult => {
-  return typeof response === 'object' && response !== null && 'success' in response;
-};
-
-const isPutRecordConflictResult = (
-  response: PutRecordWithSwapResult,
-): response is Extract<PutRecordWithSwapResult, { success: false }> => {
-  return response.success === false;
+const isPutRecordConflictResponse = (response: PutRecordResponse): response is PutRecordConflictResponse => {
+  return response.type === 'PUT_RECORD_CONFLICT';
 };
 
 const refreshAuthState = async (): Promise<void> => {
@@ -80,27 +75,17 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
       swapRecord: recordResponse.cid,
     });
 
-    if ('error' in writeResponse) {
-      const errorMessage = typeof writeResponse.error === 'string' ? writeResponse.error : writeResponse.error.message;
-      modal.setError(errorMessage);
+    if (writeResponse.type === 'PUT_RECORD_ERROR') {
+      modal.setError(writeResponse.message);
       return;
     }
 
-    if (isPutRecordWithSwapResult(writeResponse)) {
-      if (isPutRecordConflictResult(writeResponse)) {
-        const conflictResponse = writeResponse as Extract<PutRecordWithSwapResult, { success: false }>;
-        const conflictMessage = conflictResponse.conflict
-          ? 'This post changed while you were editing. Reload to compare the latest version.'
-          : 'This post changed while you were editing. Please reload and try again.';
+    if (isPutRecordConflictResponse(writeResponse)) {
+      const conflictMessage = writeResponse.conflict
+        ? 'This post changed while you were editing. Reload to compare the latest version.'
+        : 'This post changed while you were editing. Please reload and try again.';
 
-        modal.setError(conflictMessage);
-        return;
-      }
-
-      modal.markSaved(text);
-      markPostAsEdited(postElement);
-      modal.setSuccess('Edit saved.');
-      console.info(`${APP_NAME}: edit saved`, { atUri: info.atUri, uri: writeResponse.uri, cid: writeResponse.cid });
+      modal.setError(conflictMessage);
       return;
     }
 
@@ -124,7 +109,9 @@ const injectEditButton = (postElement: HTMLElement): void => {
   button.addEventListener('click', event => {
     event.preventDefault();
     event.stopPropagation();
-    handleEditClick(postElement);
+    void handleEditClick(postElement).catch(error => {
+      console.error(`${APP_NAME}: failed to handle edit click`, error);
+    });
   });
 
   const actionContainer = postElement.querySelector<HTMLElement>('[data-testid="postButtonInline"]');
@@ -147,13 +134,25 @@ const scanForPosts = (): void => {
   }
 };
 
+const scheduleScanForPosts = (): void => {
+  if (scanScheduled) {
+    return;
+  }
+
+  scanScheduled = true;
+  setTimeout(() => {
+    scanScheduled = false;
+    scanForPosts();
+  }, 0);
+};
+
 const ensureObserver = (): void => {
   if (mutationObserver) {
     return;
   }
 
   mutationObserver = new MutationObserver(() => {
-    scanForPosts();
+    scheduleScanForPosts();
   });
 
   if (document.body) {

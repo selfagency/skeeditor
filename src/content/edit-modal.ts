@@ -261,6 +261,10 @@ export class EditModal extends HTMLElement {
     this.onCancel = onCancel ?? undefined;
     this.onSave = onSave ?? undefined;
 
+    if (!this.isConnected) {
+      document.body.appendChild(this);
+    }
+
     if (this.textarea) {
       this.textarea.value = text;
       this.updateCharCount();
@@ -269,10 +273,6 @@ export class EditModal extends HTMLElement {
     }
 
     this.hideStatusMessage();
-
-    if (!this.isConnected) {
-      document.body.appendChild(this);
-    }
 
     this.style.display = 'flex';
   }
@@ -377,7 +377,17 @@ export class EditModal extends HTMLElement {
       return;
     }
 
-    void this.onSave?.(this.textarea!.value);
+    const saveResult = this.onSave?.(this.textarea!.value);
+    if (saveResult !== undefined) {
+      Promise.resolve(saveResult).catch((error: unknown) => {
+        console.error('Error while saving post from EditModal:', error);
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : 'An unexpected error occurred while saving the post.';
+        this.setError(message);
+      });
+    }
   }
 }
 

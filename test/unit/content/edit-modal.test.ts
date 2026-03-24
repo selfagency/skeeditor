@@ -57,4 +57,23 @@ describe('edit-modal', () => {
 
     expect(onSave).toHaveBeenCalledWith('Hello Bluesky, edited');
   });
+
+  it('should surface save callback rejections as an error message', async () => {
+    const modal = createModal();
+    const onSave = vi.fn().mockRejectedValue(new Error('save failed'));
+
+    modal.open('Hello Bluesky', undefined, onSave);
+
+    const textarea = modal.querySelector('textarea') as HTMLTextAreaElement;
+    const saveButton = modal.querySelector('.save-button') as HTMLButtonElement;
+
+    textarea.value = 'Hello Bluesky, edited';
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    saveButton.click();
+
+    await Promise.resolve();
+
+    const statusMessage = modal.querySelector('.status-message') as HTMLElement;
+    expect(statusMessage.textContent).toContain('save failed');
+  });
 });
