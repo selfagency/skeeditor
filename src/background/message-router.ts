@@ -1,9 +1,20 @@
-import type { GetRecordResult, PutRecordResult, XrpcClientConfig } from '../shared/api/xrpc-client';
+import type {
+  GetRecordResult,
+  PutRecordResult,
+  PutRecordWithSwapResult,
+  XrpcClientConfig,
+} from '../shared/api/xrpc-client';
 import { XrpcClient } from '../shared/api/xrpc-client';
 import type { AuthorizationRequest } from '../shared/auth/auth-client';
 import { buildAuthorizationRequest } from '../shared/auth/auth-client';
 import { sessionStore } from '../shared/auth/session-store';
 import { BSKY_OAUTH_AUTHORIZE_URL, BSKY_OAUTH_CLIENT_ID, BSKY_OAUTH_SCOPE, BSKY_PDS_URL } from '../shared/constants';
+import type {
+  PutRecordConflictResponse,
+  PutRecordErrorResponse,
+  PutRecordResponse,
+  PutRecordSuccessResponse,
+} from '../shared/messages';
 
 // ── Dependency injection types ────────────────────────────────────────────────
 
@@ -16,6 +27,14 @@ interface XrpcInterface {
     record: Record<string, unknown> & { $type: string };
     swapRecord?: string;
   }) => Promise<PutRecordResult>;
+  putRecordWithSwap: (params: {
+    repo: string;
+    collection: string;
+    rkey: string;
+    record: Record<string, unknown> & { $type: string };
+    swapRecord: string;
+    validate?: boolean;
+  }) => Promise<PutRecordWithSwapResult>;
 }
 
 interface StoreInterface {
@@ -122,7 +141,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
       const stored = await deps.store.get();
       const valid = await deps.store.isAccessTokenValid();
       if (stored === null || !valid) {
-        return { error: 'Not authenticated' };
+        return { type: 'PUT_RECORD_ERROR', message: 'Not authenticated' } satisfies PutRecordErrorResponse;
       }
       try {
         const client = deps.createXrpc({ service: BSKY_PDS_URL, did: stored.did, accessJwt: stored.accessToken });
@@ -134,11 +153,39 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
           record,
         };
         if (typeof message['swapRecord'] === 'string') {
-          params.swapRecord = message['swapRecord'];
+          const result = await client.putRecordWithSwap({
+            repo: message['repo'] as string,
+            collection: message['collection'] as string,
+            rkey: message['rkey'] as string,
+            record,
+            swapRecord: message['swapRecord'],
+          });
+
+          if (result.success) {
+            return { type: 'PUT_RECORD_SUCCESS', uri: result.uri, cid: result.cid } satisfies PutRecordSuccessResponse;
+          }
+
+          const conflictResponse: PutRecordConflictResponse = result.conflict
+            ? {
+                type: 'PUT_RECORD_CONFLICT',
+                error: result.error,
+                conflict: result.conflict,
+              }
+            : {
+                type: 'PUT_RECORD_CONFLICT',
+                error: result.error,
+              };
+
+          return conflictResponse satisfies PutRecordResponse;
         }
-        return await client.putRecord(params);
+
+        const result = await client.putRecord(params);
+        return { type: 'PUT_RECORD_SUCCESS', uri: result.uri, cid: result.cid } satisfies PutRecordSuccessResponse;
       } catch (err) {
-        return { error: err instanceof Error ? err.message : 'Failed to update record' };
+        return {
+          type: 'PUT_RECORD_ERROR',
+          message: err instanceof Error ? err.message : 'Failed to update record',
+        } satisfies PutRecordErrorResponse;
       }
     }
 

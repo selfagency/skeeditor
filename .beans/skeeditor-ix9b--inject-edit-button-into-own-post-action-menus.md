@@ -1,11 +1,11 @@
 ---
 # skeeditor-ix9b
 title: Inject "Edit" button into own-post action menus
-status: todo
+status: completed
 type: feature
 priority: critical
 created_at: 2026-03-18T14:29:10Z
-updated_at: 2026-03-18T15:10:11Z
+updated_at: 2026-03-24T23:06:44Z
 parent: skeeditor-02o8
 blocked_by:
     - skeeditor-03tp

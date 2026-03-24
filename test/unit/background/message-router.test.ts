@@ -1,10 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { handleMessage } from '@src/background/message-router';
 import type { RouterDeps } from '@src/background/message-router';
-import type { StoredSession } from '@src/shared/auth/session-store';
+import { handleMessage } from '@src/background/message-router';
+import type { GetRecordResult, PutRecordResult, PutRecordWithSwapResult } from '@src/shared/api/xrpc-client';
 import type { AuthorizationRequest } from '@src/shared/auth/auth-client';
-import type { GetRecordResult, PutRecordResult } from '@src/shared/api/xrpc-client';
+import type { StoredSession } from '@src/shared/auth/session-store';
 
 const makeSession = (overrides: Partial<StoredSession> = {}): StoredSession => ({
   accessToken: 'at-token',
@@ -34,6 +34,11 @@ const makeXrpcMock = () => ({
     cid: 'bafyreiabc',
   }),
   putRecord: vi.fn<() => Promise<PutRecordResult>>().mockResolvedValue({
+    uri: 'at://did:plc:testuser/app.bsky.feed.post/abc',
+    cid: 'bafyreinew',
+  }),
+  putRecordWithSwap: vi.fn<() => Promise<PutRecordWithSwapResult>>().mockResolvedValue({
+    success: true,
     uri: 'at://did:plc:testuser/app.bsky.feed.post/abc',
     cid: 'bafyreinew',
   }),
@@ -187,10 +192,10 @@ describe('handleMessage', () => {
         deps,
       );
 
-      expect(result).toEqual({ error: 'Not authenticated' });
+      expect(result).toEqual({ type: 'PUT_RECORD_ERROR', message: 'Not authenticated' });
     });
 
-    it('calls xrpcClient.putRecord with the correct params when authenticated', async () => {
+    it('calls xrpcClient.putRecordWithSwap with the correct params when authenticated', async () => {
       const session = makeSession();
       const xrpc = makeXrpcMock();
       const deps = makeDeps({
@@ -211,14 +216,64 @@ describe('handleMessage', () => {
         deps,
       );
 
-      expect(vi.mocked(xrpc.putRecord)).toHaveBeenCalledWith({
+      expect(vi.mocked(xrpc.putRecordWithSwap)).toHaveBeenCalledWith({
         repo: 'did:plc:alice',
         collection: 'app.bsky.feed.post',
         rkey: 'abc',
         record,
         swapRecord: 'bafyreiabc',
       });
-      expect(result).toEqual({ uri: 'at://did:plc:testuser/app.bsky.feed.post/abc', cid: 'bafyreinew' });
+      expect(result).toEqual({
+        type: 'PUT_RECORD_SUCCESS',
+        uri: 'at://did:plc:testuser/app.bsky.feed.post/abc',
+        cid: 'bafyreinew',
+      });
+    });
+
+    it('returns a structured conflict result when xrpcClient reports a conflict', async () => {
+      const session = makeSession();
+      const xrpc = makeXrpcMock();
+      vi.mocked(xrpc.putRecordWithSwap).mockResolvedValueOnce({
+        success: false,
+        error: {
+          kind: 'conflict',
+          message: 'stale write',
+          status: 409,
+        },
+        conflict: {
+          currentCid: 'bafyrelatest',
+          currentValue: { $type: 'app.bsky.feed.post', text: 'latest' },
+        },
+      });
+      const deps = makeDeps({
+        store: makeStoreMock(session),
+        createXrpc: vi.fn().mockReturnValue(xrpc),
+      });
+
+      const result = await handleMessage(
+        {
+          type: 'PUT_RECORD',
+          repo: 'did:plc:alice',
+          collection: 'app.bsky.feed.post',
+          rkey: 'abc',
+          record: { $type: 'app.bsky.feed.post', text: 'edited' },
+          swapRecord: 'bafyreiabc',
+        },
+        deps,
+      );
+
+      expect(result).toEqual({
+        type: 'PUT_RECORD_CONFLICT',
+        error: {
+          kind: 'conflict',
+          message: 'stale write',
+          status: 409,
+        },
+        conflict: {
+          currentCid: 'bafyrelatest',
+          currentValue: { $type: 'app.bsky.feed.post', text: 'latest' },
+        },
+      });
     });
   });
 });

@@ -1,11 +1,11 @@
 ---
 # skeeditor-xojb
 title: Honor configured edit window when rendering edit actions
-status: todo
+status: completed
 type: feature
 priority: high
 created_at: 2026-03-18T16:00:41Z
-updated_at: 2026-03-18T16:00:47Z
+updated_at: 2026-03-24T23:07:06Z
 parent: skeeditor-02o8
 blocked_by:
     - skeeditor-mwhy

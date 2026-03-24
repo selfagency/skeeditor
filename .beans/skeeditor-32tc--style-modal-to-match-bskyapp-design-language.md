@@ -1,11 +1,11 @@
 ---
 # skeeditor-32tc
 title: Style modal to match bsky.app design language
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-18T14:29:32Z
-updated_at: 2026-03-18T15:10:11Z
+updated_at: 2026-03-24T23:07:10Z
 parent: skeeditor-02o8
 blocked_by:
     - skeeditor-pteo
