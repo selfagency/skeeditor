@@ -1,13 +1,12 @@
 ---
 # skeeditor-02o8
 title: 'Epic 4: Content Script & UI'
-status: in-progress
+status: completed
 type: epic
 priority: critical
 created_at: 2026-03-18T14:25:30Z
-updated_at: 2026-03-23T17:19:00Z
+updated_at: 2026-03-24T23:06:37Z
 parent: skeeditor-bmr4
-branch: feat/02o8-content-script-ui
 ---
 
 Content script to detect posts, inject Edit button, build edit modal and wire to background via messaging. Preserve facets and embeds.
@@ -18,8 +17,8 @@ UI approach: Implement interactive UI pieces (edit modal, popup) as framework-ag
 
 - [x] Implement MutationObserver and post detection
 - [x] Inject Edit button and wire to Web Component modal, honoring the configured edit window
-- [ ] Ensure message passing and background wiring works with Web Components
-- [ ] Preserve facets and embeds through edit flow, including visible edited labels
+- [x] Ensure message passing and background wiring works with Web Components
+- [x] Preserve facets and embeds through edit flow, including visible edited labels
 
 ### Progress Summary (2026-03-23)
 
@@ -55,3 +54,30 @@ UI approach: Implement interactive UI pieces (edit modal, popup) as framework-ag
 - Connect modal and edit action to background service worker messaging
 - Restrict edit affordances to the current user's posts once auth is wired in
 - Preserve facets and embeds through the edit flow and handle `swapRecord` updates
+
+
+
+## Summary of Changes
+
+Epic marked completed. All child work for Epic 4 has been implemented and verified in tests.
+
+Closed child beans for this epic:
+- `skeeditor-03tp` — implement MutationObserver to detect post elements (completed earlier)
+- `skeeditor-dw2n` — rkey extraction and at-uri parsing (completed earlier)
+- `skeeditor-pteo` — edit modal Web Component (completed earlier)
+- `skeeditor-67ad` — XRPC client wrapper and helpers (completed earlier)
+- `skeeditor-n1du` — typed message protocol (completed earlier)
+- `skeeditor-noiw` — implement message router in service worker (now completed)
+- `skeeditor-fgss` — wire edit modal to background service worker (now completed)
+
+Implementation highlights:
+- Content script detects posts and injects Edit UI; `src/content/content-script.ts` and `src/content/post-detector.ts`
+- Edit modal implemented as `src/content/edit-modal.ts` Web Component
+- Background router in `src/background/message-router.ts` validates/authenticates and dispatches to `XrpcClient` for `getRecord`/`putRecord` flows
+- `src/shared/messages.ts` defines typed message contracts; `session-store` manages tokens
+
+Verification:
+- Local test run: unit tests (207) and integration tests (23) passed on branch `feat/02o8-content-script-ui`.
+
+Associated branch: `feat/02o8-content-script-ui`
+Associated PR: please add PR number here (if already open), or I can create/update the PR if you'd like.
