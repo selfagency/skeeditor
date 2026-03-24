@@ -5,8 +5,9 @@ status: completed
 type: epic
 priority: critical
 created_at: 2026-03-18T14:25:30Z
-updated_at: 2026-03-24T23:06:37Z
+updated_at: 2026-03-24T23:09:00Z
 parent: skeeditor-bmr4
+pr: 24
 ---
 
 Content script to detect posts, inject Edit button, build edit modal and wire to background via messaging. Preserve facets and embeds.
@@ -55,13 +56,12 @@ UI approach: Implement interactive UI pieces (edit modal, popup) as framework-ag
 - Restrict edit affordances to the current user's posts once auth is wired in
 - Preserve facets and embeds through the edit flow and handle `swapRecord` updates
 
-
-
 ## Summary of Changes
 
 Epic marked completed. All child work for Epic 4 has been implemented and verified in tests.
 
 Closed child beans for this epic:
+
 - `skeeditor-03tp` — implement MutationObserver to detect post elements (completed earlier)
 - `skeeditor-dw2n` — rkey extraction and at-uri parsing (completed earlier)
 - `skeeditor-pteo` — edit modal Web Component (completed earlier)
@@ -71,12 +71,14 @@ Closed child beans for this epic:
 - `skeeditor-fgss` — wire edit modal to background service worker (now completed)
 
 Implementation highlights:
+
 - Content script detects posts and injects Edit UI; `src/content/content-script.ts` and `src/content/post-detector.ts`
 - Edit modal implemented as `src/content/edit-modal.ts` Web Component
 - Background router in `src/background/message-router.ts` validates/authenticates and dispatches to `XrpcClient` for `getRecord`/`putRecord` flows
 - `src/shared/messages.ts` defines typed message contracts; `session-store` manages tokens
 
 Verification:
+
 - Local test run: unit tests (207) and integration tests (23) passed on branch `feat/02o8-content-script-ui`.
 
 Associated branch: `feat/02o8-content-script-ui`
