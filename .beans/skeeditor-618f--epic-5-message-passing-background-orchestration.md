@@ -1,12 +1,13 @@
 ---
 # skeeditor-618f
 title: 'Epic 5: Message Passing & Background Orchestration'
-status: todo
+status: in-progress
 type: epic
 priority: critical
 created_at: 2026-03-18T14:25:36Z
-updated_at: 2026-03-18T14:49:55Z
+updated_at: 2026-03-24T23:57:43Z
 parent: skeeditor-bmr4
+branch: feat/618f-message-passing
 ---
 
 Typed message protocol, service worker message router, and routing for getRecord/putRecord/auth queries.
