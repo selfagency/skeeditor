@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildUpdatedPostRecord } from '@src/content/post-editor';
+import { buildUpdatedPostRecord, type EditablePostRecord } from '@src/content/post-editor';
 
 describe('post-editor', () => {
   it('should preserve the existing record fields while updating text and facets', () => {
-    const currentRecord = {
+    const currentRecord: EditablePostRecord = {
       $type: 'app.bsky.feed.post' as const,
       text: 'Hello @alice.test https://example.com',
       createdAt: '2026-03-18T12:00:00.000Z',
@@ -25,11 +25,22 @@ describe('post-editor', () => {
   });
 
   it('should omit facets when the updated text has no detected facets', () => {
-    const currentRecord = {
+    const currentRecord: EditablePostRecord = {
       $type: 'app.bsky.feed.post' as const,
       text: 'Hello @alice.test',
       createdAt: '2026-03-18T12:00:00.000Z',
-      facets: [{ $type: 'app.bsky.richtext.facet' }],
+      facets: [
+        {
+          $type: 'app.bsky.richtext.facet' as const,
+          index: { byteStart: 6, byteEnd: 17 },
+          features: [
+            {
+              $type: 'app.bsky.richtext.facet#mention' as const,
+              did: 'did:plc:alice123',
+            },
+          ],
+        },
+      ],
     };
 
     const nextRecord = buildUpdatedPostRecord(currentRecord, 'Plain post text');
@@ -38,7 +49,7 @@ describe('post-editor', () => {
   });
 
   it('should preserve mention facets when the current record already resolved the DID', () => {
-    const currentRecord = {
+    const currentRecord: EditablePostRecord = {
       $type: 'app.bsky.feed.post' as const,
       text: 'Hello @alice.test',
       createdAt: '2026-03-18T12:00:00.000Z',

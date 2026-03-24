@@ -9,7 +9,12 @@ import type { AuthorizationRequest } from '../shared/auth/auth-client';
 import { buildAuthorizationRequest } from '../shared/auth/auth-client';
 import { sessionStore } from '../shared/auth/session-store';
 import { BSKY_OAUTH_AUTHORIZE_URL, BSKY_OAUTH_CLIENT_ID, BSKY_OAUTH_SCOPE, BSKY_PDS_URL } from '../shared/constants';
-import type { PutRecordErrorResponse, PutRecordResponse, PutRecordSuccessResponse } from '../shared/messages';
+import type {
+  PutRecordConflictResponse,
+  PutRecordErrorResponse,
+  PutRecordResponse,
+  PutRecordSuccessResponse,
+} from '../shared/messages';
 
 // ── Dependency injection types ────────────────────────────────────────────────
 
@@ -160,11 +165,18 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
             return { type: 'PUT_RECORD_SUCCESS', uri: result.uri, cid: result.cid } satisfies PutRecordSuccessResponse;
           }
 
-          return {
-            type: 'PUT_RECORD_CONFLICT',
-            error: result.error,
-            conflict: result.conflict,
-          } satisfies PutRecordResponse;
+          const conflictResponse: PutRecordConflictResponse = result.conflict
+            ? {
+                type: 'PUT_RECORD_CONFLICT',
+                error: result.error,
+                conflict: result.conflict,
+              }
+            : {
+                type: 'PUT_RECORD_CONFLICT',
+                error: result.error,
+              };
+
+          return conflictResponse satisfies PutRecordResponse;
         }
 
         const result = await client.putRecord(params);
