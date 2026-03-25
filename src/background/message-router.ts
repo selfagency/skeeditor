@@ -335,10 +335,12 @@ export function createDefaultDeps(): RouterDeps {
     buildAuthReq: buildAuthorizationRequest,
     createXrpc: (config: XrpcClientConfig) => new XrpcClient(config),
     storeAuthState: async (state: string, codeVerifier: string): Promise<void> => {
-      await browser.storage.local.set({ pendingAuth: { state, codeVerifier } });
+      const storage = browser.storage.session ?? browser.storage.local;
+      await storage.set({ pendingAuth: { state, codeVerifier } });
     },
     getAuthState: async (): Promise<{ state: string; codeVerifier: string } | null> => {
-      const result = await browser.storage.local.get('pendingAuth');
+      const storage = browser.storage.session ?? browser.storage.local;
+      const result = await storage.get('pendingAuth');
       const raw: unknown = (result as Record<string, unknown>)['pendingAuth'];
       if (
         raw !== null &&
@@ -353,7 +355,8 @@ export function createDefaultDeps(): RouterDeps {
       return null;
     },
     clearAuthState: async (): Promise<void> => {
-      await browser.storage.local.remove('pendingAuth');
+      const storage = browser.storage.session ?? browser.storage.local;
+      await storage.remove('pendingAuth');
     },
     exchangeCode: exchangeCodeForTokens,
   };
