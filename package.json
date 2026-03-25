@@ -11,7 +11,10 @@
   ],
   "license": "MIT",
   "scripts": {
-    "build": "pnpm run lex:build && tsx scripts/build.ts",
+    "build": "pnpm run lex:build && tsx scripts/build.ts --browser=chrome",
+    "build:chrome": "pnpm run lex:build && tsx scripts/build.ts --browser=chrome",
+    "build:firefox": "pnpm run lex:build && tsx scripts/build.ts --browser=firefox",
+    "build:safari": "pnpm run lex:build && tsx scripts/build.ts --browser=safari",
     "build:repo": "turbo run build",
     "build:watch": "tsx scripts/build.ts --watch",
     "clean": "tsx scripts/clean.ts",

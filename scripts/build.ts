@@ -19,15 +19,19 @@ if (!(validBrowsers as readonly string[]).includes(browserArg)) {
 
 const browser = browserArg as Browser;
 
+const outDir = resolve(projectRoot, 'dist', browser);
+
 const main = async (): Promise<void> => {
   await build({
     configFile: resolve(projectRoot, 'vite.config.ts'),
     build: {
+      outDir,
+      emptyOutDir: true,
       watch: isWatchEnabled ? {} : null,
     },
   });
 
-  await writeMergedManifest(browser, 'dist/manifest.json', projectRoot);
+  await writeMergedManifest(browser, `dist/${browser}/manifest.json`, projectRoot);
 };
 
 main().catch(error => {
