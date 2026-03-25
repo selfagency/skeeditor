@@ -61,6 +61,9 @@ const main = async (): Promise<void> => {
             name: '_skeeditorContent',
             entryFileNames: 'content/content-script.js',
             assetFileNames: 'assets/[name][extname]',
+            globals: {
+              'webextension-polyfill': 'browser',
+            },
           },
         },
       },
