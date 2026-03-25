@@ -48,7 +48,7 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@atproto/lex": "^0.0.20",
+    "@atproto/lex": "^0.0.22",
     "webextension-polyfill": "^0.12.0"
   },
   "devDependencies": {
@@ -56,21 +56,21 @@
     "@testing-library/dom": "^10.4.1",
     "@types/node": "25.5.0",
     "@types/webextension-polyfill": "^0.12.5",
-    "@vitest/coverage-v8": "^4.1.0",
-    "@vitest/ui": "4.1.0",
+    "@vitest/coverage-v8": "^4.1.1",
+    "@vitest/ui": "4.1.1",
     "husky": "^9.1.7",
-    "jsdom": "29.0.0",
+    "jsdom": "29.0.1",
     "lint-staged": "^16.4.0",
-    "msw": "^2.12.13",
-    "oxfmt": "^0.41.0",
-    "oxlint": "^1.56.0",
-    "oxlint-tsgolint": "^0.17.0",
+    "msw": "^2.12.14",
+    "oxfmt": "^0.42.0",
+    "oxlint": "^1.57.0",
+    "oxlint-tsgolint": "^0.17.3",
     "tsx": "^4.21.0",
-    "turbo": "^2.8.17",
-    "typescript": "^5.9.3",
-    "vite": "8.0.0",
+    "turbo": "^2.8.20",
+    "typescript": "6.0.2",
+    "vite": "8.0.2",
     "vitepress": "^1.6.4",
-    "vitest": "4.1.0",
+    "vitest": "4.1.1",
     "web-ext": "10.0.0"
   },
   "engines": {
