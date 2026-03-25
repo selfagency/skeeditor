@@ -18,5 +18,5 @@ export type { BrowserName, PlatformCapabilities } from './types';
 
 import { detectPlatform } from './detect';
 
-/** Lazily-evaluated platform capabilities for the current browser. */
+/** Eagerly-evaluated (once at module load) platform capabilities for the current browser. */
 export const platform = detectPlatform();

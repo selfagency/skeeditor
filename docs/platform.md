@@ -38,7 +38,7 @@ combining `manifests/base.json` with the per-browser overlay at
 1. `pnpm build:firefox`
 2. `npx web-ext run --source-dir dist/firefox/ --firefox=nightly`
    - `web-ext` automatically reloads the extension on file changes when combined
-     with `pnpm build:watch`
+     with `pnpm build:watch:firefox` (so the watcher writes to `dist/firefox/`)
 3. Or: `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on** →
    select `dist/firefox/manifest.json`
 
