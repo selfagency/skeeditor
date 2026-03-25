@@ -4,7 +4,7 @@ A cross-browser extension that lets you **edit your own Bluesky posts directly o
 
 Click the **✏ Edit** badge on any of your posts, change the text, and save. skeeditor authenticates via OAuth 2.0 + PKCE, fetches the current record from the Bluesky PDS, and writes the updated record back — preserving rich-text facets, embeds, and timestamps automatically.
 
-**[Full documentation →](https://selfagency.github.io/skeeditor/)**
+**[Full documentation →](https://skeeditor.self.agency/)**
 
 ---
 
@@ -66,7 +66,7 @@ pnpm build:watch:firefox
 
 **Firefox**: `about:debugging#/runtime/this-firefox` → Load Temporary Add-on → `dist/firefox/manifest.json`
 
-**Safari**: Build, then open the generated Xcode project under `dist/safari/` and run it. See [Cross-Browser Platform docs](https://selfagency.github.io/skeeditor/dev/platform) for full instructions.
+**Safari**: Build, then open the generated Xcode project under `dist/safari/` and run it. See [Cross-Browser Platform docs](https://skeeditor.self.agency/dev/platform) for full instructions.
 
 ### Test
 
@@ -107,30 +107,30 @@ The extension has three contexts that communicate via typed runtime messages:
 
 Tokens never touch the content script. All authenticated network requests go through the background worker.
 
-See the [Architecture](https://selfagency.github.io/skeeditor/dev/architecture) and [Message Protocol](https://selfagency.github.io/skeeditor/dev/messages) docs for details.
+See the [Architecture](https://skeeditor.self.agency/dev/architecture) and [Message Protocol](https://skeeditor.self.agency/dev/messages) docs for details.
 
 ---
 
 ## Documentation
 
-| Section                                                                       | Description                                         |
-| ----------------------------------------------------------------------------- | --------------------------------------------------- |
-| [User Guide](https://selfagency.github.io/skeeditor/guide/introduction)       | Installation, usage, privacy & security, FAQ        |
-| [Architecture](https://selfagency.github.io/skeeditor/dev/architecture)       | Extension context model, data flow                  |
-| [Getting Started](https://selfagency.github.io/skeeditor/dev/getting-started) | Dev environment setup                               |
-| [Build System](https://selfagency.github.io/skeeditor/dev/build)              | Vite config, per-browser builds, manifest merging   |
-| [Testing](https://selfagency.github.io/skeeditor/dev/testing)                 | Unit, integration, E2E test layers                  |
-| [Contributing](https://selfagency.github.io/skeeditor/dev/contributing)       | Beans workflow, branch naming, TDD, PR requirements |
-| [Authentication](https://selfagency.github.io/skeeditor/dev/auth)             | OAuth PKCE flow, token storage, session management  |
-| [XRPC Client](https://selfagency.github.io/skeeditor/dev/xrpc)                | `getRecord`, `putRecordWithSwap`, conflict handling |
-| [Facets & Rich Text](https://selfagency.github.io/skeeditor/dev/facets)       | Link/mention/hashtag detection, byte offsets        |
-| [Cross-Browser Platform](https://selfagency.github.io/skeeditor/dev/platform) | API differences, manifest structure, Safari setup   |
+| Section                                                              | Description                                         |
+| -------------------------------------------------------------------- | --------------------------------------------------- |
+| [User Guide](https://skeeditor.self.agency/guide/introduction)       | Installation, usage, privacy & security, FAQ        |
+| [Architecture](https://skeeditor.self.agency/dev/architecture)       | Extension context model, data flow                  |
+| [Getting Started](https://skeeditor.self.agency/dev/getting-started) | Dev environment setup                               |
+| [Build System](https://skeeditor.self.agency/dev/build)              | Vite config, per-browser builds, manifest merging   |
+| [Testing](https://skeeditor.self.agency/dev/testing)                 | Unit, integration, E2E test layers                  |
+| [Contributing](https://skeeditor.self.agency/dev/contributing)       | Beans workflow, branch naming, TDD, PR requirements |
+| [Authentication](https://skeeditor.self.agency/dev/auth)             | OAuth PKCE flow, token storage, session management  |
+| [XRPC Client](https://skeeditor.self.agency/dev/xrpc)                | `getRecord`, `putRecordWithSwap`, conflict handling |
+| [Facets & Rich Text](https://skeeditor.self.agency/dev/facets)       | Link/mention/hashtag detection, byte offsets        |
+| [Cross-Browser Platform](https://skeeditor.self.agency/dev/platform) | API differences, manifest structure, Safari setup   |
 
 ---
 
 ## Contributing
 
-All work is tracked with [Beans](https://usebeans.io/). Before writing code, find or create a bean and create the issue branch. All changes require tests (TDD: red → green → refactor). See [Contributing](https://selfagency.github.io/skeeditor/dev/contributing) for the full workflow.
+All work is tracked with [Beans](https://usebeans.io/). Before writing code, find or create a bean and create the issue branch. All changes require tests (TDD: red → green → refactor). See [Contributing](https://skeeditor.self.agency/dev/contributing) for the full workflow.
 
 Commits follow [Conventional Commits](https://www.conventionalcommits.org/). PRs require passing CI (lint, typecheck, unit + integration tests) and must reference a bean ID.
 
