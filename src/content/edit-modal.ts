@@ -1,3 +1,5 @@
+import { graphemeLength } from '../shared/utils/text';
+
 const EDIT_MODAL_TEMPLATE = `
   <style>
     :host {
@@ -307,7 +309,7 @@ export class EditModal {
   private updateCharCount(): void {
     if (!this.charCount || !this.textarea) return;
 
-    const length = this.currentText.length;
+    const length = graphemeLength(this.currentText);
     const remaining = this.maxLength - length;
     const isError = remaining < 0;
 
@@ -364,7 +366,7 @@ export class EditModal {
       return;
     }
 
-    if (this.textarea && this.textarea.value.length > this.maxLength) {
+    if (this.textarea && graphemeLength(this.textarea.value) > this.maxLength) {
       this.setError(`Post exceeds maximum length of ${this.maxLength} characters`);
       return;
     }
