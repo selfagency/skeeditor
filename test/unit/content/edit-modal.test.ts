@@ -107,4 +107,20 @@ describe('edit-modal', () => {
     const statusMessage = modal.element.shadowRoot!.querySelector('.status-message') as HTMLElement;
     expect(statusMessage.textContent).toContain('save failed');
   });
+
+  it('should respond to Escape key after close and reopen', () => {
+    const modal = createModal();
+    const onCancel = vi.fn();
+
+    modal.open('First open', onCancel);
+    modal.close();
+
+    // Reopen — keydown listener should be active again
+    const onCancel2 = vi.fn();
+    modal.open('Second open', onCancel2);
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+    expect(onCancel2).toHaveBeenCalledOnce();
+  });
 });
