@@ -1,11 +1,11 @@
 ---
 # skeeditor-dixl
 title: Route getRecord requests from content script
-status: todo
+status: completed
 type: feature
 priority: critical
 created_at: 2026-03-18T14:29:45Z
-updated_at: 2026-03-18T15:10:11Z
+updated_at: 2026-03-25T01:50:13Z
 parent: skeeditor-618f
 blocked_by:
     - skeeditor-noiw

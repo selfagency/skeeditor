@@ -1,11 +1,11 @@
 ---
 # skeeditor-r8bf
 title: Route putRecord requests from content script
-status: todo
+status: completed
 type: feature
 priority: critical
 created_at: 2026-03-18T14:29:50Z
-updated_at: 2026-03-18T15:10:11Z
+updated_at: 2026-03-25T01:50:18Z
 parent: skeeditor-618f
 blocked_by:
     - skeeditor-noiw
