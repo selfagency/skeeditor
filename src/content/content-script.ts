@@ -1,5 +1,7 @@
 import 'webextension-polyfill';
 import { APP_NAME } from '../shared/constants';
+
+declare const browser: typeof import('webextension-polyfill');
 import type { PutRecordConflictResponse, PutRecordResponse } from '../shared/messages';
 import { sendMessage } from '../shared/messages';
 import { EditModal } from './edit-modal';

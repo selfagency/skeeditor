@@ -64,6 +64,7 @@ const main = async (): Promise<void> => {
             globals: {
               'webextension-polyfill': 'browser',
             },
+            intro: 'var browser = typeof browser !== "undefined" ? browser : {};',
           },
         },
       },
