@@ -10,6 +10,7 @@
     "monorepo"
   ],
   "license": "MIT",
+  "type": "module",
   "scripts": {
     "build": "pnpm run lex:build && tsx scripts/build.ts --browser=chrome",
     "build:chrome": "pnpm run lex:build && tsx scripts/build.ts --browser=chrome",
@@ -41,6 +42,9 @@
     "test:unit": "pnpm run lex:build && vitest run --project unit",
     "test:watch": "vitest --project unit --project integration",
     "typecheck": "pnpm run lex:build && tsc --project tsconfig.build.json --noEmit",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs",
     "prepare": "husky"
   },
   "dependencies": {
@@ -65,6 +69,7 @@
     "turbo": "^2.8.17",
     "typescript": "^5.9.3",
     "vite": "8.0.0",
+    "vitepress": "^1.6.4",
     "vitest": "4.1.0",
     "web-ext": "10.0.0"
   },
