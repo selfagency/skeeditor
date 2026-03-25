@@ -233,4 +233,41 @@ describe('message router integration: PUT_RECORD', () => {
 
     expect(result).toEqual({ type: 'PUT_RECORD_ERROR', message: 'Not authenticated' });
   });
+
+  it('returns PUT_RECORD_ERROR when PDS responds 401 Unauthorized', async () => {
+    server.use(
+      http.post(`${BSKY_PDS_URL}/xrpc/com.atproto.repo.putRecord`, () =>
+        HttpResponse.json({ error: 'AuthenticationRequired', message: 'Invalid token' }, { status: 401 }),
+      ),
+    );
+
+    const result = await handleMessage(
+      {
+        type: 'PUT_RECORD',
+        repo: TEST_DID,
+        collection: TEST_COLLECTION,
+        rkey: TEST_RKEY,
+        record: { ...TEST_RECORD, text: 'Edited' },
+        swapRecord: TEST_CID,
+      },
+      makeRealDeps(),
+    );
+
+    expect(result).toMatchObject({ type: 'PUT_RECORD_ERROR', message: expect.stringContaining('Invalid token') });
+  });
+
+  it('returns error for GET_RECORD when PDS responds 401 Unauthorized', async () => {
+    server.use(
+      http.get(`${BSKY_PDS_URL}/xrpc/com.atproto.repo.getRecord`, () =>
+        HttpResponse.json({ error: 'AuthenticationRequired', message: 'Expired token' }, { status: 401 }),
+      ),
+    );
+
+    const result = await handleMessage(
+      { type: 'GET_RECORD', repo: TEST_DID, collection: TEST_COLLECTION, rkey: TEST_RKEY },
+      makeRealDeps(),
+    );
+
+    expect(result).toMatchObject({ error: expect.stringContaining('Expired token') });
+  });
 });
