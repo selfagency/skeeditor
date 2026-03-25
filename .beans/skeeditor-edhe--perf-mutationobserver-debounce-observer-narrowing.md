@@ -1,11 +1,11 @@
 ---
 # skeeditor-edhe
 title: perf mutationobserver debounce observer narrowing
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-25T17:56:35Z
-updated_at: 2026-03-25T22:39:37Z
+updated_at: 2026-03-25T22:42:05Z
 parent: skeeditor-pjwz
 ---
 
@@ -19,11 +19,22 @@ Fix performance issues found in the codebase audit:
 
 ## Todo
 
-- [ ] Read `src/content/content-script.ts` observer setup
-- [ ] Implement coalescing debounce (100ms) for `scheduleScanForPosts`
-- [ ] Identify the feed container selector used by bsky.app and narrow the observer to it with body fallback
-- [ ] Read `src/shared/api/at-uri.ts` `getElementCandidates` function
-- [ ] Memoize or restructure the subtree search to avoid O(n) per call
-- [ ] Add/update unit tests for debounce behavior
-- [ ] `pnpm test` + `tsc --noEmit` clean
-- [ ] Commit with `perf(content)` prefix
+- [x] Read `src/content/content-script.ts` observer setup
+- [x] Implement coalescing debounce (100ms) for `scheduleScanForPosts`
+- [x] Identify the feed container selector used by bsky.app and narrow the observer to it with body fallback
+- [x] Read `src/shared/api/at-uri.ts` `getElementCandidates` function
+- [x] Memoize or restructure the subtree search to avoid O(n) per call
+- [x] Add/update unit tests for debounce behavior
+- [x] `pnpm test` + `tsc --noEmit` clean
+- [x] Commit with `perf(content)` prefix
+
+## Summary of Changes
+
+- `src/content/content-script.ts`: observer now targets feed container (`[data-testid=\"feed\"]`, `[data-testid=\"feedPage-feed\"]`, `main`, `[role=\"main\"]`) with `document.body` fallback
+- `src/content/content-script.ts`: debounce increased from `setTimeout(0)` to `setTimeout(100)` for mutation coalescing
+- `src/content/content-script.ts`: `cleanupContentScript` now clears pending timer
+- `src/shared/api/at-uri.ts`: `getElementCandidates` uses `WeakMap<Element, Element[]>` cache to skip redundant `querySelectorAll` per element
+
+branch: perf/edhe-observer-narrowing-memoize
+
+267 unit/integration tests pass, tsc clean.
