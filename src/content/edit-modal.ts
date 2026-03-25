@@ -239,9 +239,6 @@ export class EditModal {
     if (this.saveButton) {
       this.saveButton.addEventListener('click', this.handleSaveBound);
     }
-
-    this.element.addEventListener('click', this.handleBackgroundClickBound);
-    window.addEventListener('keydown', this.handleKeydownBound);
   }
 
   public open(text: string, onCancel?: () => void, onSave?: (text: string) => void | Promise<void>): void {
@@ -263,6 +260,9 @@ export class EditModal {
     }
 
     this.hideStatusMessage();
+
+    this.element.addEventListener('click', this.handleBackgroundClickBound);
+    window.addEventListener('keydown', this.handleKeydownBound);
 
     this.element.style.display = 'flex';
   }
