@@ -1,11 +1,11 @@
 ---
 # skeeditor-yz58
 title: 'E2E: unauthenticated user sees login prompt, not edit button'
-status: todo
+status: completed
 type: test
 priority: normal
 created_at: 2026-03-18T14:30:55Z
-updated_at: 2026-03-18T15:10:19Z
+updated_at: 2026-03-25T13:31:35Z
 parent: skeeditor-965j
 blocked_by:
     - skeeditor-dsxj

@@ -126,8 +126,13 @@ const injectEditButton = (postElement: HTMLElement): void => {
 };
 
 const scanForPosts = (): void => {
+  // No authenticated DID → don't inject any edit buttons.
+  if (currentDid === null) {
+    return;
+  }
+
   for (const postInfo of findPosts(document)) {
-    if (currentDid !== null && postInfo.repo !== currentDid) {
+    if (postInfo.repo !== currentDid) {
       continue;
     }
 
