@@ -6,7 +6,7 @@
  * MSW intercepts the outgoing XRPC requests and returns controlled responses.
  */
 import { http, HttpResponse } from 'msw';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { handleMessage, type RouterDeps } from '@src/background/message-router';
 import { XrpcClient } from '@src/shared/api/xrpc-client';
