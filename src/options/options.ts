@@ -1,3 +1,5 @@
+import 'webextension-polyfill';
+
 const status = document.querySelector<HTMLParagraphElement>('#status');
 
 if (status) {

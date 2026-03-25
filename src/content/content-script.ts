@@ -1,3 +1,4 @@
+import 'webextension-polyfill';
 import { APP_NAME } from '../shared/constants';
 import type { PutRecordConflictResponse, PutRecordResponse } from '../shared/messages';
 import { sendMessage } from '../shared/messages';

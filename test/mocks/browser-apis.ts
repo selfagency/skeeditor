@@ -1,19 +1,11 @@
 import { vi } from 'vitest';
 
-interface BrowserMessage {
-  type: string;
-}
-
-interface BrowserPingResponse {
-  ok: true;
-}
-
 interface BrowserRuntimeMock {
   onMessage: {
     addListener: (listener: (message: unknown) => unknown) => void;
     removeListener: (listener: (message: unknown) => unknown) => void;
   };
-  sendMessage: (message: BrowserMessage) => Promise<BrowserPingResponse>;
+  sendMessage: (message: unknown) => Promise<{ ok: true }>;
   getURL: (path: string) => string;
 }
 
@@ -23,7 +15,7 @@ interface BrowserTabsMock {
 
 interface BrowserStorageMock {
   local: {
-    get: (key: string) => Promise<Record<string, never>>;
+    get: (key: string) => Promise<Record<string, unknown>>;
     remove: (key: string) => Promise<void>;
     set: (value: Record<string, unknown>) => Promise<void>;
   };
@@ -36,8 +28,8 @@ interface BrowserApiMock {
 }
 
 declare global {
-  // eslint-disable-next-line no-var
-  var browser: BrowserApiMock;
+  // chrome is Chrome-namespace alias used in a single content-layer test; browser
+  // global typing comes from src/browser.d.ts (webextension-polyfill types).
   // eslint-disable-next-line no-var
   var chrome: BrowserApiMock;
 }
@@ -65,7 +57,8 @@ const createBrowserApiMock = (): BrowserApiMock => ({
 
 const assignMocks = (): void => {
   const mock = createBrowserApiMock();
-  globalThis.browser = mock;
+  // Cast to the real polyfill type — the mock satisfies the subset used in tests.
+  globalThis.browser = mock as unknown as typeof browser;
   globalThis.chrome = mock;
 };
 

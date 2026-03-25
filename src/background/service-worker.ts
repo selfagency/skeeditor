@@ -1,3 +1,4 @@
+import 'webextension-polyfill';
 import { APP_NAME } from '../shared/constants';
 import { registerMessageRouter } from './message-router';
 
