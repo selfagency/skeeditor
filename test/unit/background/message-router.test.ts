@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 import type { RouterDeps } from '@src/background/message-router';
-import { handleMessage } from '@src/background/message-router';
+import { createDefaultDeps, handleMessage } from '@src/background/message-router';
 import type { GetRecordResult, PutRecordResult, PutRecordWithSwapResult } from '@src/shared/api/xrpc-client';
 import type { AuthorizationRequest } from '@src/shared/auth/auth-client';
 import type { StoredSession } from '@src/shared/auth/session-store';
@@ -628,6 +628,42 @@ describe('handleMessage', () => {
       );
 
       expect(result).toEqual({ error: 'Invalid GET_RECORD payload' });
+    });
+  });
+});
+
+describe('createDefaultDeps', () => {
+  describe('auth state storage', () => {
+    it('should store PKCE state in browser.storage.session, not storage.local', async () => {
+      const deps = createDefaultDeps();
+
+      await deps.storeAuthState('test-state', 'test-verifier');
+
+      expect(globalThis.browser.storage.session.set).toHaveBeenCalledWith({
+        pendingAuth: { state: 'test-state', codeVerifier: 'test-verifier' },
+      });
+      expect(globalThis.browser.storage.local.set).not.toHaveBeenCalled();
+    });
+
+    it('should read PKCE state from browser.storage.session', async () => {
+      const deps = createDefaultDeps();
+      vi.mocked(globalThis.browser.storage.session.get).mockResolvedValueOnce({
+        pendingAuth: { state: 'stored-state', codeVerifier: 'stored-verifier' },
+      });
+
+      const result = await deps.getAuthState();
+
+      expect(globalThis.browser.storage.session.get).toHaveBeenCalledWith('pendingAuth');
+      expect(result).toEqual({ state: 'stored-state', codeVerifier: 'stored-verifier' });
+    });
+
+    it('should clear PKCE state from browser.storage.session', async () => {
+      const deps = createDefaultDeps();
+
+      await deps.clearAuthState();
+
+      expect(globalThis.browser.storage.session.remove).toHaveBeenCalledWith('pendingAuth');
+      expect(globalThis.browser.storage.local.remove).not.toHaveBeenCalled();
     });
   });
 });
