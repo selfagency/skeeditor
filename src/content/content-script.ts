@@ -2,6 +2,12 @@ import 'webextension-polyfill';
 import { APP_NAME } from '../shared/constants';
 
 declare const browser: typeof import('webextension-polyfill');
+
+// Ensure browser API is available in IIFE context
+if (typeof browser === 'undefined') {
+  // @ts-ignore - This is a fallback for the IIFE build
+  window.browser = {};
+}
 import type { PutRecordConflictResponse, PutRecordResponse } from '../shared/messages';
 import { sendMessage } from '../shared/messages';
 import { EditModal } from './edit-modal';
