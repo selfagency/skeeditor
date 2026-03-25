@@ -142,10 +142,15 @@ bskyTest(
 bskyTest('unauthenticated user sees no edit buttons', async ({ page, routeBskyApp }) => {
   // No setAuthState call → storage remains empty → AUTH_GET_STATUS returns { authenticated: false }
   await routeBskyApp();
-  await page.goto(`https://bsky.app/profile/${TEST_DID}/post/${TEST_RKEY}`);
 
-  // Allow the content script time to complete its AUTH_GET_STATUS round-trip.
-  await page.waitForTimeout(2_000);
+  // Wait for the content script's AUTH_GET_STATUS round-trip to complete before asserting the
+  // absence of edit buttons. The script logs this message after refreshAuthState() resolves.
+  const authDonePromise = page.waitForEvent('console', {
+    predicate: msg => msg.type() === 'info' && msg.text().includes('content script loaded'),
+    timeout: 10_000,
+  });
+  await page.goto(`https://bsky.app/profile/${TEST_DID}/post/${TEST_RKEY}`);
+  await authDonePromise;
 
   // Neither the own post nor the other user's post should have an Edit button.
   await expect(page.locator('.skeeditor-edit-button')).toHaveCount(0);

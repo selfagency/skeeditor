@@ -24,7 +24,21 @@ const MOCK_PAGE_PATH = resolve(process.cwd(), 'test/e2e/fixtures/mock-bsky-page.
 
 // ── Mock record factory ───────────────────────────────────────────────────────
 
-export const makeMockGetRecordResult = (text = OWN_POST_TEXT) => ({
+interface MockGetRecordResult {
+  value: {
+    $type: string;
+    text: string;
+    createdAt: string;
+  };
+  cid: string;
+}
+
+interface MockPutRecordResult {
+  uri: string;
+  cid: string;
+}
+
+export const makeMockGetRecordResult = (text = OWN_POST_TEXT): MockGetRecordResult => ({
   value: {
     $type: 'app.bsky.feed.post',
     text,
@@ -33,7 +47,7 @@ export const makeMockGetRecordResult = (text = OWN_POST_TEXT) => ({
   cid: 'bafyreixxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
 });
 
-export const makeMockPutRecordResult = () => ({
+export const makeMockPutRecordResult = (): MockPutRecordResult => ({
   uri: TEST_AT_URI,
   cid: 'bafyreinewcidxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
 });
