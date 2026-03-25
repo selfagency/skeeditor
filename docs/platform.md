@@ -12,11 +12,11 @@ by Firefox and Safari.
 
 ## Build Targets
 
-| Browser | Build command | Output directory |
-| :------ | :------------ | :--------------- |
-| Chrome | `pnpm build:chrome` | `dist/chrome/` |
-| Firefox | `pnpm build:firefox` | `dist/firefox/` |
-| Safari | `pnpm build:safari` | `dist/safari/` |
+| Browser | Build command        | Output directory |
+| :------ | :------------------- | :--------------- |
+| Chrome  | `pnpm build:chrome`  | `dist/chrome/`   |
+| Firefox | `pnpm build:firefox` | `dist/firefox/`  |
+| Safari  | `pnpm build:safari`  | `dist/safari/`   |
 
 The default `pnpm build` alias targets Chrome.
 
@@ -80,11 +80,11 @@ instead by `test/mocks/browser-apis.ts` via `test/setup/unit.ts`.
 `src/platform/detect.ts` exports `detectPlatform()`, which uses **feature
 detection** to identify the current browser — never `navigator.userAgent`.
 
-| Signal | Browser |
-| :----- | :------ |
+| Signal                                         | Browser |
+| :--------------------------------------------- | :------ |
 | `browser.runtime.getBrowserInfo` is a function | Firefox |
-| `globalThis.safari.extension` is defined | Safari |
-| Neither of the above | Chrome |
+| `globalThis.safari.extension` is defined       | Safari  |
+| Neither of the above                           | Chrome  |
 
 Example:
 
@@ -100,11 +100,11 @@ if (platform.isFirefox) {
 
 ### Background execution model
 
-| Browser | Manifest key | Notes |
-| :------ | :----------- | :---- |
-| Chrome | `"service_worker": "…"` | Non-persistent, MV3 only |
-| Firefox | `"scripts": ["…"]` | Non-persistent background script (Firefox 121+) |
-| Safari | `"service_worker": "…"` | Non-persistent, mirrors Chrome |
+| Browser | Manifest key            | Notes                                           |
+| :------ | :---------------------- | :---------------------------------------------- |
+| Chrome  | `"service_worker": "…"` | Non-persistent, MV3 only                        |
+| Firefox | `"scripts": ["…"]`      | Non-persistent background script (Firefox 121+) |
+| Safari  | `"service_worker": "…"` | Non-persistent, mirrors Chrome                  |
 
 **Do not store in-memory state between wake cycles.** Use `browser.storage.local`
 for any data that must survive the background being unloaded.
