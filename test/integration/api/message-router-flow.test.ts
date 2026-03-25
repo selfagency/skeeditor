@@ -60,10 +60,6 @@ const makeRealDeps = (session: ReturnType<typeof makeSession> | null = makeSessi
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-afterEach(() => {
-  server.resetHandlers();
-});
-
 describe('message router integration: GET_RECORD', () => {
   it('returns the record value and CID when the PDS responds 200', async () => {
     server.use(

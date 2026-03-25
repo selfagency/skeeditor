@@ -436,6 +436,39 @@ describe('handleMessage', () => {
       expect(result).toEqual({ type: 'PUT_RECORD_ERROR', message: 'Invalid PUT_RECORD payload' });
     });
 
+    it('returns a structured error when record is a non-plain object (Map)', async () => {
+      const deps = makeDeps({ store: makeStoreMock(makeSession()) });
+      const map = new Map([['$type', 'app.bsky.feed.post']]);
+
+      const result = await handleMessage(
+        { type: 'PUT_RECORD', repo: 'did:plc:alice', collection: 'app.bsky.feed.post', rkey: 'abc', record: map },
+        deps,
+      );
+
+      expect(result).toEqual({ type: 'PUT_RECORD_ERROR', message: 'Invalid PUT_RECORD payload' });
+    });
+
+    it('returns a structured error when record is a class instance', async () => {
+      class PostRecord {
+        $type = 'app.bsky.feed.post';
+        text = 'hello';
+      }
+      const deps = makeDeps({ store: makeStoreMock(makeSession()) });
+
+      const result = await handleMessage(
+        {
+          type: 'PUT_RECORD',
+          repo: 'did:plc:alice',
+          collection: 'app.bsky.feed.post',
+          rkey: 'abc',
+          record: new PostRecord(),
+        },
+        deps,
+      );
+
+      expect(result).toEqual({ type: 'PUT_RECORD_ERROR', message: 'Invalid PUT_RECORD payload' });
+    });
+
     it('returns a structured error when repo is missing from PUT_RECORD', async () => {
       const deps = makeDeps({ store: makeStoreMock(makeSession()) });
 

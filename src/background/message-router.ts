@@ -104,7 +104,12 @@ function isValidPutRecordPayload(msg: IncomingMessage): msg is IncomingMessage &
     return false;
   }
   const record = msg['record'];
-  if (record === null || typeof record !== 'object' || Array.isArray(record)) {
+  if (
+    record === null ||
+    typeof record !== 'object' ||
+    Array.isArray(record) ||
+    Object.getPrototypeOf(record) !== Object.prototype
+  ) {
     return false;
   }
   if (!isNonEmptyString((record as Record<string, unknown>)['$type'])) {
