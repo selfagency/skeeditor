@@ -1,6 +1,6 @@
-import { AuthClientError } from './auth-client';
-import type { TokenResponse } from './types';
+import { throwParsedOAuthError } from './auth-client';
 import type { StoredSession } from './session-store';
+import type { TokenResponse } from './types';
 
 export type { TokenResponse };
 
@@ -44,19 +44,7 @@ export async function refreshAccessToken(
   });
 
   if (!response.ok) {
-    const errorBody: unknown = await response.json().catch(() => ({}));
-    const errorDescription =
-      errorBody !== null &&
-      typeof errorBody === 'object' &&
-      'error_description' in errorBody &&
-      typeof (errorBody as Record<string, unknown>)['error_description'] === 'string'
-        ? (errorBody as Record<string, string>)['error_description']
-        : undefined;
-    throw new AuthClientError(
-      errorDescription ?? `Token refresh failed with HTTP ${response.status}`,
-      'refresh_failed',
-      response.status,
-    );
+    await throwParsedOAuthError(response, `Token refresh failed with HTTP ${response.status}`, 'refresh_failed');
   }
 
   return response.json() as Promise<TokenResponse>;

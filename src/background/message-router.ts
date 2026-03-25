@@ -6,9 +6,16 @@ import type {
 } from '../shared/api/xrpc-client';
 import { XrpcClient } from '../shared/api/xrpc-client';
 import type { AuthorizationRequest } from '../shared/auth/auth-client';
-import { buildAuthorizationRequest } from '../shared/auth/auth-client';
+import { buildAuthorizationRequest, exchangeCodeForTokens } from '../shared/auth/auth-client';
+import type { StoredSession } from '../shared/auth/session-store';
 import { sessionStore } from '../shared/auth/session-store';
-import { BSKY_OAUTH_AUTHORIZE_URL, BSKY_OAUTH_CLIENT_ID, BSKY_OAUTH_SCOPE, BSKY_PDS_URL } from '../shared/constants';
+import {
+  BSKY_OAUTH_AUTHORIZE_URL,
+  BSKY_OAUTH_CLIENT_ID,
+  BSKY_OAUTH_SCOPE,
+  BSKY_OAUTH_TOKEN_URL,
+  BSKY_PDS_URL,
+} from '../shared/constants';
 import type {
   PutRecordConflictResponse,
   PutRecordErrorResponse,
@@ -39,6 +46,7 @@ interface XrpcInterface {
 
 interface StoreInterface {
   get: () => Promise<{ did: string; accessToken: string; expiresAt: number } | null>;
+  set: (session: StoredSession) => Promise<void>;
   clear: () => Promise<void>;
   isAccessTokenValid: () => Promise<boolean>;
 }
@@ -50,6 +58,8 @@ export interface RouterDeps {
   buildAuthReq: (params: Parameters<typeof buildAuthorizationRequest>[0]) => Promise<AuthorizationRequest>;
   createXrpc: (config: XrpcClientConfig) => XrpcInterface;
   storeAuthState: (state: string, codeVerifier: string) => Promise<void>;
+  getAuthState: () => Promise<{ state: string; codeVerifier: string } | null>;
+  clearAuthState: () => Promise<void>;
 }
 
 // ── Known message types ──────────────────────────────────────────────────────
@@ -59,6 +69,7 @@ const KNOWN_TYPES = new Set([
   'AUTH_SIGN_OUT',
   'AUTH_REAUTHORIZE',
   'AUTH_GET_STATUS',
+  'AUTH_CALLBACK',
   'GET_RECORD',
   'PUT_RECORD',
 ]);
@@ -154,6 +165,48 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
     case 'AUTH_SIGN_OUT': {
       await deps.store.clear();
       return { ok: true };
+    }
+
+    case 'AUTH_CALLBACK': {
+      const code = message['code'];
+      const callbackState = message['state'];
+      if (!isNonEmptyString(code) || !isNonEmptyString(callbackState)) {
+        return { error: 'Invalid AUTH_CALLBACK payload' };
+      }
+
+      const pending = await deps.getAuthState();
+      if (pending === null) {
+        return { error: 'No pending auth state' };
+      }
+
+      // CSRF protection: verify the state matches what was stored before the redirect
+      if (pending.state !== callbackState) {
+        await deps.clearAuthState();
+        return { error: 'State mismatch' };
+      }
+
+      try {
+        const tokens = await exchangeCodeForTokens(
+          BSKY_OAUTH_TOKEN_URL,
+          code,
+          pending.codeVerifier,
+          BSKY_OAUTH_CLIENT_ID,
+          deps.redirectUri,
+        );
+        const session: StoredSession = {
+          accessToken: tokens.access_token,
+          refreshToken: tokens.refresh_token ?? '',
+          expiresAt: tokens.expires_in !== undefined ? Date.now() + tokens.expires_in * 1000 : Date.now() + 3_600_000,
+          scope: tokens.scope ?? BSKY_OAUTH_SCOPE,
+          did: tokens.sub ?? '',
+        };
+        await deps.store.set(session);
+        return { ok: true };
+      } catch (err) {
+        return { error: err instanceof Error ? err.message : 'Token exchange failed' };
+      } finally {
+        await deps.clearAuthState();
+      }
     }
 
     case 'AUTH_GET_STATUS': {
@@ -266,6 +319,24 @@ export function createDefaultDeps(): RouterDeps {
     createXrpc: (config: XrpcClientConfig) => new XrpcClient(config),
     storeAuthState: async (state: string, codeVerifier: string): Promise<void> => {
       await browser.storage.local.set({ pendingAuth: { state, codeVerifier } });
+    },
+    getAuthState: async (): Promise<{ state: string; codeVerifier: string } | null> => {
+      const result = await browser.storage.local.get('pendingAuth');
+      const raw: unknown = (result as Record<string, unknown>)['pendingAuth'];
+      if (
+        raw !== null &&
+        typeof raw === 'object' &&
+        'state' in raw &&
+        typeof (raw as Record<string, unknown>)['state'] === 'string' &&
+        'codeVerifier' in raw &&
+        typeof (raw as Record<string, unknown>)['codeVerifier'] === 'string'
+      ) {
+        return raw as { state: string; codeVerifier: string };
+      }
+      return null;
+    },
+    clearAuthState: async (): Promise<void> => {
+      await browser.storage.local.remove('pendingAuth');
     },
   };
 }

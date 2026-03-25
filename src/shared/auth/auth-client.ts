@@ -16,6 +16,25 @@ export class AuthClientError extends Error {
 }
 
 /**
+ * Parse an OAuth HTTP error response, extract `error_description` from the JSON
+ * body when present, and throw an `AuthClientError`.
+ *
+ * Extracted to avoid duplicating the same inline error-body parsing in both
+ * `exchangeCodeForTokens` and `refreshAccessToken`.
+ */
+export async function throwParsedOAuthError(response: Response, fallbackMessage: string, kind: string): Promise<never> {
+  const errorBody: unknown = await response.json().catch(() => ({}));
+  const errorDescription =
+    errorBody !== null &&
+    typeof errorBody === 'object' &&
+    'error_description' in errorBody &&
+    typeof (errorBody as Record<string, unknown>)['error_description'] === 'string'
+      ? (errorBody as Record<string, string>)['error_description']
+      : undefined;
+  throw new AuthClientError(errorDescription ?? fallbackMessage, kind, response.status);
+}
+
+/**
  * Build a PKCE authorization request URL.
  *
  * Returns the full authorization URL to open in the browser along with the
@@ -77,19 +96,7 @@ export async function exchangeCodeForTokens(
   });
 
   if (!response.ok) {
-    const errorBody: unknown = await response.json().catch(() => ({}));
-    const errorDescription =
-      errorBody !== null &&
-      typeof errorBody === 'object' &&
-      'error_description' in errorBody &&
-      typeof (errorBody as Record<string, unknown>)['error_description'] === 'string'
-        ? (errorBody as Record<string, string>)['error_description']
-        : undefined;
-    throw new AuthClientError(
-      errorDescription ?? `Token request failed with HTTP ${response.status}`,
-      'token_request_failed',
-      response.status,
-    );
+    await throwParsedOAuthError(response, `Token request failed with HTTP ${response.status}`, 'token_request_failed');
   }
 
   return response.json() as Promise<TokenResponse>;

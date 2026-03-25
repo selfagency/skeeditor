@@ -245,6 +245,9 @@ export class XrpcClient {
       service: config.service,
     };
     if (config.did !== undefined) {
+      if (!/^did:[a-z]+:.+$/u.test(config.did)) {
+        throw new XrpcClientError('Invalid DID format');
+      }
       agentConfig.did = config.did as `did:${string}:${string}`;
     }
     if (config.accessJwt !== undefined) {
@@ -274,7 +277,7 @@ export class XrpcClient {
 
       return { value, cid };
     } catch (err) {
-      throw mapXrpcError(err, `getRecord(${repo}/${collection}/${rkey})`);
+      throw mapXrpcError(err, 'getRecord');
     }
   }
 
@@ -301,7 +304,7 @@ export class XrpcClient {
 
       return { uri, cid };
     } catch (err) {
-      throw mapXrpcError(err, `putRecord(${repo}/${collection}/${rkey})`);
+      throw mapXrpcError(err, 'putRecord');
     }
   }
 

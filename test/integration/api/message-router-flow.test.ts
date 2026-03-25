@@ -44,6 +44,7 @@ const makeSession = () => ({
 const makeRealDeps = (session: ReturnType<typeof makeSession> | null = makeSession()): RouterDeps => ({
   store: {
     get: vi.fn().mockResolvedValue(session),
+    set: vi.fn().mockResolvedValue(undefined),
     clear: vi.fn().mockResolvedValue(undefined),
     isAccessTokenValid: vi.fn().mockResolvedValue(session !== null),
   },
@@ -56,6 +57,8 @@ const makeRealDeps = (session: ReturnType<typeof makeSession> | null = makeSessi
   }),
   createXrpc: config => new XrpcClient(config),
   storeAuthState: vi.fn().mockResolvedValue(undefined),
+  getAuthState: vi.fn().mockResolvedValue(null),
+  clearAuthState: vi.fn().mockResolvedValue(undefined),
 });
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

@@ -51,6 +51,8 @@ const makeDeps = (overrides: Partial<RouterDeps> = {}): RouterDeps => ({
   buildAuthReq: vi.fn().mockResolvedValue(makeAuthRequest()),
   createXrpc: vi.fn().mockReturnValue(makeXrpcMock()),
   storeAuthState: vi.fn().mockResolvedValue(undefined),
+  getAuthState: vi.fn().mockResolvedValue(null),
+  clearAuthState: vi.fn().mockResolvedValue(undefined),
   ...overrides,
 });
 

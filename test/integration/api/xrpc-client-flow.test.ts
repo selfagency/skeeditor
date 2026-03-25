@@ -177,7 +177,7 @@ describe('XrpcClient integration flow', () => {
         success: false,
         error: {
           kind: 'conflict',
-          message: `putRecord(${TEST_DID}/${TEST_COLLECTION}/${TEST_RKEY}): Record was updated by another actor`,
+          message: 'putRecord: Record was updated by another actor',
           status: 409,
         },
         conflict: {
