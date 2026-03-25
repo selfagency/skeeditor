@@ -28,7 +28,7 @@ test('should open the mock Bluesky fixture page for future content-script tests'
 
   await page.goto(mockPageUrl.href);
 
-  await expect(page.getByTestId('post')).toBeVisible();
+  await expect(page.getByTestId('post').first()).toBeVisible();
   await expect(page.getByTestId('post-text').first()).toContainText('Hello from my own post');
 });
 
@@ -143,14 +143,10 @@ bskyTest('unauthenticated user sees no edit buttons', async ({ page, routeBskyAp
   // No setAuthState call → storage remains empty → AUTH_GET_STATUS returns { authenticated: false }
   await routeBskyApp();
 
-  // Wait for the content script's AUTH_GET_STATUS round-trip to complete before asserting the
-  // absence of edit buttons. The script logs this message after refreshAuthState() resolves.
-  const authDonePromise = page.waitForEvent('console', {
-    predicate: msg => msg.type() === 'info' && msg.text().includes('content script loaded'),
-    timeout: 10_000,
-  });
+  // Wait for the content script to complete its AUTH_GET_STATUS round-trip. The content
+  // script stamps data-skeeditor-initialized on <html> after refreshAuthState() settles.
   await page.goto(`https://bsky.app/profile/${TEST_DID}/post/${TEST_RKEY}`);
-  await authDonePromise;
+  await page.waitForSelector(':root[data-skeeditor-initialized]', { timeout: 10_000 });
 
   // Neither the own post nor the other user's post should have an Edit button.
   await expect(page.locator('.skeeditor-edit-button')).toHaveCount(0);

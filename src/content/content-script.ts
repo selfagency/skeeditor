@@ -172,11 +172,13 @@ const start = (): void => {
   void refreshAuthState()
     .then(() => {
       scanForPosts();
+      document.documentElement.setAttribute('data-skeeditor-initialized', 'true');
       console.info(`${APP_NAME}: content script loaded`);
     })
     .catch(error => {
       console.error(`${APP_NAME}: failed to load auth state`, error);
       scanForPosts();
+      document.documentElement.setAttribute('data-skeeditor-initialized', 'true');
       console.info(`${APP_NAME}: content script loaded with anonymous state`);
     });
 };
