@@ -20,11 +20,11 @@ Click the **✏ Edit** badge on any of your posts, change the text, and save. sk
 
 ## Browser support
 
-| Browser | Minimum version |
-| --- | --- |
-| Chrome | 120+ |
-| Firefox | 121+ |
-| Safari | macOS 14+ (Sonoma) |
+| Browser | Minimum version    |
+| ------- | ------------------ |
+| Chrome  | 120+               |
+| Firefox | 121+               |
+| Safari  | macOS 14+ (Sonoma) |
 
 ---
 
@@ -113,18 +113,18 @@ See the [Architecture](https://selfagency.github.io/skeeditor/dev/architecture) 
 
 ## Documentation
 
-| Section | Description |
-| --- | --- |
-| [User Guide](https://selfagency.github.io/skeeditor/guide/introduction) | Installation, usage, privacy & security, FAQ |
-| [Architecture](https://selfagency.github.io/skeeditor/dev/architecture) | Extension context model, data flow |
-| [Getting Started](https://selfagency.github.io/skeeditor/dev/getting-started) | Dev environment setup |
-| [Build System](https://selfagency.github.io/skeeditor/dev/build) | Vite config, per-browser builds, manifest merging |
-| [Testing](https://selfagency.github.io/skeeditor/dev/testing) | Unit, integration, E2E test layers |
-| [Contributing](https://selfagency.github.io/skeeditor/dev/contributing) | Beans workflow, branch naming, TDD, PR requirements |
-| [Authentication](https://selfagency.github.io/skeeditor/dev/auth) | OAuth PKCE flow, token storage, session management |
-| [XRPC Client](https://selfagency.github.io/skeeditor/dev/xrpc) | `getRecord`, `putRecordWithSwap`, conflict handling |
-| [Facets & Rich Text](https://selfagency.github.io/skeeditor/dev/facets) | Link/mention/hashtag detection, byte offsets |
-| [Cross-Browser Platform](https://selfagency.github.io/skeeditor/dev/platform) | API differences, manifest structure, Safari setup |
+| Section                                                                       | Description                                         |
+| ----------------------------------------------------------------------------- | --------------------------------------------------- |
+| [User Guide](https://selfagency.github.io/skeeditor/guide/introduction)       | Installation, usage, privacy & security, FAQ        |
+| [Architecture](https://selfagency.github.io/skeeditor/dev/architecture)       | Extension context model, data flow                  |
+| [Getting Started](https://selfagency.github.io/skeeditor/dev/getting-started) | Dev environment setup                               |
+| [Build System](https://selfagency.github.io/skeeditor/dev/build)              | Vite config, per-browser builds, manifest merging   |
+| [Testing](https://selfagency.github.io/skeeditor/dev/testing)                 | Unit, integration, E2E test layers                  |
+| [Contributing](https://selfagency.github.io/skeeditor/dev/contributing)       | Beans workflow, branch naming, TDD, PR requirements |
+| [Authentication](https://selfagency.github.io/skeeditor/dev/auth)             | OAuth PKCE flow, token storage, session management  |
+| [XRPC Client](https://selfagency.github.io/skeeditor/dev/xrpc)                | `getRecord`, `putRecordWithSwap`, conflict handling |
+| [Facets & Rich Text](https://selfagency.github.io/skeeditor/dev/facets)       | Link/mention/hashtag detection, byte offsets        |
+| [Cross-Browser Platform](https://selfagency.github.io/skeeditor/dev/platform) | API differences, manifest structure, Safari setup   |
 
 ---
 

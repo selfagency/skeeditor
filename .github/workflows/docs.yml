@@ -5,9 +5,9 @@ on:
     branches:
       - main
     paths:
-      - 'docs/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
+      - "docs/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
   workflow_dispatch:
 
 permissions:
@@ -28,7 +28,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Required for lastUpdated
+          fetch-depth: 0 # Required for lastUpdated
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
