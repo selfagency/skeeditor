@@ -1,10 +1,15 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 import type { RouterDeps } from '@src/background/message-router';
 import { handleMessage } from '@src/background/message-router';
 import type { GetRecordResult, PutRecordResult, PutRecordWithSwapResult } from '@src/shared/api/xrpc-client';
 import type { AuthorizationRequest } from '@src/shared/auth/auth-client';
 import type { StoredSession } from '@src/shared/auth/session-store';
+
+vi.mock('@src/shared/auth/auth-client', () => ({
+  buildAuthorizationRequest: vi.fn(),
+  exchangeCodeForTokens: vi.fn(),
+}));
 
 const makeSession = (overrides: Partial<StoredSession> = {}): StoredSession => ({
   accessToken: 'at-token',
@@ -51,6 +56,15 @@ const makeDeps = (overrides: Partial<RouterDeps> = {}): RouterDeps => ({
   buildAuthReq: vi.fn().mockResolvedValue(makeAuthRequest()),
   createXrpc: vi.fn().mockReturnValue(makeXrpcMock()),
   storeAuthState: vi.fn().mockResolvedValue(undefined),
+  getAuthState: vi.fn().mockResolvedValue(null),
+  clearAuthState: vi.fn().mockResolvedValue(undefined),
+  exchangeCode: vi.fn().mockResolvedValue({
+    access_token: 'new-access-token',
+    refresh_token: 'new-refresh-token',
+    expires_in: 3600,
+    scope: 'atproto transition:generic',
+    sub: 'did:plc:testuser',
+  }),
   ...overrides,
 });
 
@@ -114,6 +128,79 @@ describe('handleMessage', () => {
       expect(vi.mocked(deps.storeAuthState)).toHaveBeenCalledWith(authRequest.state, authRequest.codeVerifier);
       expect(vi.mocked(deps.openTab)).toHaveBeenCalledWith(authRequest.url);
       expect(result).toEqual({ ok: true });
+    });
+  });
+
+  describe('AUTH_CALLBACK', () => {
+    it('rejects invalid payload missing code or state', async () => {
+      const deps = makeDeps();
+
+      const result1 = await handleMessage({ type: 'AUTH_CALLBACK', code: '', state: 'state' }, deps);
+      const result2 = await handleMessage({ type: 'AUTH_CALLBACK', code: 'code', state: '' }, deps);
+      const result3 = await handleMessage({ type: 'AUTH_CALLBACK', code: '' as never, state: '' as never }, deps);
+
+      expect(result1).toEqual({ error: 'Invalid AUTH_CALLBACK payload' });
+      expect(result2).toEqual({ error: 'Invalid AUTH_CALLBACK payload' });
+      expect(result3).toEqual({ error: 'Invalid AUTH_CALLBACK payload' });
+    });
+
+    it('rejects when no pending auth state exists', async () => {
+      const deps = makeDeps({
+        getAuthState: vi.fn().mockResolvedValue(null),
+      });
+
+      const result = await handleMessage({ type: 'AUTH_CALLBACK', code: 'code', state: 'state' }, deps);
+
+      expect(result).toEqual({ error: 'No pending auth state' });
+      expect(vi.mocked(deps.getAuthState)).toHaveBeenCalledOnce();
+    });
+
+    it('rejects on state mismatch and clears pending state', async () => {
+      const deps = makeDeps({
+        getAuthState: vi.fn().mockResolvedValue({ state: 'stored-state', codeVerifier: 'verifier' }),
+      });
+
+      const result = await handleMessage({ type: 'AUTH_CALLBACK', code: 'code', state: 'different-state' }, deps);
+
+      expect(result).toEqual({ error: 'State mismatch' });
+      expect(vi.mocked(deps.clearAuthState)).toHaveBeenCalledOnce();
+    });
+
+    it('exchanges code for tokens and stores session on successful callback', async () => {
+      const deps = makeDeps({
+        getAuthState: vi.fn().mockResolvedValue({ state: 'matching-state', codeVerifier: 'verifier' }),
+      });
+
+      const result = await handleMessage({ type: 'AUTH_CALLBACK', code: 'auth-code', state: 'matching-state' }, deps);
+
+      expect(vi.mocked(deps.exchangeCode)).toHaveBeenCalledWith(
+        expect.any(String),
+        'auth-code',
+        'verifier',
+        expect.any(String),
+        'chrome-extension://abc/callback.html',
+      );
+      expect(vi.mocked(deps.store.set)).toHaveBeenCalledWith({
+        accessToken: 'new-access-token',
+        refreshToken: 'new-refresh-token',
+        expiresAt: expect.any(Number),
+        scope: 'atproto transition:generic',
+        did: 'did:plc:testuser',
+      });
+      expect(vi.mocked(deps.clearAuthState)).toHaveBeenCalledOnce();
+      expect(result).toEqual({ ok: true });
+    });
+
+    it('clears pending state even on token exchange failure', async () => {
+      const deps = makeDeps({
+        getAuthState: vi.fn().mockResolvedValue({ state: 'matching-state', codeVerifier: 'verifier' }),
+        exchangeCode: vi.fn().mockRejectedValue(new Error('Token exchange failed')),
+      });
+
+      const result = await handleMessage({ type: 'AUTH_CALLBACK', code: 'auth-code', state: 'matching-state' }, deps);
+
+      expect(result).toEqual({ error: 'Token exchange failed' });
+      expect(vi.mocked(deps.clearAuthState)).toHaveBeenCalledOnce();
     });
   });
 

@@ -24,6 +24,18 @@ describe('XrpcClient', () => {
 
       expect(client).toBeInstanceOf(XrpcClient);
     });
+
+    it('should reject an invalid DID format', () => {
+      expect(() => new XrpcClient({ service: 'https://bsky.social', did: 'not-a-did' as never })).toThrow(
+        XrpcClientError,
+      );
+      expect(() => new XrpcClient({ service: 'https://bsky.social', did: 'did:invalid' as never })).toThrow(
+        XrpcClientError,
+      );
+      expect(() => new XrpcClient({ service: 'https://bsky.social', did: '123did:test' as never })).toThrow(
+        XrpcClientError,
+      );
+    });
   });
 
   describe('getRecord', () => {
@@ -273,7 +285,7 @@ describe('XrpcClient', () => {
         success: false,
         error: {
           kind: 'conflict',
-          message: 'putRecord(did:plc:abc123/app.bsky.feed.post/rkey1): Record was updated by another actor',
+          message: 'putRecord: Record was updated by another actor',
           status: 409,
         },
         conflict: {
@@ -307,7 +319,7 @@ describe('XrpcClient', () => {
         success: false,
         error: {
           kind: 'validation',
-          message: 'putRecord(did:plc:abc123/app.bsky.feed.post/rkey1): Record validation failed',
+          message: 'putRecord: Record validation failed',
           status: 400,
         },
       });
@@ -337,7 +349,7 @@ describe('XrpcClient', () => {
         success: false,
         error: {
           kind: 'auth',
-          message: 'putRecord(did:plc:abc123/app.bsky.feed.post/rkey1): Authentication required',
+          message: 'putRecord: Authentication required',
           status: 401,
         },
       });
@@ -360,7 +372,7 @@ describe('XrpcClient', () => {
         success: false,
         error: {
           kind: 'network',
-          message: 'putRecord(did:plc:abc123/app.bsky.feed.post/rkey1): socket hang up',
+          message: 'putRecord: socket hang up',
         },
       });
     });
