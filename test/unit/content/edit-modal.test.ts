@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { EditModal } from '@src/content/edit-modal';
 
@@ -9,6 +9,10 @@ const createModal = (): EditModal => {
 };
 
 describe('edit-modal', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
   it('should render the initial text and keep save disabled until changes are made', () => {
     const modal = createModal();
 
@@ -73,5 +77,103 @@ describe('edit-modal', () => {
 
     const statusMessage = modal.element.shadowRoot!.querySelector('.status-message') as HTMLElement;
     expect(statusMessage.textContent).toContain('save failed');
+  });
+
+  describe('accessibility', () => {
+    it('should have role="dialog" and aria-modal="true" on the modal', () => {
+      const modal = createModal();
+      modal.open('Hello');
+
+      const dialogEl = modal.element.shadowRoot!.querySelector('.modal') as HTMLElement;
+
+      expect(dialogEl.getAttribute('role')).toBe('dialog');
+      expect(dialogEl.getAttribute('aria-modal')).toBe('true');
+    });
+
+    it('should have aria-labelledby pointing to the title element', () => {
+      const modal = createModal();
+      modal.open('Hello');
+
+      const dialogEl = modal.element.shadowRoot!.querySelector('.modal') as HTMLElement;
+      const titleEl = modal.element.shadowRoot!.querySelector('.title') as HTMLElement;
+
+      expect(titleEl.id).toBeTruthy();
+      expect(dialogEl.getAttribute('aria-labelledby')).toBe(titleEl.id);
+    });
+
+    it('should have aria-live="polite" on the status message element', () => {
+      const modal = createModal();
+      modal.open('Hello');
+
+      const statusEl = modal.element.shadowRoot!.querySelector('.status-message') as HTMLElement;
+
+      expect(statusEl.getAttribute('aria-live')).toBe('polite');
+    });
+
+    it('should save and restore focus when opening and closing the modal', () => {
+      const trigger = document.createElement('button');
+      trigger.textContent = 'Edit';
+      document.body.appendChild(trigger);
+      trigger.focus();
+
+      expect(document.activeElement).toBe(trigger);
+
+      const modal = createModal();
+      modal.open('Hello');
+
+      modal.close();
+
+      expect(document.activeElement).toBe(trigger);
+    });
+
+    it('should trap focus within the modal on Tab', () => {
+      const modal = createModal();
+      modal.open('Hello');
+
+      const shadow = modal.element.shadowRoot!;
+      // Cancel button is the last non-disabled focusable element
+      const cancelButton = shadow.querySelector('.cancel-button') as HTMLButtonElement;
+
+      // Focus on cancel (last non-disabled), Tab should wrap to first focusable (close button)
+      cancelButton.focus();
+      const tabEvent = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+      window.dispatchEvent(tabEvent);
+
+      const activeEl = shadow.activeElement;
+      const closeButton = shadow.querySelector('.close-button') as HTMLElement;
+      expect(activeEl).toBe(closeButton);
+    });
+
+    it('should trap focus within the modal on Shift+Tab', () => {
+      const modal = createModal();
+      modal.open('Hello');
+
+      const shadow = modal.element.shadowRoot!;
+      // Close button is the first focusable element in document order
+      const closeButton = shadow.querySelector('.close-button') as HTMLButtonElement;
+
+      // Focus on close button (first focusable), Shift+Tab should wrap to cancel (last non-disabled)
+      closeButton.focus();
+      const shiftTabEvent = new KeyboardEvent('keydown', {
+        key: 'Tab',
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      window.dispatchEvent(shiftTabEvent);
+
+      const activeEl = shadow.activeElement;
+      const cancelButton = shadow.querySelector('.cancel-button') as HTMLElement;
+      expect(activeEl).toBe(cancelButton);
+    });
+
+    it('should add aria-label to the textarea', () => {
+      const modal = createModal();
+      modal.open('Hello');
+
+      const textarea = modal.element.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+
+      expect(textarea.getAttribute('aria-label')).toBe('Edit post content');
+    });
   });
 });
