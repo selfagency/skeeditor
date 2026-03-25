@@ -23,6 +23,7 @@ let mutationObserver: MutationObserver | null = null;
 let currentDid: string | null = null;
 let domContentLoadedHandler: (() => void) | null = null;
 let scanScheduled = false;
+let scanTimer: ReturnType<typeof setTimeout> | null = null;
 let activeModal: EditModal | null = null;
 
 const getOrCreateEditModal = (): EditModal => {
@@ -154,10 +155,11 @@ const scheduleScanForPosts = (): void => {
   }
 
   scanScheduled = true;
-  setTimeout(() => {
+  scanTimer = setTimeout(() => {
+    scanTimer = null;
     scanScheduled = false;
     scanForPosts();
-  }, 0);
+  }, 100);
 };
 
 const ensureObserver = (): void => {
