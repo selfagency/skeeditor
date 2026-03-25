@@ -122,7 +122,12 @@ export const parseBskyPostUrl = (url: string | URL): ParsedAtUri => {
   return toParsedAtUri(repo, APP_BSKY_FEED_POST_COLLECTION, rkey);
 };
 
+const candidateCache = new WeakMap<Element, Element[]>();
+
 const getElementCandidates = (element: Element): Element[] => {
+  const cached = candidateCache.get(element);
+  if (cached) return cached;
+
   const candidates = [
     element,
     element.closest('[data-at-uri]'),
@@ -131,7 +136,9 @@ const getElementCandidates = (element: Element): Element[] => {
     ...Array.from(element.querySelectorAll('[data-at-uri], [data-uri], a[href]')),
   ].filter((candidate): candidate is Element => candidate !== null);
 
-  return [...new Set(candidates)];
+  const unique = [...new Set(candidates)];
+  candidateCache.set(element, unique);
+  return unique;
 };
 
 const extractReferenceValue = (element: Element): string | null => {

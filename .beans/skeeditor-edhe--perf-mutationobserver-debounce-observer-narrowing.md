@@ -1,14 +1,14 @@
 ---
 # skeeditor-edhe
 title: perf mutationobserver debounce observer narrowing
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-03-25T17:56:35Z
-updated_at: 2026-03-25T17:56:35Z
+updated_at: 2026-03-25T22:39:37Z
 parent: skeeditor-pjwz
-id: skeeditor-edhe
 ---
+
 Fix performance issues found in the codebase audit:
 
 1. **MutationObserver not debounced** — `content-script.ts:142-150`: `scheduleScanForPosts()` is called on every mutation, enqueueing N timeouts for rapidly firing mutations. Replace with a coalescing 100ms debounce so burst mutations result in a single scan.

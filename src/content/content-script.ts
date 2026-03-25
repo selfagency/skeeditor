@@ -23,7 +23,11 @@ let mutationObserver: MutationObserver | null = null;
 let currentDid: string | null = null;
 let domContentLoadedHandler: (() => void) | null = null;
 let scanScheduled = false;
+let scanTimer: ReturnType<typeof setTimeout> | null = null;
 let activeModal: EditModal | null = null;
+
+/** Selectors for the main feed container on bsky.app. */
+const FEED_CONTAINER_SELECTORS = ['[data-testid="feed"]', '[data-testid="feedPage-feed"]', 'main', '[role="main"]'];
 
 const getOrCreateEditModal = (): EditModal => {
   if (activeModal !== null && activeModal.element.isConnected) {
@@ -154,10 +158,19 @@ const scheduleScanForPosts = (): void => {
   }
 
   scanScheduled = true;
-  setTimeout(() => {
+  scanTimer = setTimeout(() => {
+    scanTimer = null;
     scanScheduled = false;
     scanForPosts();
-  }, 0);
+  }, 100);
+};
+
+const findObserverTarget = (): Element => {
+  for (const selector of FEED_CONTAINER_SELECTORS) {
+    const target = document.querySelector(selector);
+    if (target) return target;
+  }
+  return document.body;
 };
 
 const ensureObserver = (): void => {
@@ -169,9 +182,8 @@ const ensureObserver = (): void => {
     scheduleScanForPosts();
   });
 
-  if (document.body) {
-    mutationObserver.observe(document.body, { childList: true, subtree: true });
-  }
+  const target = findObserverTarget();
+  mutationObserver.observe(target, { childList: true, subtree: true });
 };
 
 const start = (): void => {
@@ -201,6 +213,12 @@ if (document.readyState === 'loading') {
 export const cleanupContentScript = (): void => {
   mutationObserver?.disconnect();
   mutationObserver = null;
+
+  if (scanTimer !== null) {
+    clearTimeout(scanTimer);
+    scanTimer = null;
+  }
+  scanScheduled = false;
 
   if (domContentLoadedHandler) {
     document.removeEventListener('DOMContentLoaded', domContentLoadedHandler);
