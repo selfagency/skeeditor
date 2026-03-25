@@ -492,7 +492,7 @@ describe('handleMessage', () => {
         deps,
       );
 
-      expect(result).toEqual({ type: 'PUT_RECORD_ERROR', message: 'Unauthorized' });
+      expect(result).toEqual({ type: 'PUT_RECORD_ERROR', message: 'Failed to update record' });
     });
 
     it('returns a structured error when record field is missing', async () => {

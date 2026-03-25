@@ -220,7 +220,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
         await deps.store.set(session);
         return { ok: true };
       } catch (err) {
-        return { error: err instanceof Error ? err.message : 'Token exchange failed' };
+        return { error: 'Token exchange failed' };
       } finally {
         await deps.clearAuthState();
       }
@@ -252,7 +252,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
           rkey: message['rkey'],
         });
       } catch (err) {
-        return { error: err instanceof Error ? err.message : 'Failed to fetch record' };
+        return { error: 'Failed to fetch record' };
       }
     }
 
@@ -290,7 +290,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
           if (result.error.kind !== 'conflict') {
             return {
               type: 'PUT_RECORD_ERROR',
-              message: result.error.message,
+              message: 'Failed to update record',
             } satisfies PutRecordErrorResponse;
           }
 
@@ -313,7 +313,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
       } catch (err) {
         return {
           type: 'PUT_RECORD_ERROR',
-          message: err instanceof Error ? err.message : 'Failed to update record',
+          message: 'Failed to update record',
         } satisfies PutRecordErrorResponse;
       }
     }
