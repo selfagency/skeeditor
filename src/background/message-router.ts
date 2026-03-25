@@ -210,6 +210,9 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
         if (!isNonEmptyString(tokens.refresh_token)) {
           return { error: 'Invalid token response from authorization server: missing refresh token' };
         }
+        if (tokens.expires_in !== undefined && (typeof tokens.expires_in !== 'number' || tokens.expires_in <= 0)) {
+          return { error: 'Invalid token response from authorization server: invalid expiry' };
+        }
         const session: StoredSession = {
           accessToken: tokens.access_token,
           refreshToken: tokens.refresh_token,
