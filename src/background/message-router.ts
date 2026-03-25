@@ -60,6 +60,13 @@ export interface RouterDeps {
   storeAuthState: (state: string, codeVerifier: string) => Promise<void>;
   getAuthState: () => Promise<{ state: string; codeVerifier: string } | null>;
   clearAuthState: () => Promise<void>;
+  exchangeCode: (
+    tokenEndpoint: string,
+    code: string,
+    codeVerifier: string,
+    clientId: string,
+    redirectUri: string,
+  ) => Promise<{ access_token: string; refresh_token: string; expires_in?: number; scope?: string; sub?: string }>;
 }
 
 // ── Known message types ──────────────────────────────────────────────────────
@@ -186,19 +193,29 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
       }
 
       try {
-        const tokens = await exchangeCodeForTokens(
+        const tokens = await deps.exchangeCode(
           BSKY_OAUTH_TOKEN_URL,
           code,
           pending.codeVerifier,
           BSKY_OAUTH_CLIENT_ID,
           deps.redirectUri,
         );
+        // Validate required token fields before persisting a session
+        if (!isNonEmptyString(tokens.access_token)) {
+          return { error: 'Invalid token response from authorization server: missing access token' };
+        }
+        if (!isNonEmptyString(tokens.sub) || !tokens.sub.startsWith('did:')) {
+          return { error: 'Invalid token response from authorization server: missing or invalid subject DID' };
+        }
+        if (!isNonEmptyString(tokens.refresh_token)) {
+          return { error: 'Invalid token response from authorization server: missing refresh token' };
+        }
         const session: StoredSession = {
           accessToken: tokens.access_token,
-          refreshToken: tokens.refresh_token ?? '',
+          refreshToken: tokens.refresh_token,
           expiresAt: tokens.expires_in !== undefined ? Date.now() + tokens.expires_in * 1000 : Date.now() + 3_600_000,
           scope: tokens.scope ?? BSKY_OAUTH_SCOPE,
-          did: tokens.sub ?? '',
+          did: tokens.sub,
         };
         await deps.store.set(session);
         return { ok: true };
@@ -338,6 +355,7 @@ export function createDefaultDeps(): RouterDeps {
     clearAuthState: async (): Promise<void> => {
       await browser.storage.local.remove('pendingAuth');
     },
+    exchangeCode: exchangeCodeForTokens,
   };
 }
 

@@ -18,6 +18,12 @@ export interface AuthGetStatusRequest {
   type: 'AUTH_GET_STATUS';
 }
 
+export interface AuthCallbackRequest {
+  type: 'AUTH_CALLBACK';
+  code: string;
+  state: string;
+}
+
 export type AuthUnauthenticatedStatus = { authenticated: false };
 export type AuthAuthenticatedStatus = { authenticated: true; did: string; expiresAt: number };
 export type AuthGetStatusResponse = AuthUnauthenticatedStatus | AuthAuthenticatedStatus;
@@ -25,6 +31,8 @@ export type AuthGetStatusResponse = AuthUnauthenticatedStatus | AuthAuthenticate
 export interface OkResponse {
   ok: true;
 }
+
+export type AuthCallbackResponse = OkResponse | { error: string };
 
 // ── Record messages ───────────────────────────────────────────────────────────
 
@@ -72,6 +80,7 @@ export type MessageRequest =
   | AuthSignOutRequest
   | AuthReauthorizeRequest
   | AuthGetStatusRequest
+  | AuthCallbackRequest
   | GetRecordRequest
   | PutRecordRequest;
 
@@ -79,13 +88,15 @@ export type MessageRequest =
 
 export type ResponseFor<T extends MessageRequest> = T extends AuthGetStatusRequest
   ? AuthGetStatusResponse
-  : T extends AuthSignInRequest | AuthSignOutRequest | AuthReauthorizeRequest
-    ? OkResponse
-    : T extends GetRecordRequest
-      ? GetRecordResponse
-      : T extends PutRecordRequest
-        ? PutRecordResponse
-        : never;
+  : T extends AuthCallbackRequest
+    ? AuthCallbackResponse
+    : T extends AuthSignInRequest | AuthSignOutRequest | AuthReauthorizeRequest
+      ? OkResponse
+      : T extends GetRecordRequest
+        ? GetRecordResponse
+        : T extends PutRecordRequest
+          ? PutRecordResponse
+          : never;
 
 /**
  * Type-safe wrapper around `browser.runtime.sendMessage`.
