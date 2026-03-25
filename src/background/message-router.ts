@@ -75,6 +75,52 @@ function isMessage(msg: unknown): msg is IncomingMessage {
   );
 }
 
+// ── Payload validators ────────────────────────────────────────────────────────
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0;
+}
+
+interface GetRecordPayload {
+  repo: string;
+  collection: string;
+  rkey: string;
+}
+
+function isValidGetRecordPayload(msg: IncomingMessage): msg is IncomingMessage & GetRecordPayload {
+  return isNonEmptyString(msg['repo']) && isNonEmptyString(msg['collection']) && isNonEmptyString(msg['rkey']);
+}
+
+interface PutRecordPayload {
+  repo: string;
+  collection: string;
+  rkey: string;
+  record: Record<string, unknown> & { $type: string };
+  swapRecord?: string;
+}
+
+function isValidPutRecordPayload(msg: IncomingMessage): msg is IncomingMessage & PutRecordPayload {
+  if (!isNonEmptyString(msg['repo']) || !isNonEmptyString(msg['collection']) || !isNonEmptyString(msg['rkey'])) {
+    return false;
+  }
+  const record = msg['record'];
+  if (
+    record === null ||
+    typeof record !== 'object' ||
+    Array.isArray(record) ||
+    Object.getPrototypeOf(record) !== Object.prototype
+  ) {
+    return false;
+  }
+  if (!isNonEmptyString((record as Record<string, unknown>)['$type'])) {
+    return false;
+  }
+  if (msg['swapRecord'] !== undefined && !isNonEmptyString(msg['swapRecord'])) {
+    return false;
+  }
+  return true;
+}
+
 // ── Handler ──────────────────────────────────────────────────────────────────
 
 /**
@@ -120,6 +166,9 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
     }
 
     case 'GET_RECORD': {
+      if (!isValidGetRecordPayload(message)) {
+        return { error: 'Invalid GET_RECORD payload' };
+      }
       const stored = await deps.store.get();
       const valid = await deps.store.isAccessTokenValid();
       if (stored === null || !valid) {
@@ -128,9 +177,9 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
       try {
         const client = deps.createXrpc({ service: BSKY_PDS_URL, did: stored.did, accessJwt: stored.accessToken });
         return await client.getRecord({
-          repo: message['repo'] as string,
-          collection: message['collection'] as string,
-          rkey: message['rkey'] as string,
+          repo: message['repo'],
+          collection: message['collection'],
+          rkey: message['rkey'],
         });
       } catch (err) {
         return { error: err instanceof Error ? err.message : 'Failed to fetch record' };
@@ -138,6 +187,9 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
     }
 
     case 'PUT_RECORD': {
+      if (!isValidPutRecordPayload(message)) {
+        return { type: 'PUT_RECORD_ERROR', message: 'Invalid PUT_RECORD payload' } satisfies PutRecordErrorResponse;
+      }
       const stored = await deps.store.get();
       const valid = await deps.store.isAccessTokenValid();
       if (stored === null || !valid) {
@@ -145,24 +197,31 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
       }
       try {
         const client = deps.createXrpc({ service: BSKY_PDS_URL, did: stored.did, accessJwt: stored.accessToken });
-        const record = message['record'] as Record<string, unknown> & { $type: string };
+        const record = message['record'];
         const params: Parameters<XrpcInterface['putRecord']>[0] = {
-          repo: message['repo'] as string,
-          collection: message['collection'] as string,
-          rkey: message['rkey'] as string,
+          repo: message['repo'],
+          collection: message['collection'],
+          rkey: message['rkey'],
           record,
         };
         if (typeof message['swapRecord'] === 'string') {
           const result = await client.putRecordWithSwap({
-            repo: message['repo'] as string,
-            collection: message['collection'] as string,
-            rkey: message['rkey'] as string,
+            repo: message['repo'],
+            collection: message['collection'],
+            rkey: message['rkey'],
             record,
             swapRecord: message['swapRecord'],
           });
 
           if (result.success) {
             return { type: 'PUT_RECORD_SUCCESS', uri: result.uri, cid: result.cid } satisfies PutRecordSuccessResponse;
+          }
+
+          if (result.error.kind !== 'conflict') {
+            return {
+              type: 'PUT_RECORD_ERROR',
+              message: result.error.message,
+            } satisfies PutRecordErrorResponse;
           }
 
           const conflictResponse: PutRecordConflictResponse = result.conflict

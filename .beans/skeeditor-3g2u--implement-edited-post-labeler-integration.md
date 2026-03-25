@@ -1,11 +1,11 @@
 ---
 # skeeditor-3g2u
 title: Implement edited-post labeler integration
-status: todo
+status: completed
 type: feature
 priority: high
 created_at: 2026-03-18T16:00:41Z
-updated_at: 2026-03-19T18:32:02Z
+updated_at: 2026-03-25T01:50:24Z
 parent: skeeditor-618f
 blocked_by:
     - skeeditor-mjc5

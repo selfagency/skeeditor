@@ -230,6 +230,40 @@ describe('handleMessage', () => {
       });
     });
 
+    it('calls xrpcClient.putRecord (no swap) when swapRecord is absent', async () => {
+      const session = makeSession();
+      const xrpc = makeXrpcMock();
+      const deps = makeDeps({
+        store: makeStoreMock(session),
+        createXrpc: vi.fn().mockReturnValue(xrpc),
+      });
+      const record = { $type: 'app.bsky.feed.post', text: 'no swap' };
+
+      const result = await handleMessage(
+        {
+          type: 'PUT_RECORD',
+          repo: 'did:plc:alice',
+          collection: 'app.bsky.feed.post',
+          rkey: 'abc',
+          record,
+        },
+        deps,
+      );
+
+      expect(vi.mocked(xrpc.putRecord)).toHaveBeenCalledWith({
+        repo: 'did:plc:alice',
+        collection: 'app.bsky.feed.post',
+        rkey: 'abc',
+        record,
+      });
+      expect(vi.mocked(xrpc.putRecordWithSwap)).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        type: 'PUT_RECORD_SUCCESS',
+        uri: 'at://did:plc:testuser/app.bsky.feed.post/abc',
+        cid: 'bafyreinew',
+      });
+    });
+
     it('returns a structured conflict result when xrpcClient reports a conflict', async () => {
       const session = makeSession();
       const xrpc = makeXrpcMock();
@@ -274,6 +308,239 @@ describe('handleMessage', () => {
           currentValue: { $type: 'app.bsky.feed.post', text: 'latest' },
         },
       });
+    });
+
+    it('returns PUT_RECORD_CONFLICT without conflict field when no conflict details are available', async () => {
+      const session = makeSession();
+      const xrpc = makeXrpcMock();
+      vi.mocked(xrpc.putRecordWithSwap).mockResolvedValueOnce({
+        success: false,
+        error: {
+          kind: 'conflict',
+          message: 'stale write',
+          status: 409,
+        },
+      });
+      const deps = makeDeps({
+        store: makeStoreMock(session),
+        createXrpc: vi.fn().mockReturnValue(xrpc),
+      });
+
+      const result = await handleMessage(
+        {
+          type: 'PUT_RECORD',
+          repo: 'did:plc:alice',
+          collection: 'app.bsky.feed.post',
+          rkey: 'abc',
+          record: { $type: 'app.bsky.feed.post', text: 'edited' },
+          swapRecord: 'bafyreiabc',
+        },
+        deps,
+      );
+
+      expect(result).toEqual({
+        type: 'PUT_RECORD_CONFLICT',
+        error: { kind: 'conflict', message: 'stale write', status: 409 },
+      });
+      // 'conflict' key must be absent (exactOptionalPropertyTypes compliance)
+      expect(result).not.toHaveProperty('conflict');
+    });
+
+    it('returns PUT_RECORD_ERROR for non-conflict swap failures (e.g. network error)', async () => {
+      const session = makeSession();
+      const xrpc = makeXrpcMock();
+      vi.mocked(xrpc.putRecordWithSwap).mockResolvedValueOnce({
+        success: false,
+        error: {
+          kind: 'network',
+          message: 'network failure',
+          status: 500,
+        },
+      });
+      const deps = makeDeps({
+        store: makeStoreMock(session),
+        createXrpc: vi.fn().mockReturnValue(xrpc),
+      });
+
+      const result = await handleMessage(
+        {
+          type: 'PUT_RECORD',
+          repo: 'did:plc:alice',
+          collection: 'app.bsky.feed.post',
+          rkey: 'abc',
+          record: { $type: 'app.bsky.feed.post', text: 'edited' },
+          swapRecord: 'bafyreiabc',
+        },
+        deps,
+      );
+
+      expect(result).toEqual({ type: 'PUT_RECORD_ERROR', message: 'network failure' });
+    });
+
+    it('returns PUT_RECORD_ERROR for auth swap failures', async () => {
+      const session = makeSession();
+      const xrpc = makeXrpcMock();
+      vi.mocked(xrpc.putRecordWithSwap).mockResolvedValueOnce({
+        success: false,
+        error: {
+          kind: 'auth',
+          message: 'Unauthorized',
+          status: 401,
+        },
+      });
+      const deps = makeDeps({
+        store: makeStoreMock(session),
+        createXrpc: vi.fn().mockReturnValue(xrpc),
+      });
+
+      const result = await handleMessage(
+        {
+          type: 'PUT_RECORD',
+          repo: 'did:plc:alice',
+          collection: 'app.bsky.feed.post',
+          rkey: 'abc',
+          record: { $type: 'app.bsky.feed.post', text: 'edited' },
+          swapRecord: 'bafyreiabc',
+        },
+        deps,
+      );
+
+      expect(result).toEqual({ type: 'PUT_RECORD_ERROR', message: 'Unauthorized' });
+    });
+
+    it('returns a structured error when record field is missing', async () => {
+      const deps = makeDeps({ store: makeStoreMock(makeSession()) });
+
+      const result = await handleMessage(
+        { type: 'PUT_RECORD', repo: 'did:plc:alice', collection: 'app.bsky.feed.post', rkey: 'abc' },
+        deps,
+      );
+
+      expect(result).toEqual({ type: 'PUT_RECORD_ERROR', message: 'Invalid PUT_RECORD payload' });
+    });
+
+    it('returns a structured error when record lacks $type', async () => {
+      const deps = makeDeps({ store: makeStoreMock(makeSession()) });
+
+      const result = await handleMessage(
+        {
+          type: 'PUT_RECORD',
+          repo: 'did:plc:alice',
+          collection: 'app.bsky.feed.post',
+          rkey: 'abc',
+          record: { text: 'no type field' },
+        },
+        deps,
+      );
+
+      expect(result).toEqual({ type: 'PUT_RECORD_ERROR', message: 'Invalid PUT_RECORD payload' });
+    });
+
+    it('returns a structured error when record is a non-plain object (Map)', async () => {
+      const deps = makeDeps({ store: makeStoreMock(makeSession()) });
+      const map = new Map([['$type', 'app.bsky.feed.post']]);
+
+      const result = await handleMessage(
+        { type: 'PUT_RECORD', repo: 'did:plc:alice', collection: 'app.bsky.feed.post', rkey: 'abc', record: map },
+        deps,
+      );
+
+      expect(result).toEqual({ type: 'PUT_RECORD_ERROR', message: 'Invalid PUT_RECORD payload' });
+    });
+
+    it('returns a structured error when record is a class instance', async () => {
+      class PostRecord {
+        $type = 'app.bsky.feed.post';
+        text = 'hello';
+      }
+      const deps = makeDeps({ store: makeStoreMock(makeSession()) });
+
+      const result = await handleMessage(
+        {
+          type: 'PUT_RECORD',
+          repo: 'did:plc:alice',
+          collection: 'app.bsky.feed.post',
+          rkey: 'abc',
+          record: new PostRecord(),
+        },
+        deps,
+      );
+
+      expect(result).toEqual({ type: 'PUT_RECORD_ERROR', message: 'Invalid PUT_RECORD payload' });
+    });
+
+    it('returns a structured error when repo is missing from PUT_RECORD', async () => {
+      const deps = makeDeps({ store: makeStoreMock(makeSession()) });
+
+      const result = await handleMessage(
+        {
+          type: 'PUT_RECORD',
+          collection: 'app.bsky.feed.post',
+          rkey: 'abc',
+          record: { $type: 'app.bsky.feed.post', text: 'hello' },
+        },
+        deps,
+      );
+
+      expect(result).toEqual({ type: 'PUT_RECORD_ERROR', message: 'Invalid PUT_RECORD payload' });
+    });
+
+    it('returns a structured error when swapRecord is not a string', async () => {
+      const deps = makeDeps({ store: makeStoreMock(makeSession()) });
+
+      const result = await handleMessage(
+        {
+          type: 'PUT_RECORD',
+          repo: 'did:plc:alice',
+          collection: 'app.bsky.feed.post',
+          rkey: 'abc',
+          record: { $type: 'app.bsky.feed.post', text: 'hello' },
+          swapRecord: 12345,
+        },
+        deps,
+      );
+
+      expect(result).toEqual({ type: 'PUT_RECORD_ERROR', message: 'Invalid PUT_RECORD payload' });
+    });
+  });
+
+  describe('GET_RECORD payload validation', () => {
+    it('returns an error when repo is missing', async () => {
+      const deps = makeDeps({ store: makeStoreMock(makeSession()) });
+
+      const result = await handleMessage({ type: 'GET_RECORD', collection: 'app.bsky.feed.post', rkey: 'abc' }, deps);
+
+      expect(result).toEqual({ error: 'Invalid GET_RECORD payload' });
+    });
+
+    it('returns an error when collection is missing', async () => {
+      const deps = makeDeps({ store: makeStoreMock(makeSession()) });
+
+      const result = await handleMessage({ type: 'GET_RECORD', repo: 'did:plc:alice', rkey: 'abc' }, deps);
+
+      expect(result).toEqual({ error: 'Invalid GET_RECORD payload' });
+    });
+
+    it('returns an error when rkey is missing', async () => {
+      const deps = makeDeps({ store: makeStoreMock(makeSession()) });
+
+      const result = await handleMessage(
+        { type: 'GET_RECORD', repo: 'did:plc:alice', collection: 'app.bsky.feed.post' },
+        deps,
+      );
+
+      expect(result).toEqual({ error: 'Invalid GET_RECORD payload' });
+    });
+
+    it('returns an error when a field is not a string', async () => {
+      const deps = makeDeps({ store: makeStoreMock(makeSession()) });
+
+      const result = await handleMessage(
+        { type: 'GET_RECORD', repo: 42, collection: 'app.bsky.feed.post', rkey: 'abc' },
+        deps,
+      );
+
+      expect(result).toEqual({ error: 'Invalid GET_RECORD payload' });
     });
   });
 });
