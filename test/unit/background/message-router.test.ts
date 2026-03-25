@@ -191,6 +191,44 @@ describe('handleMessage', () => {
       expect(result).toEqual({ ok: true });
     });
 
+    it('returns an error when expires_in is not a positive number', async () => {
+      const deps = makeDeps({
+        getAuthState: vi.fn().mockResolvedValue({ state: 'matching-state', codeVerifier: 'verifier' }),
+        exchangeCode: vi.fn().mockResolvedValue({
+          access_token: 'new-access-token',
+          refresh_token: 'new-refresh-token',
+          expires_in: 'not-a-number',
+          scope: 'atproto transition:generic',
+          sub: 'did:plc:testuser',
+        }),
+      });
+
+      const result = await handleMessage({ type: 'AUTH_CALLBACK', code: 'auth-code', state: 'matching-state' }, deps);
+
+      expect(result).toEqual({
+        error: 'Invalid token response from authorization server: invalid expiry',
+      });
+    });
+
+    it('returns an error when expires_in is negative', async () => {
+      const deps = makeDeps({
+        getAuthState: vi.fn().mockResolvedValue({ state: 'matching-state', codeVerifier: 'verifier' }),
+        exchangeCode: vi.fn().mockResolvedValue({
+          access_token: 'new-access-token',
+          refresh_token: 'new-refresh-token',
+          expires_in: -100,
+          scope: 'atproto transition:generic',
+          sub: 'did:plc:testuser',
+        }),
+      });
+
+      const result = await handleMessage({ type: 'AUTH_CALLBACK', code: 'auth-code', state: 'matching-state' }, deps);
+
+      expect(result).toEqual({
+        error: 'Invalid token response from authorization server: invalid expiry',
+      });
+    });
+
     it('clears pending state even on token exchange failure', async () => {
       const deps = makeDeps({
         getAuthState: vi.fn().mockResolvedValue({ state: 'matching-state', codeVerifier: 'verifier' }),
