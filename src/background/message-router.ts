@@ -5,7 +5,7 @@ import type {
   XrpcClientConfig,
 } from '../shared/api/xrpc-client';
 import { XrpcClient } from '../shared/api/xrpc-client';
-import type { AuthorizationRequest } from '../shared/auth/auth-client';
+import type { AuthorizationRequest, TokenResponse } from '../shared/auth/auth-client';
 import { buildAuthorizationRequest, exchangeCodeForTokens } from '../shared/auth/auth-client';
 import type { StoredSession } from '../shared/auth/session-store';
 import { sessionStore } from '../shared/auth/session-store';
@@ -66,7 +66,7 @@ export interface RouterDeps {
     codeVerifier: string,
     clientId: string,
     redirectUri: string,
-  ) => Promise<{ access_token: string; refresh_token: string; expires_in?: number; scope?: string; sub?: string }>;
+  ) => Promise<TokenResponse>;
 }
 
 // ── Known message types ──────────────────────────────────────────────────────

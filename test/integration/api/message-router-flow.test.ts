@@ -59,6 +59,12 @@ const makeRealDeps = (session: ReturnType<typeof makeSession> | null = makeSessi
   storeAuthState: vi.fn().mockResolvedValue(undefined),
   getAuthState: vi.fn().mockResolvedValue(null),
   clearAuthState: vi.fn().mockResolvedValue(undefined),
+  exchangeCode: vi.fn().mockResolvedValue({
+    access_token: 'test-access-token',
+    token_type: 'Bearer',
+    refresh_token: 'test-refresh-token',
+    sub: 'did:plc:testuser',
+  }),
 });
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
