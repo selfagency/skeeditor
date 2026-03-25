@@ -15,17 +15,17 @@ let mutationObserver: MutationObserver | null = null;
 let currentDid: string | null = null;
 let domContentLoadedHandler: (() => void) | null = null;
 let scanScheduled = false;
+let activeModal: EditModal | null = null;
 
 const getOrCreateEditModal = (): EditModal => {
-  const existing = document.querySelector<EditModal>('edit-modal[data-skeeditor-modal="true"]');
-
-  if (existing) {
-    return existing;
+  if (activeModal !== null && activeModal.element.isConnected) {
+    return activeModal;
   }
 
-  const modal = document.createElement('edit-modal') as EditModal;
-  modal.setAttribute('data-skeeditor-modal', 'true');
-  document.body.appendChild(modal);
+  const modal = new EditModal();
+  modal.element.setAttribute('data-skeeditor-modal', 'true');
+  document.body.appendChild(modal.element);
+  activeModal = modal;
 
   return modal;
 };

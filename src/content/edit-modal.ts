@@ -187,7 +187,8 @@ const EDIT_MODAL_TEMPLATE = `
 
 const MAX_POST_LENGTH = 300;
 
-export class EditModal extends HTMLElement {
+export class EditModal {
+  public readonly element: HTMLElement;
   private textarea: HTMLTextAreaElement | null = null;
   private charCount: HTMLElement | null = null;
   private saveButton: HTMLButtonElement | null = null;
@@ -203,23 +204,30 @@ export class EditModal extends HTMLElement {
   private handleBackgroundClickBound = this.handleBackgroundClick.bind(this);
   private handleKeydownBound = this.handleKeydown.bind(this);
 
-  public connectedCallback(): void {
-    this.innerHTML = EDIT_MODAL_TEMPLATE;
-    this.textarea = this.querySelector<HTMLTextAreaElement>('textarea');
-    this.charCount = this.querySelector<HTMLElement>('.char-count');
-    this.saveButton = this.querySelector<HTMLButtonElement>('.save-button');
-    this.statusMessage = this.querySelector<HTMLElement>('.status-message');
+  public constructor() {
+    this.element = document.createElement('edit-modal');
+    this.initialize();
+  }
+
+  private initialize(): void {
+    if (this.textarea) return;
+    this.element.innerHTML = EDIT_MODAL_TEMPLATE;
+    this.element.style.display = 'none';
+    this.textarea = this.element.querySelector<HTMLTextAreaElement>('textarea');
+    this.charCount = this.element.querySelector<HTMLElement>('.char-count');
+    this.saveButton = this.element.querySelector<HTMLButtonElement>('.save-button');
+    this.statusMessage = this.element.querySelector<HTMLElement>('.status-message');
 
     if (this.textarea) {
       this.textarea.addEventListener('input', this.handleInputBound);
     }
 
-    const closeButton = this.querySelector<HTMLButtonElement>('.close-button');
+    const closeButton = this.element.querySelector<HTMLButtonElement>('.close-button');
     if (closeButton) {
       closeButton.addEventListener('click', this.closeBound);
     }
 
-    const cancelButton = this.querySelector<HTMLButtonElement>('.cancel-button');
+    const cancelButton = this.element.querySelector<HTMLButtonElement>('.cancel-button');
     if (cancelButton) {
       cancelButton.addEventListener('click', this.closeBound);
     }
@@ -228,41 +236,19 @@ export class EditModal extends HTMLElement {
       this.saveButton.addEventListener('click', this.handleSaveBound);
     }
 
-    this.addEventListener('click', this.handleBackgroundClickBound);
+    this.element.addEventListener('click', this.handleBackgroundClickBound);
     window.addEventListener('keydown', this.handleKeydownBound);
   }
 
-  public disconnectedCallback(): void {
-    if (this.textarea) {
-      this.textarea.removeEventListener('input', this.handleInputBound);
-    }
-
-    const closeButton = this.querySelector<HTMLButtonElement>('.close-button');
-    if (closeButton) {
-      closeButton.removeEventListener('click', this.closeBound);
-    }
-
-    const cancelButton = this.querySelector<HTMLButtonElement>('.cancel-button');
-    if (cancelButton) {
-      cancelButton.removeEventListener('click', this.closeBound);
-    }
-
-    if (this.saveButton) {
-      this.saveButton.removeEventListener('click', this.handleSaveBound);
-    }
-
-    this.removeEventListener('click', this.handleBackgroundClickBound);
-    window.removeEventListener('keydown', this.handleKeydownBound);
-  }
-
   public open(text: string, onCancel?: () => void, onSave?: (text: string) => void | Promise<void>): void {
+    this.initialize();
     this.originalText = text;
     this.currentText = text;
     this.onCancel = onCancel ?? undefined;
     this.onSave = onSave ?? undefined;
 
-    if (!this.isConnected) {
-      document.body.appendChild(this);
+    if (!this.element.isConnected) {
+      document.body.appendChild(this.element);
     }
 
     if (this.textarea) {
@@ -274,15 +260,16 @@ export class EditModal extends HTMLElement {
 
     this.hideStatusMessage();
 
-    this.style.display = 'flex';
+    this.element.style.display = 'flex';
   }
 
   public close(): void {
-    this.style.display = 'none';
-    if (this.isConnected) {
-      document.body.removeChild(this);
+    this.element.style.display = 'none';
+    if (this.element.isConnected) {
+      document.body.removeChild(this.element);
     }
-
+    window.removeEventListener('keydown', this.handleKeydownBound);
+    this.element.removeEventListener('click', this.handleBackgroundClickBound);
     this.onCancel?.();
   }
 
@@ -353,7 +340,7 @@ export class EditModal extends HTMLElement {
   }
 
   private handleBackgroundClick(event: MouseEvent): void {
-    if (event.target === this) {
+    if (event.target === this.element) {
       this.close();
     }
   }
@@ -389,8 +376,4 @@ export class EditModal extends HTMLElement {
       });
     }
   }
-}
-
-if (!customElements.get('edit-modal')) {
-  customElements.define('edit-modal', EditModal);
 }

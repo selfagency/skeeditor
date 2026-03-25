@@ -4,9 +4,7 @@ import { EditModal } from '@src/content/edit-modal';
 
 const createModal = (): EditModal => {
   const modal = new EditModal();
-  document.body.appendChild(modal);
-  modal.connectedCallback();
-
+  document.body.appendChild(modal.element);
   return modal;
 };
 
@@ -16,8 +14,8 @@ describe('edit-modal', () => {
 
     modal.open('Hello Bluesky');
 
-    const textarea = modal.querySelector('textarea') as HTMLTextAreaElement;
-    const saveButton = modal.querySelector('.save-button') as HTMLButtonElement;
+    const textarea = modal.element.querySelector('textarea') as HTMLTextAreaElement;
+    const saveButton = modal.element.querySelector('.save-button') as HTMLButtonElement;
 
     expect(textarea.value).toBe('Hello Bluesky');
     expect(saveButton.disabled).toBe(true);
@@ -33,8 +31,8 @@ describe('edit-modal', () => {
 
     modal.open('Hello Bluesky');
 
-    const textarea = modal.querySelector('textarea') as HTMLTextAreaElement;
-    const charCount = modal.querySelector('.char-count') as HTMLElement;
+    const textarea = modal.element.querySelector('textarea') as HTMLTextAreaElement;
+    const charCount = modal.element.querySelector('.char-count') as HTMLElement;
 
     textarea.value = 'Hello Bluesky, edited';
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
@@ -48,8 +46,8 @@ describe('edit-modal', () => {
 
     modal.open('Hello Bluesky', undefined, onSave);
 
-    const textarea = modal.querySelector('textarea') as HTMLTextAreaElement;
-    const saveButton = modal.querySelector('.save-button') as HTMLButtonElement;
+    const textarea = modal.element.querySelector('textarea') as HTMLTextAreaElement;
+    const saveButton = modal.element.querySelector('.save-button') as HTMLButtonElement;
 
     textarea.value = 'Hello Bluesky, edited';
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
@@ -64,8 +62,8 @@ describe('edit-modal', () => {
 
     modal.open('Hello Bluesky', undefined, onSave);
 
-    const textarea = modal.querySelector('textarea') as HTMLTextAreaElement;
-    const saveButton = modal.querySelector('.save-button') as HTMLButtonElement;
+    const textarea = modal.element.querySelector('textarea') as HTMLTextAreaElement;
+    const saveButton = modal.element.querySelector('.save-button') as HTMLButtonElement;
 
     textarea.value = 'Hello Bluesky, edited';
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
@@ -73,7 +71,7 @@ describe('edit-modal', () => {
 
     await Promise.resolve();
 
-    const statusMessage = modal.querySelector('.status-message') as HTMLElement;
+    const statusMessage = modal.element.querySelector('.status-message') as HTMLElement;
     expect(statusMessage.textContent).toContain('save failed');
   });
 });
