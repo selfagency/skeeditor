@@ -6,11 +6,11 @@ skeeditor targets Chrome, Firefox, and Safari using a shared `src/` codebase. Br
 
 ## Build targets
 
-| Browser | Build command | Output directory |
-| --- | --- | --- |
-| Chrome | `pnpm build:chrome` | `dist/chrome/` |
-| Firefox | `pnpm build:firefox` | `dist/firefox/` |
-| Safari | `pnpm build:safari` | `dist/safari/` |
+| Browser | Build command        | Output directory |
+| ------- | -------------------- | ---------------- |
+| Chrome  | `pnpm build:chrome`  | `dist/chrome/`   |
+| Firefox | `pnpm build:firefox` | `dist/firefox/`  |
+| Safari  | `pnpm build:safari`  | `dist/safari/`   |
 
 `pnpm build` is an alias for `pnpm build:chrome`.
 
@@ -35,11 +35,11 @@ In unit/integration tests, `webextension-polyfill` is stubbed — the `browser.*
 
 Use **feature detection**, never `navigator.userAgent`. The `detectPlatform()` function uses API presence as the signal:
 
-| Signal | Browser |
-| --- | --- |
+| Signal                                         | Browser |
+| ---------------------------------------------- | ------- |
 | `browser.runtime.getBrowserInfo` is a function | Firefox |
-| `globalThis.safari?.extension` is defined | Safari |
-| Neither | Chrome |
+| `globalThis.safari?.extension` is defined      | Safari  |
+| Neither                                        | Chrome  |
 
 ```ts
 import { platform } from '@src/platform';
@@ -55,11 +55,11 @@ if (platform.isFirefox) {
 
 ### Background execution model
 
-| Browser | Manifest key | Notes |
-| --- | --- | --- |
-| Chrome | `"service_worker": "…"` | Non-persistent, wakes on events |
-| Firefox | `"scripts": ["…"]` | Non-persistent background script (Firefox 121+) |
-| Safari | `"service_worker": "…"` | Non-persistent, mirrors Chrome |
+| Browser | Manifest key            | Notes                                           |
+| ------- | ----------------------- | ----------------------------------------------- |
+| Chrome  | `"service_worker": "…"` | Non-persistent, wakes on events                 |
+| Firefox | `"scripts": ["…"]`      | Non-persistent background script (Firefox 121+) |
+| Safari  | `"service_worker": "…"` | Non-persistent, mirrors Chrome                  |
 
 **Never store in-memory state between background wake cycles.** Use `browser.storage.local` for any data that must survive the background being unloaded.
 
@@ -135,8 +135,8 @@ To allow unsigned extensions during development: Safari → Settings → Advance
 
 ## Minimum supported versions
 
-| Browser | Minimum version | Key requirement |
-| --- | --- | --- |
-| Chrome | 120 | MV3 service worker stability |
-| Firefox | 121 | MV3 non-persistent background support |
-| Safari | 17 (macOS 14/Sonoma) | Baseline WebExtensions MV3 |
+| Browser | Minimum version      | Key requirement                       |
+| ------- | -------------------- | ------------------------------------- |
+| Chrome  | 120                  | MV3 service worker stability          |
+| Firefox | 121                  | MV3 non-persistent background support |
+| Safari  | 17 (macOS 14/Sonoma) | Baseline WebExtensions MV3            |

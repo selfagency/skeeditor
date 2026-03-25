@@ -142,8 +142,8 @@ Open the Xcode project and run it to register the extension with Safari. CI veri
 
 ## Environment variables
 
-| Variable | Set by | Purpose |
-| --- | --- | --- |
+| Variable       | Set by             | Purpose                                                |
+| -------------- | ------------------ | ------------------------------------------------------ |
 | `VITE_BROWSER` | `scripts/build.ts` | Selects the platform shim in `src/platform/<browser>/` |
 
 ---

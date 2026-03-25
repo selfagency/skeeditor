@@ -39,6 +39,7 @@ Unsigned extensions require Firefox Nightly, Developer Edition, or a configurati
 5. Select the `.xpi` file.
 
 Alternatively, for development:
+
 1. Open `about:debugging#/runtime/this-firefox`.
 2. Click **Load Temporary Add-on…** and select the `manifest.json` inside the unzipped folder.
 
@@ -64,11 +65,11 @@ To load an unsigned Safari extension during development, enable Safari → Setti
 
 When you install skeeditor, your browser will ask for these permissions:
 
-| Permission | Why it is needed |
-| --- | --- |
-| `storage` | Stores your OAuth session tokens securely in extension storage |
-| `activeTab` | Reads the current tab's URL to know when you are on bsky.app |
-| `https://bsky.app/*` | Injects the edit UI into bsky.app pages and intercepts post navigation |
+| Permission                 | Why it is needed                                                                          |
+| -------------------------- | ----------------------------------------------------------------------------------------- |
+| `storage`                  | Stores your OAuth session tokens securely in extension storage                            |
+| `activeTab`                | Reads the current tab's URL to know when you are on bsky.app                              |
+| `https://bsky.app/*`       | Injects the edit UI into bsky.app pages and intercepts post navigation                    |
 | `https://*.bsky.network/*` | Makes authenticated calls to the Bluesky PDS (Personal Data Server) to fetch/save records |
 
 skeeditor requests no other permissions. It does not access your browser history, bookmarks, clipboard (beyond what you paste into the editor), or any other site.

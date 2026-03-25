@@ -79,12 +79,12 @@ interface PutRecordMergeAdvisory {
 
 ## Error handling by kind
 
-| Error kind | Recommended action |
-| --- | --- |
-| `conflict` | Show compare/retry UI; require explicit user action |
+| Error kind   | Recommended action                                       |
+| ------------ | -------------------------------------------------------- |
+| `conflict`   | Show compare/retry UI; require explicit user action      |
 | `validation` | Show "fix-the-input" message; do not retry automatically |
-| `auth` | Prompt the user to re-authenticate via the popup |
-| `network` | Allow retry with backoff; preserve the draft locally |
+| `auth`       | Prompt the user to re-authenticate via the popup         |
+| `network`    | Allow retry with backoff; preserve the draft locally     |
 
 ---
 

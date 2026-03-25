@@ -114,20 +114,20 @@ await store.clear();              // Delete tokens (sign-out)
 
 ## Required scopes
 
-| Scope | Purpose |
-| --- | --- |
-| `atproto` | Identifies this as an AT Protocol client |
+| Scope                | Purpose                                           |
+| -------------------- | ------------------------------------------------- |
+| `atproto`            | Identifies this as an AT Protocol client          |
 | `transition:generic` | Grants read/write access to records the user owns |
 
 ---
 
 ## OAuth endpoints
 
-| Endpoint | URL |
-| --- | --- |
-| Discover | `https://bsky.social/.well-known/oauth-authorization-server` |
-| Authorization | `https://bsky.social/oauth/authorize` |
-| Token | `https://bsky.social/oauth/token` |
+| Endpoint      | URL                                                          |
+| ------------- | ------------------------------------------------------------ |
+| Discover      | `https://bsky.social/.well-known/oauth-authorization-server` |
+| Authorization | `https://bsky.social/oauth/authorize`                        |
+| Token         | `https://bsky.social/oauth/token`                            |
 
 Exported from `src/shared/constants.ts` as `BSKY_OAUTH_AUTHORIZE_URL` and `BSKY_OAUTH_TOKEN_URL`.
 

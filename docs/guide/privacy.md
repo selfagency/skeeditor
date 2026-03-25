@@ -27,12 +27,12 @@ skeeditor never asks for, receives, or stores your Bluesky password. The OAuth f
 
 When you use skeeditor, your browser makes requests to:
 
-| Endpoint | Purpose |
-| --- | --- |
-| `https://bsky.social/oauth/authorize` | Initial OAuth authorization redirect |
-| `https://bsky.social/oauth/token` | Exchange authorization code for tokens; token refresh |
-| `https://bsky.social/xrpc/com.atproto.repo.getRecord` | Fetch the current post record |
-| `https://bsky.social/xrpc/com.atproto.repo.putRecord` | Write the edited post record back |
+| Endpoint                                              | Purpose                                               |
+| ----------------------------------------------------- | ----------------------------------------------------- |
+| `https://bsky.social/oauth/authorize`                 | Initial OAuth authorization redirect                  |
+| `https://bsky.social/oauth/token`                     | Exchange authorization code for tokens; token refresh |
+| `https://bsky.social/xrpc/com.atproto.repo.getRecord` | Fetch the current post record                         |
+| `https://bsky.social/xrpc/com.atproto.repo.putRecord` | Write the edited post record back                     |
 
 All requests go to Bluesky's own servers over HTTPS. No intermediate proxy or skeeditor-operated server is involved at any point.
 

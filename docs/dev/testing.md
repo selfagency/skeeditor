@@ -142,10 +142,10 @@ pnpm test:e2e:list
 
 ## Coverage targets
 
-| Package | Target |
-| --- | --- |
-| `src/shared/` | ≥ 90% line coverage |
-| `src/content/` | ≥ 80% line coverage |
+| Package           | Target              |
+| ----------------- | ------------------- |
+| `src/shared/`     | ≥ 90% line coverage |
+| `src/content/`    | ≥ 80% line coverage |
 | `src/background/` | ≥ 80% line coverage |
 
 Coverage is enforced in CI. A PR that reduces coverage below threshold will fail.

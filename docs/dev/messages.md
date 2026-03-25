@@ -82,14 +82,14 @@ switch (result.type) {
 
 ## Message catalogue
 
-| Request `type` | Payload fields | Response type |
-| --- | --- | --- |
-| `AUTH_SIGN_IN` | — | `{ ok: true }` |
-| `AUTH_SIGN_OUT` | — | `{ ok: true }` |
-| `AUTH_REAUTHORIZE` | — | `{ ok: true }` |
-| `AUTH_GET_STATUS` | — | `{ authenticated: false }` or `{ authenticated: true, did, expiresAt }` |
-| `GET_RECORD` | `repo`, `collection`, `rkey` | `{ value, cid }` or `{ error }` |
-| `PUT_RECORD` | `repo`, `collection`, `rkey`, `record`, `swapRecord?` | See PUT_RECORD responses below |
+| Request `type`     | Payload fields                                        | Response type                                                           |
+| ------------------ | ----------------------------------------------------- | ----------------------------------------------------------------------- |
+| `AUTH_SIGN_IN`     | —                                                     | `{ ok: true }`                                                          |
+| `AUTH_SIGN_OUT`    | —                                                     | `{ ok: true }`                                                          |
+| `AUTH_REAUTHORIZE` | —                                                     | `{ ok: true }`                                                          |
+| `AUTH_GET_STATUS`  | —                                                     | `{ authenticated: false }` or `{ authenticated: true, did, expiresAt }` |
+| `GET_RECORD`       | `repo`, `collection`, `rkey`                          | `{ value, cid }` or `{ error }`                                         |
+| `PUT_RECORD`       | `repo`, `collection`, `rkey`, `record`, `swapRecord?` | See PUT_RECORD responses below                                          |
 
 ### PUT_RECORD response shapes
 

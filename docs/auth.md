@@ -44,9 +44,9 @@ AT Protocol OAuth requires the client to be identified by a **client ID that is 
 
 ## Required Scopes
 
-| Scope | Purpose |
-| --- | --- |
-| `atproto` | Identifies this as an AT Protocol client |
+| Scope                | Purpose                                                                  |
+| -------------------- | ------------------------------------------------------------------------ |
+| `atproto`            | Identifies this as an AT Protocol client                                 |
 | `transition:generic` | Grants read/write access to records the user owns (minimum viable scope) |
 
 Use `atproto transition:generic` as the default scope. Narrower scopes may be supported in future ATProto PDS releases.
@@ -90,11 +90,11 @@ Ensure the build pipeline includes `callback.html` (and its companion script) in
 
 ## Authorization Endpoints
 
-| Endpoint | URL |
-| --- | --- |
+| Endpoint            | URL                                                          |
+| ------------------- | ------------------------------------------------------------ |
 | Discover (metadata) | `https://bsky.social/.well-known/oauth-authorization-server` |
-| Authorization | `https://bsky.social/oauth/authorize` |
-| Token | `https://bsky.social/oauth/token` |
+| Authorization       | `https://bsky.social/oauth/authorize`                        |
+| Token               | `https://bsky.social/oauth/token`                            |
 
 These URLs are also exported from `src/shared/constants.ts` as `BSKY_OAUTH_AUTHORIZE_URL` and `BSKY_OAUTH_TOKEN_URL`.
 
@@ -132,10 +132,10 @@ Prefer the higher-level `buildAuthorizationRequest()` from `auth-client.ts` whic
 
 ## Follow-up Beans
 
-| Bean | Scope |
-| --- | --- |
+| Bean             | Scope                                                    |
+| ---------------- | -------------------------------------------------------- |
 | `skeeditor-4pqr` | Persist access/refresh tokens in `browser.storage.local` |
-| `skeeditor-qnbm` | Automatic silent token refresh before expiry |
-| `skeeditor-sykd` | Popup login/logout UI wired to the auth flow |
-| `skeeditor-vrnp` | Auth-status routing (show editor vs. login gate) |
-| `skeeditor-oflm` | App-password fallback for non-OAuth PDS instances |
+| `skeeditor-qnbm` | Automatic silent token refresh before expiry             |
+| `skeeditor-sykd` | Popup login/logout UI wired to the auth flow             |
+| `skeeditor-vrnp` | Auth-status routing (show editor vs. login gate)         |
+| `skeeditor-oflm` | App-password fallback for non-OAuth PDS instances        |
