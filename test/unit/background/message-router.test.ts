@@ -194,7 +194,7 @@ describe('handleMessage', () => {
     it('clears pending state even on token exchange failure', async () => {
       const deps = makeDeps({
         getAuthState: vi.fn().mockResolvedValue({ state: 'matching-state', codeVerifier: 'verifier' }),
-        exchangeCode: vi.fn().mockRejectedValue(new Error('Token exchange failed')),
+        exchangeCode: vi.fn().mockRejectedValue(new Error('Server internal error: rate limit exceeded')),
       });
 
       const result = await handleMessage({ type: 'AUTH_CALLBACK', code: 'auth-code', state: 'matching-state' }, deps);
@@ -260,7 +260,7 @@ describe('handleMessage', () => {
         deps,
       );
 
-      expect(result).toEqual({ error: 'XRPC network error' });
+      expect(result).toEqual({ error: 'Failed to fetch record' });
     });
   });
 
@@ -461,7 +461,7 @@ describe('handleMessage', () => {
         deps,
       );
 
-      expect(result).toEqual({ type: 'PUT_RECORD_ERROR', message: 'network failure' });
+      expect(result).toEqual({ type: 'PUT_RECORD_ERROR', message: 'Failed to update record' });
     });
 
     it('returns PUT_RECORD_ERROR for auth swap failures', async () => {
