@@ -1,11 +1,11 @@
 ---
 # skeeditor-ykhp
 title: Test and fix Firefox-specific behaviors (web-ext)
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-18T14:30:21Z
-updated_at: 2026-03-18T15:10:19Z
+updated_at: 2026-03-25T02:39:53Z
 parent: skeeditor-7d7e
 blocked_by:
     - skeeditor-ra8t

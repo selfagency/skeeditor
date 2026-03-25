@@ -1,11 +1,11 @@
 ---
 # skeeditor-tz8r
 title: Handle Safari API incompatibilities (document and shim)
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-18T14:30:30Z
-updated_at: 2026-03-18T15:10:19Z
+updated_at: 2026-03-25T02:40:05Z
 parent: skeeditor-7d7e
 blocked_by:
     - skeeditor-vklb

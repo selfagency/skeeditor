@@ -1,11 +1,11 @@
 ---
 # skeeditor-dkdo
 title: Test and fix Chrome-specific behaviors
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-18T14:30:16Z
-updated_at: 2026-03-18T15:10:19Z
+updated_at: 2026-03-25T02:39:49Z
 parent: skeeditor-7d7e
 blocked_by:
     - skeeditor-ra8t

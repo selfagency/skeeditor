@@ -1,11 +1,11 @@
 ---
 # skeeditor-ra8t
 title: Integrate webextension-polyfill for browser.* normalization
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-18T14:30:09Z
-updated_at: 2026-03-18T14:51:33Z
+updated_at: 2026-03-25T02:39:45Z
 parent: skeeditor-7d7e
 ---
 

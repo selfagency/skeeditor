@@ -1,11 +1,11 @@
 ---
 # skeeditor-ku9o
 title: Add platform shims for identity/auth API differences
-status: todo
+status: completed
 type: feature
 priority: normal
 created_at: 2026-03-18T14:30:34Z
-updated_at: 2026-03-18T14:52:09Z
+updated_at: 2026-03-25T02:39:56Z
 parent: skeeditor-7d7e
 ---
 

@@ -1,11 +1,11 @@
 ---
 # skeeditor-vklb
 title: Convert and test in Safari via Xcode
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-18T14:30:25Z
-updated_at: 2026-03-18T15:10:19Z
+updated_at: 2026-03-25T02:40:02Z
 parent: skeeditor-7d7e
 blocked_by:
     - skeeditor-nbu0
