@@ -11,10 +11,7 @@
       Own post: data-at-uri matches TEST_DID in bsky-route-extension.ts
       The content script injects an Edit button here when authenticated as TEST_DID.
     -->
-    <article
-      data-testid="post"
-      data-at-uri="at://did:plc:testuser00000000000000/app.bsky.feed.post/testpost123456"
-    >
+    <article data-testid="post" data-at-uri="at://did:plc:testuser00000000000000/app.bsky.feed.post/testpost123456">
       <div class="post-header">
         <a href="https://bsky.app/profile/test.bsky.social">@test.bsky.social</a>
         <a href="https://bsky.app/profile/test.bsky.social/post/testpost123456">2h</a>
@@ -29,10 +26,7 @@
       Other user's post: different DID (OTHER_DID in bsky-route-extension.ts)
       The content script must NOT inject an Edit button here.
     -->
-    <article
-      data-testid="post"
-      data-at-uri="at://did:plc:otheruser0000000000000/app.bsky.feed.post/otherpost987654"
-    >
+    <article data-testid="post" data-at-uri="at://did:plc:otheruser0000000000000/app.bsky.feed.post/otherpost987654">
       <div class="post-header">
         <a href="https://bsky.app/profile/other.bsky.social">@other.bsky.social</a>
       </div>

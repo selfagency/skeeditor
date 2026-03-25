@@ -1,16 +1,16 @@
 import { resolve } from 'node:path';
 
-import { expect, test } from './fixtures/chromium-extension';
 import {
   OTHER_DID,
   OWN_POST_TEXT,
   TEST_AT_URI,
   TEST_DID,
   TEST_RKEY,
+  test as bskyTest,
   makeMockGetRecordResult,
   makeMockPutRecordResult,
-  test as bskyTest,
 } from './fixtures/bsky-route-extension';
+import { expect, test } from './fixtures/chromium-extension';
 
 // ── Popup smoke tests ─────────────────────────────────────────────────────────
 

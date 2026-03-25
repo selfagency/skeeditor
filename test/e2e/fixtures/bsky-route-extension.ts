@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
-import { expect, test as chromiumBase } from './chromium-extension';
+import { test as chromiumBase, expect } from './chromium-extension';
 
 // ── Test constants ────────────────────────────────────────────────────────────
 
