@@ -33,15 +33,18 @@ export interface LoginResponse {
 }
 
 /** Error thrown when app password authentication fails */
-export class AppPasswordAuthError extends Error {
+export class AppPasswordError extends Error {
   public readonly status: number | undefined;
 
   public constructor(message: string, status?: number) {
     super(message);
-    this.name = 'AppPasswordAuthError';
+    this.name = 'AppPasswordError';
     this.status = status;
   }
 }
+
+/** @deprecated Use AppPasswordError instead */
+export { AppPasswordError as AppPasswordAuthError };
 
 /**
  * Authenticate with an app password at the AT Protocol login endpoint.
@@ -82,7 +85,7 @@ export async function authenticateWithAppPassword(
         ? (errorBody as Record<string, string>)['error']
         : undefined;
 
-    throw new AppPasswordAuthError(errorDescription ?? `Login failed with HTTP ${response.status}`, response.status);
+    throw new AppPasswordError(errorDescription ?? `Login failed with HTTP ${response.status}`, response.status);
   }
 
   const data = (await response.json()) as LoginResponse;

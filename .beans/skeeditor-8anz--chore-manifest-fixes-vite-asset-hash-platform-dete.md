@@ -1,11 +1,11 @@
 ---
 # skeeditor-8anz
 title: chore manifest fixes vite asset hash platform dete
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-03-25T17:57:02Z
-updated_at: 2026-03-25T18:00:31Z
+updated_at: 2026-03-25T22:37:02Z
 parent: skeeditor-pjwz
 ---
 

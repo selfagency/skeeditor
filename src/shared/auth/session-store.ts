@@ -65,6 +65,8 @@ async function isAccessTokenValid(): Promise<boolean> {
   const session = await get();
   if (session === null) return false;
 
+  // Refresh 30 s before actual expiry so callers can obtain a fresh token
+  // while the current one is still valid, avoiding edge-case 401s.
   const bufferMs = 30_000;
   return session.expiresAt - bufferMs > Date.now();
 }
