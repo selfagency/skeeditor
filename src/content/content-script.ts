@@ -15,17 +15,17 @@ let mutationObserver: MutationObserver | null = null;
 let currentDid: string | null = null;
 let domContentLoadedHandler: (() => void) | null = null;
 let scanScheduled = false;
+let activeModal: EditModal | null = null;
 
 const getOrCreateEditModal = (): EditModal => {
-  const existing = document.querySelector<EditModal>('edit-modal[data-skeeditor-modal="true"]');
-
-  if (existing) {
-    return existing;
+  if (activeModal !== null && activeModal.element.isConnected) {
+    return activeModal;
   }
 
-  const modal = document.createElement('edit-modal') as EditModal;
-  modal.setAttribute('data-skeeditor-modal', 'true');
-  document.body.appendChild(modal);
+  const modal = new EditModal();
+  modal.element.setAttribute('data-skeeditor-modal', 'true');
+  document.body.appendChild(modal.element);
+  activeModal = modal;
 
   return modal;
 };
@@ -126,8 +126,13 @@ const injectEditButton = (postElement: HTMLElement): void => {
 };
 
 const scanForPosts = (): void => {
+  // No authenticated DID → don't inject any edit buttons.
+  if (currentDid === null) {
+    return;
+  }
+
   for (const postInfo of findPosts(document)) {
-    if (currentDid !== null && postInfo.repo !== currentDid) {
+    if (postInfo.repo !== currentDid) {
       continue;
     }
 
@@ -167,11 +172,13 @@ const start = (): void => {
   void refreshAuthState()
     .then(() => {
       scanForPosts();
+      document.documentElement.setAttribute('data-skeeditor-initialized', 'true');
       console.info(`${APP_NAME}: content script loaded`);
     })
     .catch(error => {
       console.error(`${APP_NAME}: failed to load auth state`, error);
       scanForPosts();
+      document.documentElement.setAttribute('data-skeeditor-initialized', 'true');
       console.info(`${APP_NAME}: content script loaded with anonymous state`);
     });
 };

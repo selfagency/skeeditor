@@ -3,16 +3,35 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Mock Bluesky Post</title>
+    <title>Bluesky</title>
   </head>
 
   <body>
-    <article data-testid="post">
-      <header>
-        <strong>@skeeditor.dev</strong>
-        <time datetime="2026-03-18T12:00:00Z">now</time>
-      </header>
-      <p data-testid="post-text">A static Bluesky-like page for extension E2E scaffolding.</p>
+    <!--
+      Own post: data-at-uri matches TEST_DID in bsky-route-extension.ts
+      The content script injects an Edit button here when authenticated as TEST_DID.
+    -->
+    <article data-testid="post" data-at-uri="at://did:plc:testuser00000000000000/app.bsky.feed.post/testpost123456">
+      <div class="post-header">
+        <a href="https://bsky.app/profile/test.bsky.social">@test.bsky.social</a>
+        <a href="https://bsky.app/profile/test.bsky.social/post/testpost123456">2h</a>
+      </div>
+      <p data-testid="post-text">Hello from my own post. #testing</p>
+      <div data-testid="postButtonInline" class="post-actions">
+        <!-- Edit button will be injected here by the content script -->
+      </div>
+    </article>
+
+    <!--
+      Other user's post: different DID (OTHER_DID in bsky-route-extension.ts)
+      The content script must NOT inject an Edit button here.
+    -->
+    <article data-testid="post" data-at-uri="at://did:plc:otheruser0000000000000/app.bsky.feed.post/otherpost987654">
+      <div class="post-header">
+        <a href="https://bsky.app/profile/other.bsky.social">@other.bsky.social</a>
+      </div>
+      <p data-testid="post-text">Hello from someone else&#39;s post.</p>
+      <div data-testid="postButtonInline" class="post-actions"></div>
     </article>
   </body>
 </html>

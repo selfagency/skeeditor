@@ -56,4 +56,22 @@ describe('content-script', () => {
 
     expect(document.querySelector('[data-skeeditor-edit-button]')).toBeNull();
   });
+
+  it('should not inject any edit button when unauthenticated', async () => {
+    const sendMessage = vi.fn(async request => {
+      if (request.type === 'AUTH_GET_STATUS') {
+        return { authenticated: false };
+      }
+
+      return { ok: true };
+    });
+
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    await import('@src/content/content-script');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(document.querySelector('[data-skeeditor-edit-button]')).toBeNull();
+  });
 });
