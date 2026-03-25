@@ -206,28 +206,30 @@ export class EditModal {
 
   public constructor() {
     this.element = document.createElement('edit-modal');
+    this.element.attachShadow({ mode: 'open' });
     this.initialize();
   }
 
   private initialize(): void {
     if (this.textarea) return;
-    this.element.innerHTML = EDIT_MODAL_TEMPLATE;
+    const shadow = this.element.shadowRoot!;
+    shadow.innerHTML = EDIT_MODAL_TEMPLATE;
     this.element.style.display = 'none';
-    this.textarea = this.element.querySelector<HTMLTextAreaElement>('textarea');
-    this.charCount = this.element.querySelector<HTMLElement>('.char-count');
-    this.saveButton = this.element.querySelector<HTMLButtonElement>('.save-button');
-    this.statusMessage = this.element.querySelector<HTMLElement>('.status-message');
+    this.textarea = shadow.querySelector<HTMLTextAreaElement>('textarea');
+    this.charCount = shadow.querySelector<HTMLElement>('.char-count');
+    this.saveButton = shadow.querySelector<HTMLButtonElement>('.save-button');
+    this.statusMessage = shadow.querySelector<HTMLElement>('.status-message');
 
     if (this.textarea) {
       this.textarea.addEventListener('input', this.handleInputBound);
     }
 
-    const closeButton = this.element.querySelector<HTMLButtonElement>('.close-button');
+    const closeButton = shadow.querySelector<HTMLButtonElement>('.close-button');
     if (closeButton) {
       closeButton.addEventListener('click', this.closeBound);
     }
 
-    const cancelButton = this.element.querySelector<HTMLButtonElement>('.cancel-button');
+    const cancelButton = shadow.querySelector<HTMLButtonElement>('.cancel-button');
     if (cancelButton) {
       cancelButton.addEventListener('click', this.closeBound);
     }
@@ -340,7 +342,10 @@ export class EditModal {
   }
 
   private handleBackgroundClick(event: MouseEvent): void {
-    if (event.target === this.element) {
+    // With Shadow DOM, event.target is retargeted to the host for all shadow-internal
+    // events. Use composedPath() to get the actual target before retargeting.
+    const path = event.composedPath();
+    if (path.length > 0 && path[0] === this.element) {
       this.close();
     }
   }

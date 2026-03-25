@@ -32,6 +32,20 @@ describe('facet detectors', () => {
     ]);
   });
 
+  it('should detect single-word handles without a dot segment', () => {
+    const text = 'Hello @alice, how are you?';
+    const mentions = detectMentions(text);
+
+    expect(mentions).toEqual([
+      {
+        kind: 'mention',
+        value: 'alice',
+        start: 6,
+        end: 12,
+      },
+    ]);
+  });
+
   it('should detect handle mentions', () => {
     const text = 'Hello @alice.test and @bob.example';
     const mentions = detectMentions(text);

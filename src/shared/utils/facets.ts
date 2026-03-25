@@ -22,7 +22,7 @@ export interface BuildFacetsOptions {
 
 const linkPattern = /https?:\/\/[^\s]+/giu;
 const mentionPattern =
-  /(^|[^\p{L}\p{N}._-])@([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+)/giu;
+  /(^|[^\p{L}\p{N}._-])@([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*)/giu;
 const hashtagPattern = /(^|[^\p{L}\p{N}_])#([\p{L}\p{N}_]{1,64})/gu;
 
 const trailingLinkPunctuationPattern = /[),.!?;:]+$/u;
