@@ -162,7 +162,7 @@ Extension icons are generated at build time from two SVG source files at the pro
 | `skeeditor.svg`           | Transparent background — used for the `icons` manifest key |
 | `skeeditor_button.svg`    | Solid background — used for `action.default_icon`          |
 
-[`@resvg/resvg-js`](https://github.com/yisibl/resvg-js) (installed via [`vite-plugin-render-svg`](https://github.com/russss/vite-plugin-render-svg)) renders the SVGs to PNG at the required pixel sizes. The generated PNGs are written to `dist/<browser>/icons/` by the `buildIcons()` function in `scripts/build.ts`, called from the `iifeContentPlugin` `closeBundle` hook alongside the content-script IIFE build and manifest merge.
+[`@resvg/resvg-js`](https://github.com/yisibl/resvg-js) renders the SVGs to PNG at the required pixel sizes. The generated PNGs are written to `dist/<browser>/icons/` by the `buildIcons()` function in `scripts/build.ts`, called from the `iifeContentPlugin` `closeBundle` hook alongside the content-script IIFE build and manifest merge.
 
 ### Output files
 
