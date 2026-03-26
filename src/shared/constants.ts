@@ -49,13 +49,20 @@ export async function getCurrentPdsUrl(did?: string): Promise<string> {
 
   if (did !== undefined) {
     const result = await storage.get('pdsUrls');
-    const pdsUrls = ((result as Record<string, unknown>)['pdsUrls'] as Record<string, string>) ?? {};
-    return pdsUrls[did] ?? DEFAULT_PDS_URL;
+    const stored = (result as Record<string, unknown>)['pdsUrls'];
+    const pdsUrls: Record<string, string> =
+      stored !== null && typeof stored === 'object' && !Array.isArray(stored) ? (stored as Record<string, string>) : {};
+    const url = pdsUrls[did];
+    return typeof url === 'string' && url.length > 0 ? url : DEFAULT_PDS_URL;
   }
 
   const result = await storage.get(['pdsUrls', 'pdsUrl', 'activeDid']);
   const activeDid = (result as Record<string, unknown>)['activeDid'];
-  const pdsUrls = ((result as Record<string, unknown>)['pdsUrls'] as Record<string, string>) ?? {};
+  const storedPdsUrls = (result as Record<string, unknown>)['pdsUrls'];
+  const pdsUrls: Record<string, string> =
+    storedPdsUrls !== null && typeof storedPdsUrls === 'object' && !Array.isArray(storedPdsUrls)
+      ? (storedPdsUrls as Record<string, string>)
+      : {};
 
   if (typeof activeDid === 'string' && activeDid.length > 0 && pdsUrls[activeDid]) {
     return pdsUrls[activeDid];
@@ -70,7 +77,9 @@ export async function getCurrentPdsUrl(did?: string): Promise<string> {
 export async function setCurrentPdsUrl(did: string, url: string): Promise<void> {
   const storage = getStorage();
   const result = await storage.get('pdsUrls');
-  const pdsUrls = ((result as Record<string, unknown>)['pdsUrls'] as Record<string, string>) ?? {};
+  const stored = (result as Record<string, unknown>)['pdsUrls'];
+  const pdsUrls: Record<string, string> =
+    stored !== null && typeof stored === 'object' && !Array.isArray(stored) ? (stored as Record<string, string>) : {};
   pdsUrls[did] = url;
   await storage.set({ pdsUrls });
 }

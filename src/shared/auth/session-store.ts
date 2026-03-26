@@ -51,7 +51,9 @@ function isStoredSession(value: unknown): value is StoredSession {
  */
 async function set(session: StoredSession): Promise<void> {
   const result = await browser.storage.local.get(SESSIONS_KEY);
-  const sessions = ((result as Record<string, unknown>)[SESSIONS_KEY] as Record<string, unknown>) ?? {};
+  const stored = (result as Record<string, unknown>)[SESSIONS_KEY];
+  const sessions: Record<string, unknown> =
+    stored !== null && typeof stored === 'object' && !Array.isArray(stored) ? (stored as Record<string, unknown>) : {};
   sessions[session.did] = session;
   await browser.storage.local.set({ [SESSIONS_KEY]: sessions, [ACTIVE_DID_KEY]: session.did });
 }
@@ -103,9 +105,11 @@ async function clear(): Promise<void> {
  */
 async function clearForDid(did: string): Promise<void> {
   const result = await browser.storage.local.get([SESSIONS_KEY, ACTIVE_DID_KEY]);
-  const sessions = {
-    ...((result as Record<string, unknown>)[SESSIONS_KEY] as Record<string, unknown>),
-  };
+  const storedSessions = (result as Record<string, unknown>)[SESSIONS_KEY];
+  const sessions: Record<string, StoredSession> =
+    storedSessions !== null && typeof storedSessions === 'object' && !Array.isArray(storedSessions)
+      ? { ...(storedSessions as Record<string, StoredSession>) }
+      : {};
   delete sessions[did];
 
   const activeDid = (result as Record<string, unknown>)[ACTIVE_DID_KEY];
@@ -154,11 +158,12 @@ async function listDids(): Promise<string[]> {
  */
 async function migrateFromLegacy(): Promise<void> {
   const result = await browser.storage.local.get([SESSIONS_KEY, 'session', 'pdsUrl']);
-  const hasSessions = (result as Record<string, unknown>)[SESSIONS_KEY] !== undefined;
+  const sessions = (result as Record<string, unknown>)[SESSIONS_KEY];
+  const hasValidSessions = sessions !== null && typeof sessions === 'object' && !Array.isArray(sessions);
   const legacySession = (result as Record<string, unknown>)['session'];
 
   // Skip if already using new format or nothing to migrate
-  if (hasSessions || !isStoredSession(legacySession)) return;
+  if (hasValidSessions || !isStoredSession(legacySession)) return;
 
   // Migrate session into new map format
   await set(legacySession);
@@ -167,7 +172,11 @@ async function migrateFromLegacy(): Promise<void> {
   const legacyPdsUrl = (result as Record<string, unknown>)['pdsUrl'];
   if (typeof legacyPdsUrl === 'string' && legacyPdsUrl.length > 0) {
     const pdsUrlsResult = await browser.storage.local.get('pdsUrls');
-    const pdsUrls = ((pdsUrlsResult as Record<string, unknown>)['pdsUrls'] as Record<string, string>) ?? {};
+    const storedPdsUrls = (pdsUrlsResult as Record<string, unknown>)['pdsUrls'];
+    const pdsUrls: Record<string, string> =
+      storedPdsUrls !== null && typeof storedPdsUrls === 'object' && !Array.isArray(storedPdsUrls)
+        ? (storedPdsUrls as Record<string, string>)
+        : {};
     if (!pdsUrls[legacySession.did]) {
       pdsUrls[legacySession.did] = legacyPdsUrl;
       await browser.storage.local.set({ pdsUrls });
