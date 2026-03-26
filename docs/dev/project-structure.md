@@ -107,7 +107,7 @@ skeeditor/
 │
 ├── package.json                 # Root workspace package (scripts, devDependencies)
 ├── pnpm-workspace.yaml          # pnpm monorepo workspace definition
-├── turbo.json                   # Turborepo pipeline (build, test, lint)
+├── # Turborepo removed - using pnpm workspaces directly
 ├── tsconfig.json                # Root TypeScript config (paths, strict)
 ├── tsconfig.build.json          # TypeScript config for production builds (excludes test/)
 ├── vite.config.ts               # Vite config (entry points, resolve aliases)

@@ -109,14 +109,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Cache Turbo build artifacts
-        uses: actions/cache@v4
-        with:
-          path: .turbo
-          key: turbo-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ github.sha }}
-          restore-keys: |
-            turbo-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}-
-            turbo-${{ runner.os }}-
+
+          turbo-${{ runner.os }}-
 
       - name: Build extension
         run: pnpm build
