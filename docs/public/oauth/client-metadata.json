@@ -9,8 +9,7 @@
     "refresh_token"
   ],
   "redirect_uris": [
-    "https://skeeditor.self.agency/callback.html",
-    "http://127.0.0.1:3000/callback.html"
+    "https://skeeditor.self.agency/callback.html"
   ],
   "response_types": [
     "code"
