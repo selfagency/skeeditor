@@ -1,6 +1,6 @@
+import { Resvg } from '@resvg/resvg-js';
 import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { Resvg } from '@resvg/resvg-js';
 import { build, type Plugin } from 'vite';
 
 import { writeMergedManifest } from './merge-manifest';
@@ -34,7 +34,7 @@ const renderSvgToPng = (svg: Buffer, size: number): Buffer => {
 //   action icons  — used for the browser toolbar button
 //
 // skeeditor.svg          (transparent background) → icons/
-// skeeditor_button.svg   (solid background)       → icons/action-*.png
+// skeeditor.svg   (solid background)       → icons/action-*.png
 const ICON_SIZES = [16, 32, 48, 128] as const;
 const ACTION_SIZES = [16, 32] as const;
 
@@ -44,7 +44,7 @@ const buildIcons = async (): Promise<void> => {
 
   const [transparentSvg, buttonSvg] = await Promise.all([
     readFile(resolve(projectRoot, 'skeeditor.svg')),
-    readFile(resolve(projectRoot, 'skeeditor_button.svg')),
+    readFile(resolve(projectRoot, 'skeeditor.svg')),
   ]);
 
   await Promise.all([
