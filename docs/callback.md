@@ -63,7 +63,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 50vh;
+  width: 100%;
+  min-height: calc(100vh - var(--vp-nav-height, 64px) - 4rem);
   padding: 2rem;
 }
 
