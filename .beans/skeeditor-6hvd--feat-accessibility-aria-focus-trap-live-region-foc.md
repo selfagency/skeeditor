@@ -9,6 +9,7 @@ updated_at: 2026-03-25T23:33:07Z
 parent: skeeditor-pjwz
 blocked_by:
     - skeeditor-z761
+branch: feat/6hvd-accessibility-aria-focus-trap
 ---
 
 ## Todo

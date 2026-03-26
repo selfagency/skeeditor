@@ -51,9 +51,9 @@ const createBrowserApiMock = (): BrowserApiMock => {
     },
     storage: {
       local: {
-        get: vi.fn().mockImplementation((key: string) =>
-          Promise.resolve(store[key] !== undefined ? { [key]: store[key] } : {}),
-        ),
+        get: vi
+          .fn()
+          .mockImplementation((key: string) => Promise.resolve(store[key] !== undefined ? { [key]: store[key] } : {})),
         remove: vi.fn().mockImplementation((key: string) => {
           delete store[key];
           return Promise.resolve();

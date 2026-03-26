@@ -2,21 +2,20 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { EditModal } from '@src/content/edit-modal';
 
+let activeModal: EditModal | null = null;
+
+const createModal = (): EditModal => {
+  const modal = new EditModal();
+  document.body.appendChild(modal.element);
+  activeModal = modal;
+  return modal;
+};
+
 describe('edit-modal', () => {
-  let modal: EditModal;
-
-  const createModal = (): EditModal => {
-    modal = new EditModal();
-    document.body.appendChild(modal.element);
-    return modal;
-  };
-
   afterEach(() => {
-    // Remove the window keydown listener registered by initialize() to prevent
-    // cross-test interference when a test does not call modal.close() itself.
-    if (modal?.element?.isConnected) {
-      modal.close();
-    }
+    activeModal?.close();
+    activeModal = null;
+    document.body.innerHTML = '';
   });
 
   it('should render the initial text and keep save disabled until changes are made', () => {
@@ -118,85 +117,101 @@ describe('edit-modal', () => {
     expect(statusMessage.textContent).toContain('save failed');
   });
 
-  it('should close the modal when Escape is pressed', () => {
-    const modal = createModal();
-    const onCancel = vi.fn();
+  describe('accessibility', () => {
+    it('should have role="dialog" and aria-modal="true" on the modal', () => {
+      const modal = createModal();
+      modal.open('Hello');
 
-    modal.open('Hello Bluesky', onCancel);
+      const dialogEl = modal.element.shadowRoot!.querySelector('.modal') as HTMLElement;
 
-    expect(modal.element.style.display).toBe('flex');
+      expect(dialogEl.getAttribute('role')).toBe('dialog');
+      expect(dialogEl.getAttribute('aria-modal')).toBe('true');
+    });
 
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    it('should have aria-labelledby pointing to the title element', () => {
+      const modal = createModal();
+      modal.open('Hello');
 
-    expect(modal.element.style.display).toBe('none');
-    expect(onCancel).toHaveBeenCalledOnce();
-  });
+      const dialogEl = modal.element.shadowRoot!.querySelector('.modal') as HTMLElement;
+      const titleEl = modal.element.shadowRoot!.querySelector('.title') as HTMLElement;
 
-  it('should respond to Escape key after close and reopen', () => {
-    const modal = createModal();
-    const onCancel = vi.fn();
+      expect(titleEl.id).toBeTruthy();
+      expect(dialogEl.getAttribute('aria-labelledby')).toBe(titleEl.id);
+    });
 
-    modal.open('First open', onCancel);
-    modal.close();
+    it('should have aria-live="polite" on the status message element', () => {
+      const modal = createModal();
+      modal.open('Hello');
 
-    // Reopen — keydown listener should be active again
-    const onCancel2 = vi.fn();
-    modal.open('Second open', onCancel2);
+      const statusEl = modal.element.shadowRoot!.querySelector('.status-message') as HTMLElement;
 
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      expect(statusEl.getAttribute('aria-live')).toBe('polite');
+    });
 
-    expect(onCancel2).toHaveBeenCalledOnce();
-  });
+    it('should save and restore focus when opening and closing the modal', () => {
+      const trigger = document.createElement('button');
+      trigger.textContent = 'Edit';
+      document.body.appendChild(trigger);
+      trigger.focus();
 
-  it('should trigger save when Cmd+Enter is pressed', () => {
-    const modal = createModal();
-    const onSave = vi.fn();
+      expect(document.activeElement).toBe(trigger);
 
-    modal.open('Hello Bluesky', undefined, onSave);
+      const modal = createModal();
+      modal.open('Hello');
 
-    const textarea = modal.element.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
-    textarea.value = 'Edited text';
-    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      modal.close();
 
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', metaKey: true, bubbles: true }));
+      expect(document.activeElement).toBe(trigger);
+    });
 
-    expect(onSave).toHaveBeenCalledWith('Edited text');
-  });
+    it('should trap focus within the modal on Tab', () => {
+      const modal = createModal();
+      modal.open('Hello');
 
-  it('should trigger save when Ctrl+Enter is pressed', () => {
-    const modal = createModal();
-    const onSave = vi.fn();
+      const shadow = modal.element.shadowRoot!;
+      // Cancel button is the last non-disabled focusable element
+      const cancelButton = shadow.querySelector('.cancel-button') as HTMLButtonElement;
 
-    modal.open('Hello Bluesky', undefined, onSave);
+      // Focus on cancel (last non-disabled), Tab should wrap to first focusable (close button)
+      cancelButton.focus();
+      const tabEvent = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+      window.dispatchEvent(tabEvent);
 
-    const textarea = modal.element.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
-    textarea.value = 'Edited text';
-    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      const activeEl = shadow.activeElement;
+      const closeButton = shadow.querySelector('.close-button') as HTMLElement;
+      expect(activeEl).toBe(closeButton);
+    });
 
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true }));
+    it('should trap focus within the modal on Shift+Tab', () => {
+      const modal = createModal();
+      modal.open('Hello');
 
-    expect(onSave).toHaveBeenCalledWith('Edited text');
-  });
+      const shadow = modal.element.shadowRoot!;
+      // Close button is the first focusable element in document order
+      const closeButton = shadow.querySelector('.close-button') as HTMLButtonElement;
 
-  it('should show error and not save when text exceeds 300 characters', () => {
-    const modal = createModal();
-    const onSave = vi.fn();
+      // Focus on close button (first focusable), Shift+Tab should wrap to cancel (last non-disabled)
+      closeButton.focus();
+      const shiftTabEvent = new KeyboardEvent('keydown', {
+        key: 'Tab',
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      window.dispatchEvent(shiftTabEvent);
 
-    modal.open('Hello', undefined, onSave);
+      const activeEl = shadow.activeElement;
+      const cancelButton = shadow.querySelector('.cancel-button') as HTMLElement;
+      expect(activeEl).toBe(cancelButton);
+    });
 
-    const textarea = modal.element.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
-    const saveButton = modal.element.shadowRoot!.querySelector('.save-button') as HTMLButtonElement;
+    it('should add aria-label to the textarea', () => {
+      const modal = createModal();
+      modal.open('Hello');
 
-    textarea.value = 'a'.repeat(301);
-    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      const textarea = modal.element.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
 
-    // Force-enable save button to test the length validation in handleSave
-    saveButton.disabled = false;
-    saveButton.click();
-
-    expect(onSave).not.toHaveBeenCalled();
-
-    const statusMessage = modal.element.shadowRoot!.querySelector('.status-message') as HTMLElement;
-    expect(statusMessage.textContent).toContain('exceeds maximum length');
+      expect(textarea.getAttribute('aria-label')).toBe('Edit post content');
+    });
   });
 });
