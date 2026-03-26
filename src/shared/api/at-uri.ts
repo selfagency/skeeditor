@@ -123,15 +123,22 @@ export const parseBskyPostUrl = (url: string | URL): ParsedAtUri => {
 };
 
 const getElementCandidates = (element: Element): Element[] => {
-  const candidates = [
+  const stable = [
     element,
     element.closest('[data-at-uri]'),
     element.closest('[data-uri]'),
     element.closest('a[href]'),
-    ...Array.from(element.querySelectorAll('[data-at-uri], [data-uri], a[href]')),
   ].filter((candidate): candidate is Element => candidate !== null);
 
-  return [...new Set(candidates)];
+  const unique = [...new Set(stable)];
+
+  const hasDirectRef = unique.some(
+    c => c.hasAttribute('data-at-uri') || c.hasAttribute('data-uri') || c instanceof HTMLAnchorElement,
+  );
+
+  if (hasDirectRef) return unique;
+
+  return [...unique, ...Array.from(element.querySelectorAll('[data-at-uri], [data-uri], a[href]'))];
 };
 
 const extractReferenceValue = (element: Element): string | null => {
