@@ -1,7 +1,7 @@
-// Ambient global declaration for the webextension-polyfill browser API.
-// At runtime this global is populated by importing 'webextension-polyfill' at
-// each entry point (service-worker, content-script, popup, options).
-// This file provides the compile-time type for every source file in the project.
+// Ambient type for the webextension-polyfill browser API.
+// Source files should `import browser from 'webextension-polyfill'` to obtain
+// the browser namespace at runtime.  This global declaration exists solely for
+// the test harness, which assigns a mock to globalThis.browser in setup.
 declare var browser: typeof import('webextension-polyfill');
 
 // Allow side-effect CSS imports (e.g. `import './styles.css'`) in content scripts.

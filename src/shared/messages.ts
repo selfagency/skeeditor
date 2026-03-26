@@ -1,3 +1,5 @@
+import browser from 'webextension-polyfill';
+
 import type { GetRecordResult, PutRecordConflictDetails, PutRecordWithSwapError } from './api/xrpc-client';
 
 // ── Auth messages ─────────────────────────────────────────────────────────────

@@ -1,3 +1,5 @@
+import browser from 'webextension-polyfill';
+
 import type { BrowserName, PlatformCapabilities } from './types';
 
 /**
