@@ -5,7 +5,7 @@ status: completed
 type: feature
 priority: high
 created_at: 2026-03-26T22:38:20Z
-updated_at: 2026-03-26T22:45:14Z
+updated_at: 2026-03-26T22:47:07Z
 ---
 
 branch: feat/ogi2-auto-switch-account-on-profile-nav
@@ -35,3 +35,7 @@ branch: feat/ogi2-auto-switch-account-on-profile-nav
 - 6 new unit tests: startup account load, handle match, DID match, already-active no-op, non-profile URL no-op, popstate trigger
 - All 14 content-script unit tests pass; full suite 367/371 (4 pre-existing E2E)
 - Typecheck clean
+
+
+
+pr: 57
