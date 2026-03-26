@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { RouterDeps } from '@src/background/message-router';
 import { createDefaultDeps, handleMessage } from '@src/background/message-router';

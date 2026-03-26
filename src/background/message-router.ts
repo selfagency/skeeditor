@@ -261,7 +261,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
           collection: message['collection'],
           rkey: message['rkey'],
         });
-      } catch (err) {
+      } catch (_err) {
         return { error: 'Failed to fetch record' };
       }
     }
@@ -320,7 +320,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
 
         const result = await client.putRecord(params);
         return { type: 'PUT_RECORD_SUCCESS', uri: result.uri, cid: result.cid } satisfies PutRecordSuccessResponse;
-      } catch (err) {
+      } catch (_err) {
         return {
           type: 'PUT_RECORD_ERROR',
           message: 'Failed to update record',
