@@ -37,9 +37,14 @@ const makeAuthRequest = (): AuthorizationRequest => ({
 
 const makeStoreMock = (session: StoredSession | null = null) => ({
   get: vi.fn().mockResolvedValue(session),
+  getByDid: vi.fn().mockResolvedValue(session),
   set: vi.fn().mockResolvedValue(undefined),
   clear: vi.fn().mockResolvedValue(undefined),
+  clearForDid: vi.fn().mockResolvedValue(undefined),
   isAccessTokenValid: vi.fn().mockResolvedValue(session !== null),
+  listDids: vi.fn().mockResolvedValue(session !== null ? [session.did] : []),
+  getActiveDid: vi.fn().mockResolvedValue(session?.did ?? null),
+  setActiveDid: vi.fn().mockResolvedValue(undefined),
 });
 
 const makeXrpcMock = () => ({
@@ -790,6 +795,111 @@ describe('createDefaultDeps', () => {
 
       expect(globalThis.browser.storage.session.remove).toHaveBeenCalledWith('pendingAuth');
       expect(globalThis.browser.storage.local.remove).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('AUTH_LIST_ACCOUNTS', () => {
+    it('returns empty accounts array when no sessions exist', async () => {
+      const store = makeStoreMock(null);
+      const deps = makeDeps({ store });
+
+      const result = await handleMessage({ type: 'AUTH_LIST_ACCOUNTS' }, deps);
+
+      expect(result).toEqual({ accounts: [] });
+    });
+
+    it('returns all accounts with isActive flag for active DID', async () => {
+      const session1 = makeSession({ did: 'did:plc:user1', handle: 'alice.bsky.social' });
+      const session2 = makeSession({ did: 'did:plc:user2' });
+      const store = {
+        ...makeStoreMock(),
+        listDids: vi.fn().mockResolvedValue(['did:plc:user1', 'did:plc:user2']),
+        getActiveDid: vi.fn().mockResolvedValue('did:plc:user1'),
+        getByDid: vi.fn().mockResolvedValueOnce(session1).mockResolvedValueOnce(session2),
+      };
+      const deps = makeDeps({ store });
+
+      const result = await handleMessage({ type: 'AUTH_LIST_ACCOUNTS' }, deps);
+
+      expect(result).toEqual({
+        accounts: [
+          { did: 'did:plc:user1', handle: 'alice.bsky.social', expiresAt: session1.expiresAt, isActive: true },
+          { did: 'did:plc:user2', handle: undefined, expiresAt: session2.expiresAt, isActive: false },
+        ],
+      });
+    });
+
+    it('marks no account as active when activeDid is null', async () => {
+      const session = makeSession({ did: 'did:plc:user1' });
+      const store = {
+        ...makeStoreMock(),
+        listDids: vi.fn().mockResolvedValue(['did:plc:user1']),
+        getActiveDid: vi.fn().mockResolvedValue(null),
+        getByDid: vi.fn().mockResolvedValue(session),
+      };
+      const deps = makeDeps({ store });
+
+      const result = await handleMessage({ type: 'AUTH_LIST_ACCOUNTS' }, deps);
+
+      expect(result).toEqual({
+        accounts: [{ did: 'did:plc:user1', handle: undefined, expiresAt: session.expiresAt, isActive: false }],
+      });
+    });
+  });
+
+  describe('AUTH_SWITCH_ACCOUNT', () => {
+    it('calls setActiveDid with the given DID and returns ok', async () => {
+      const store = makeStoreMock(makeSession());
+      const deps = makeDeps({ store });
+
+      const result = await handleMessage({ type: 'AUTH_SWITCH_ACCOUNT', did: 'did:plc:user2' }, deps);
+
+      expect(vi.mocked(store.setActiveDid)).toHaveBeenCalledWith('did:plc:user2');
+      expect(result).toEqual({ ok: true });
+    });
+
+    it('returns error for missing DID', async () => {
+      const deps = makeDeps();
+
+      const result = await handleMessage({ type: 'AUTH_SWITCH_ACCOUNT' }, deps);
+
+      expect(result).toEqual({ error: 'Invalid AUTH_SWITCH_ACCOUNT payload' });
+    });
+
+    it('returns error for empty DID string', async () => {
+      const deps = makeDeps();
+
+      const result = await handleMessage({ type: 'AUTH_SWITCH_ACCOUNT', did: '' }, deps);
+
+      expect(result).toEqual({ error: 'Invalid AUTH_SWITCH_ACCOUNT payload' });
+    });
+  });
+
+  describe('AUTH_SIGN_OUT_ACCOUNT', () => {
+    it('calls clearForDid with the given DID and returns ok', async () => {
+      const store = makeStoreMock(makeSession());
+      const deps = makeDeps({ store });
+
+      const result = await handleMessage({ type: 'AUTH_SIGN_OUT_ACCOUNT', did: 'did:plc:testuser' }, deps);
+
+      expect(vi.mocked(store.clearForDid)).toHaveBeenCalledWith('did:plc:testuser');
+      expect(result).toEqual({ ok: true });
+    });
+
+    it('returns error for missing DID', async () => {
+      const deps = makeDeps();
+
+      const result = await handleMessage({ type: 'AUTH_SIGN_OUT_ACCOUNT' }, deps);
+
+      expect(result).toEqual({ error: 'Invalid AUTH_SIGN_OUT_ACCOUNT payload' });
+    });
+
+    it('returns error for empty DID string', async () => {
+      const deps = makeDeps();
+
+      const result = await handleMessage({ type: 'AUTH_SIGN_OUT_ACCOUNT', did: '' }, deps);
+
+      expect(result).toEqual({ error: 'Invalid AUTH_SIGN_OUT_ACCOUNT payload' });
     });
   });
 });
