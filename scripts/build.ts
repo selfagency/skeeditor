@@ -60,7 +60,11 @@ const main = async (): Promise<void> => {
             format: 'iife',
             name: '_skeeditorContent',
             entryFileNames: 'content/content-script.js',
-            assetFileNames: 'assets/[name][extname]',
+            assetFileNames: 'assets/[name]-[hash][extname]',
+            globals: {
+              'webextension-polyfill': 'browser',
+            },
+            intro: 'var browser = typeof browser !== "undefined" ? browser : {};',
           },
         },
       },

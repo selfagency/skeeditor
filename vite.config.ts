@@ -27,7 +27,7 @@ export default defineConfig({
         options: resolve(sourceRoot, 'options/options.html'),
       },
       output: {
-        assetFileNames: 'assets/[name][extname]',
+        assetFileNames: 'assets/[name]-[hash][extname]',
         chunkFileNames: 'assets/[name]-[hash].js',
         entryFileNames: chunkInfo => {
           if (chunkInfo.name === 'background') {

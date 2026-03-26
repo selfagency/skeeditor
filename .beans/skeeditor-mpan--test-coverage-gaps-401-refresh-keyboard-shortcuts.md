@@ -5,10 +5,10 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-25T17:56:59Z
-updated_at: 2026-03-25T17:56:59Z
+updated_at: 2026-03-25T22:22:54Z
 parent: skeeditor-pjwz
-id: skeeditor-mpan
 ---
+
 Fill test coverage gaps and fix mock fidelity issues found in the codebase audit:
 
 1. **401 → token refresh not tested** — add integration test: XRPC returns 401, router triggers token refresh, retries.

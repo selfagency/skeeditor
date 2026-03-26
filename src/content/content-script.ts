@@ -1,5 +1,13 @@
 import 'webextension-polyfill';
 import { APP_NAME } from '../shared/constants';
+
+declare const browser: typeof import('webextension-polyfill');
+
+// Ensure browser API is available in IIFE context
+if (typeof browser === 'undefined') {
+  // @ts-ignore - This is a fallback for the IIFE build
+  window.browser = {};
+}
 import type { PutRecordConflictResponse, PutRecordResponse } from '../shared/messages';
 import { sendMessage } from '../shared/messages';
 import { EditModal } from './edit-modal';
@@ -14,7 +22,7 @@ const EDIT_BUTTON_ATTRIBUTE = 'data-skeeditor-edit-button';
 let mutationObserver: MutationObserver | null = null;
 let currentDid: string | null = null;
 let domContentLoadedHandler: (() => void) | null = null;
-let scanScheduled = false;
+let scanTimer: ReturnType<typeof setTimeout> | null = null;
 let activeModal: EditModal | null = null;
 
 const getOrCreateEditModal = (): EditModal => {
@@ -141,15 +149,14 @@ const scanForPosts = (): void => {
 };
 
 const scheduleScanForPosts = (): void => {
-  if (scanScheduled) {
-    return;
+  if (scanTimer) {
+    clearTimeout(scanTimer);
   }
 
-  scanScheduled = true;
-  setTimeout(() => {
-    scanScheduled = false;
+  scanTimer = setTimeout(() => {
+    scanTimer = null;
     scanForPosts();
-  }, 0);
+  }, 100);
 };
 
 const ensureObserver = (): void => {
@@ -191,6 +198,11 @@ if (document.readyState === 'loading') {
 }
 
 export const cleanupContentScript = (): void => {
+  if (scanTimer) {
+    clearTimeout(scanTimer);
+    scanTimer = null;
+  }
+
   mutationObserver?.disconnect();
   mutationObserver = null;
 

@@ -1,7 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 import type { RouterDeps } from '@src/background/message-router';
-import { handleMessage } from '@src/background/message-router';
+import { createDefaultDeps, handleMessage } from '@src/background/message-router';
 import type { GetRecordResult, PutRecordResult, PutRecordWithSwapResult } from '@src/shared/api/xrpc-client';
 import type { AuthorizationRequest } from '@src/shared/auth/auth-client';
 import type { StoredSession } from '@src/shared/auth/session-store';
@@ -191,10 +191,48 @@ describe('handleMessage', () => {
       expect(result).toEqual({ ok: true });
     });
 
+    it('returns an error when expires_in is not a positive number', async () => {
+      const deps = makeDeps({
+        getAuthState: vi.fn().mockResolvedValue({ state: 'matching-state', codeVerifier: 'verifier' }),
+        exchangeCode: vi.fn().mockResolvedValue({
+          access_token: 'new-access-token',
+          refresh_token: 'new-refresh-token',
+          expires_in: 'not-a-number',
+          scope: 'atproto transition:generic',
+          sub: 'did:plc:testuser',
+        }),
+      });
+
+      const result = await handleMessage({ type: 'AUTH_CALLBACK', code: 'auth-code', state: 'matching-state' }, deps);
+
+      expect(result).toEqual({
+        error: 'Invalid token response from authorization server: invalid expiry',
+      });
+    });
+
+    it('returns an error when expires_in is negative', async () => {
+      const deps = makeDeps({
+        getAuthState: vi.fn().mockResolvedValue({ state: 'matching-state', codeVerifier: 'verifier' }),
+        exchangeCode: vi.fn().mockResolvedValue({
+          access_token: 'new-access-token',
+          refresh_token: 'new-refresh-token',
+          expires_in: -100,
+          scope: 'atproto transition:generic',
+          sub: 'did:plc:testuser',
+        }),
+      });
+
+      const result = await handleMessage({ type: 'AUTH_CALLBACK', code: 'auth-code', state: 'matching-state' }, deps);
+
+      expect(result).toEqual({
+        error: 'Invalid token response from authorization server: invalid expiry',
+      });
+    });
+
     it('clears pending state even on token exchange failure', async () => {
       const deps = makeDeps({
         getAuthState: vi.fn().mockResolvedValue({ state: 'matching-state', codeVerifier: 'verifier' }),
-        exchangeCode: vi.fn().mockRejectedValue(new Error('Token exchange failed')),
+        exchangeCode: vi.fn().mockRejectedValue(new Error('Server internal error: rate limit exceeded')),
       });
 
       const result = await handleMessage({ type: 'AUTH_CALLBACK', code: 'auth-code', state: 'matching-state' }, deps);
@@ -260,7 +298,7 @@ describe('handleMessage', () => {
         deps,
       );
 
-      expect(result).toEqual({ error: 'XRPC network error' });
+      expect(result).toEqual({ error: 'Failed to fetch record' });
     });
   });
 
@@ -461,7 +499,7 @@ describe('handleMessage', () => {
         deps,
       );
 
-      expect(result).toEqual({ type: 'PUT_RECORD_ERROR', message: 'network failure' });
+      expect(result).toEqual({ type: 'PUT_RECORD_ERROR', message: 'Failed to update record' });
     });
 
     it('returns PUT_RECORD_ERROR for auth swap failures', async () => {
@@ -492,7 +530,7 @@ describe('handleMessage', () => {
         deps,
       );
 
-      expect(result).toEqual({ type: 'PUT_RECORD_ERROR', message: 'Unauthorized' });
+      expect(result).toEqual({ type: 'PUT_RECORD_ERROR', message: 'Failed to update record' });
     });
 
     it('returns a structured error when record field is missing', async () => {
@@ -628,6 +666,42 @@ describe('handleMessage', () => {
       );
 
       expect(result).toEqual({ error: 'Invalid GET_RECORD payload' });
+    });
+  });
+});
+
+describe('createDefaultDeps', () => {
+  describe('auth state storage', () => {
+    it('should store PKCE state in browser.storage.session, not storage.local', async () => {
+      const deps = createDefaultDeps();
+
+      await deps.storeAuthState('test-state', 'test-verifier');
+
+      expect(globalThis.browser.storage.session.set).toHaveBeenCalledWith({
+        pendingAuth: { state: 'test-state', codeVerifier: 'test-verifier' },
+      });
+      expect(globalThis.browser.storage.local.set).not.toHaveBeenCalled();
+    });
+
+    it('should read PKCE state from browser.storage.session', async () => {
+      const deps = createDefaultDeps();
+      vi.mocked(globalThis.browser.storage.session.get).mockResolvedValueOnce({
+        pendingAuth: { state: 'stored-state', codeVerifier: 'stored-verifier' },
+      });
+
+      const result = await deps.getAuthState();
+
+      expect(globalThis.browser.storage.session.get).toHaveBeenCalledWith('pendingAuth');
+      expect(result).toEqual({ state: 'stored-state', codeVerifier: 'stored-verifier' });
+    });
+
+    it('should clear PKCE state from browser.storage.session', async () => {
+      const deps = createDefaultDeps();
+
+      await deps.clearAuthState();
+
+      expect(globalThis.browser.storage.session.remove).toHaveBeenCalledWith('pendingAuth');
+      expect(globalThis.browser.storage.local.remove).not.toHaveBeenCalled();
     });
   });
 });

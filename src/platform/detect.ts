@@ -22,12 +22,17 @@ export function detectPlatform(): PlatformCapabilities {
 }
 
 function resolveName(): BrowserName {
-  if (typeof (browser.runtime as unknown as Record<string, unknown>)['getBrowserInfo'] === 'function') {
-    return 'firefox';
+  try {
+    if (typeof (browser.runtime as unknown as Record<string, unknown>)['getBrowserInfo'] === 'function') {
+      return 'firefox';
+    }
+    const safariCandidate = (globalThis as Record<string, unknown>)['safari'];
+    if (safariCandidate !== null && typeof safariCandidate === 'object' && 'extension' in (safariCandidate as object)) {
+      return 'safari';
+    }
+    return 'chrome';
+  } catch {
+    console.warn('Platform detection failed; defaulting to unknown');
+    return 'unknown';
   }
-  const safariCandidate = (globalThis as Record<string, unknown>)['safari'];
-  if (safariCandidate !== null && typeof safariCandidate === 'object' && 'extension' in (safariCandidate as object)) {
-    return 'safari';
-  }
-  return 'chrome';
 }
