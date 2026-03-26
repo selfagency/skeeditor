@@ -10,10 +10,12 @@ export interface AuthSignInRequest {
 
 export interface AuthSignOutRequest {
   type: 'AUTH_SIGN_OUT';
+  pdsUrl?: string;
 }
 
 export interface AuthReauthorizeRequest {
   type: 'AUTH_REAUTHORIZE';
+  pdsUrl?: string;
 }
 
 export interface AuthGetStatusRequest {
@@ -75,6 +77,25 @@ export interface PutRecordRequest {
 
 export type PutRecordResponse = PutRecordSuccessResponse | PutRecordErrorResponse | PutRecordConflictResponse;
 
+// ── Blob upload messages ────────────────────────────────────────────────────────
+
+export interface UploadBlobRequest {
+  type: 'UPLOAD_BLOB';
+  data: Blob | File;
+  repo: string;
+}
+
+export interface UploadBlobSuccessResponse {
+  blobRef: { $link: string };
+  mimeType: string;
+}
+
+export interface UploadBlobErrorResponse {
+  error: string;
+}
+
+export type UploadBlobResponse = UploadBlobSuccessResponse | UploadBlobErrorResponse;
+
 // ── Discriminated union of all inbound requests ───────────────────────────────
 
 export type MessageRequest =
@@ -84,7 +105,24 @@ export type MessageRequest =
   | AuthGetStatusRequest
   | AuthCallbackRequest
   | GetRecordRequest
-  | PutRecordRequest;
+  | PutRecordRequest
+  | UploadBlobRequest
+  | SetPdsUrlRequest
+  | GetPdsUrlRequest;
+
+// ── PDS URL messages ─────────────────────────────────────────────────────────
+
+export interface SetPdsUrlRequest {
+  type: 'SET_PDS_URL';
+  url: string;
+}
+
+export interface GetPdsUrlRequest {
+  type: 'GET_PDS_URL';
+}
+
+export type SetPdsUrlResponse = OkResponse | { error: string };
+export type GetPdsUrlResponse = { url: string } | { error: string };
 
 // ── Conditional response type — maps each request to its expected response ────
 
@@ -98,7 +136,13 @@ export type ResponseFor<T extends MessageRequest> = T extends AuthGetStatusReque
         ? GetRecordResponse
         : T extends PutRecordRequest
           ? PutRecordResponse
-          : never;
+          : T extends UploadBlobRequest
+            ? UploadBlobResponse
+            : T extends SetPdsUrlRequest
+              ? SetPdsUrlResponse
+              : T extends GetPdsUrlRequest
+                ? GetPdsUrlResponse
+                : never;
 
 /**
  * Type-safe wrapper around `browser.runtime.sendMessage`.
