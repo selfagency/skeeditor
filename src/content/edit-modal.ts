@@ -53,6 +53,7 @@ export class EditModal {
   private fileInput: HTMLInputElement | null = null;
   private mediaPreview: HTMLElement | null = null;
   private uploadedMedia: File[] = [];
+  private objectUrls: Map<File, string> = new Map();
   private originalText = '';
   private currentText = '';
   private maxLength = MAX_POST_LENGTH;
@@ -145,6 +146,12 @@ export class EditModal {
   }
 
   public close(): void {
+    for (const url of this.objectUrls.values()) {
+      URL.revokeObjectURL(url);
+    }
+    this.objectUrls.clear();
+    this.uploadedMedia = [];
+
     this.element.style.display = 'none';
     if (this.element.isConnected) {
       document.body.removeChild(this.element);
@@ -211,7 +218,9 @@ export class EditModal {
 
   private updateSaveButtonState(): void {
     if (this.saveButton && this.textarea) {
-      this.saveButton.disabled = this.textarea.value === this.originalText;
+      const textChanged = this.textarea.value !== this.originalText;
+      const hasMedia = this.uploadedMedia.length > 0;
+      this.saveButton.disabled = !textChanged && !hasMedia;
     }
   }
 
@@ -343,6 +352,7 @@ export class EditModal {
         const files = Array.from(inputTarget.files) as File[];
         this.uploadedMedia = [...this.uploadedMedia, ...files];
         this.updateMediaPreview();
+        this.updateSaveButtonState();
         inputTarget.value = ''; // Reset input to allow selecting same file again
       }
     }
@@ -376,7 +386,9 @@ export class EditModal {
 
   private createImageElement(file: File): HTMLImageElement {
     const img = document.createElement('img');
-    img.src = URL.createObjectURL(file);
+    const url = URL.createObjectURL(file);
+    this.objectUrls.set(file, url);
+    img.src = url;
     img.alt = file.name;
     img.className = 'size-full object-cover';
     return img;
@@ -384,7 +396,9 @@ export class EditModal {
 
   private createVideoElement(file: File): HTMLVideoElement {
     const video = document.createElement('video');
-    video.src = URL.createObjectURL(file);
+    const url = URL.createObjectURL(file);
+    this.objectUrls.set(file, url);
+    video.src = url;
     video.controls = true;
     video.muted = true;
     video.className = 'size-full object-cover';
@@ -392,8 +406,17 @@ export class EditModal {
   }
 
   private removeMedia(index: number): void {
+    const file = this.uploadedMedia[index];
+    if (file) {
+      const url = this.objectUrls.get(file);
+      if (url) {
+        URL.revokeObjectURL(url);
+        this.objectUrls.delete(file);
+      }
+    }
     this.uploadedMedia.splice(index, 1);
     this.updateMediaPreview();
+    this.updateSaveButtonState();
   }
 
   public getUploadedMedia(): File[] {
@@ -401,6 +424,10 @@ export class EditModal {
   }
 
   public clearMedia(): void {
+    for (const url of this.objectUrls.values()) {
+      URL.revokeObjectURL(url);
+    }
+    this.objectUrls.clear();
     this.uploadedMedia = [];
     if (this.mediaPreview) {
       this.mediaPreview.innerHTML = '';

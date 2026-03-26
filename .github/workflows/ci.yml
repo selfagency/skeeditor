@@ -109,9 +109,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-
-          turbo-${{ runner.os }}-
-
       - name: Build extension
         run: pnpm build
 

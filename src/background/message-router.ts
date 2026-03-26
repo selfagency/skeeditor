@@ -1,4 +1,5 @@
 import browser from 'webextension-polyfill';
+import type { l } from '@atproto/lex';
 
 import type {
   GetRecordResult,
@@ -49,7 +50,7 @@ interface XrpcInterface {
   uploadBlob: (params: {
     data: Blob | File;
     repo: string;
-  }) => Promise<{ blobRef: { $link: string }; mimeType: string }>;
+  }) => Promise<{ blobRef: l.BlobRef; mimeType: string }>;
 }
 
 interface StoreInterface {
@@ -87,6 +88,9 @@ const KNOWN_TYPES = new Set([
   'AUTH_CALLBACK',
   'GET_RECORD',
   'PUT_RECORD',
+  'UPLOAD_BLOB',
+  'SET_PDS_URL',
+  'GET_PDS_URL',
 ]);
 
 type IncomingMessage = Record<string, unknown> & { type: string };
@@ -418,7 +422,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
 export function createDefaultDeps(): RouterDeps {
   return {
     store: sessionStore,
-    redirectUri: BSKY_OAUTH_REDIRECT_URI,
+    redirectUri: browser.runtime.getURL('callback.html'),
     openTab: async (url: string): Promise<void> => {
       await browser.tabs.create({ url });
     },

@@ -1,4 +1,5 @@
 import browser from 'webextension-polyfill';
+import type { l } from '@atproto/lex';
 
 import type { GetRecordResult, PutRecordConflictDetails, PutRecordWithSwapError } from './api/xrpc-client';
 
@@ -6,11 +7,11 @@ import type { GetRecordResult, PutRecordConflictDetails, PutRecordWithSwapError 
 
 export interface AuthSignInRequest {
   type: 'AUTH_SIGN_IN';
+  pdsUrl?: string;
 }
 
 export interface AuthSignOutRequest {
   type: 'AUTH_SIGN_OUT';
-  pdsUrl?: string;
 }
 
 export interface AuthReauthorizeRequest {
@@ -86,7 +87,7 @@ export interface UploadBlobRequest {
 }
 
 export interface UploadBlobSuccessResponse {
-  blobRef: { $link: string };
+  blobRef: l.BlobRef;
   mimeType: string;
 }
 

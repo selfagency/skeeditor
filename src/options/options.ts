@@ -57,7 +57,7 @@ async function savePdsUrl(): Promise<void> {
       }
     } else {
       if (status) {
-        status.textContent = response.error || 'Failed to update PDS URL';
+        status.textContent = ('error' in response ? response.error : null) ?? 'Failed to update PDS URL';
         status.className = 'mb-6 text-sm text-red-400';
       }
     }

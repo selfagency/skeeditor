@@ -8,7 +8,7 @@ describe('post-editor', () => {
       $type: 'app.bsky.feed.post' as const,
       text: 'Hello @alice.test https://example.com',
       createdAt: '2026-03-18T12:00:00.000Z',
-      embed: { $type: 'app.bsky.embed.external', external: { uri: 'https://example.com', title: 'Example' } },
+      embed: { $type: 'app.bsky.embed.external', external: { uri: 'https://example.com', title: 'Example', description: '' } },
       langs: ['en'],
     };
 

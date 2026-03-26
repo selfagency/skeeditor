@@ -1,4 +1,4 @@
-import { Client, XrpcError, XrpcResponseError } from '@atproto/lex';
+import { Client, XrpcError, XrpcResponseError, l } from '@atproto/lex';
 
 export interface XrpcClientConfig {
   service: string;
@@ -364,7 +364,7 @@ export class XrpcClient {
    * @returns `{ blobRef: { $link: string }, mimeType: string }`
    * @throws `XrpcClientError` on any XRPC or network failure
    */
-  public async uploadBlob(params: { data: Blob | File }): Promise<{ blobRef: { $link: string }; mimeType: string }> {
+  public async uploadBlob(params: { data: Blob | File }): Promise<{ blobRef: l.BlobRef; mimeType: string }> {
     const { data } = params;
 
     try {
@@ -373,7 +373,7 @@ export class XrpcClient {
       const { blob } = response.body as any;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return { blobRef: blob.ref as any, mimeType: blob.mimeType };
+      return { blobRef: blob as unknown as l.BlobRef, mimeType: blob.mimeType };
     } catch (err) {
       throw mapXrpcError(err, 'uploadBlob');
     }

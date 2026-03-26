@@ -1,6 +1,7 @@
 export const APP_NAME = 'skeeditor';
 export const BSKY_APP_ORIGIN = 'https://bsky.app';
 export const DEFAULT_PDS_URL = 'https://bsky.social';
+export const BSKY_PDS_URL = DEFAULT_PDS_URL;
 export const APP_BSKY_FEED_POST_COLLECTION = 'app.bsky.feed.post';
 
 // Get the current PDS URL from storage or use default

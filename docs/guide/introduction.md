@@ -29,7 +29,7 @@ Let's set expectations (for now):
 - It prevents edits that would exceed Bluesky's 300-grapheme limit, showing an error if your edit is too long.
 - It does not yet support editing embedded images or videos (text-only edits for now — we're working on rich media editing 🫡).
 - It does not edit posts on behalf of other accounts. Your typos are your own.
-- It currently only supports `bsky.social` PDS but transmits no data except for authentication and record operations. Your data stays between you and Bluesky. We plan to add support for other PDS instances in the future.
+- It supports `bsky.social` and custom PDS instances, and transmits no data except for authentication and record operations. Your data stays between you and your PDS.
 
 ## 👉 Next steps
 
