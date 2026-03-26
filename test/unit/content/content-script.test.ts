@@ -121,7 +121,7 @@ describe('content-script', () => {
     const onChanged = globalThis.browser.storage.onChanged as unknown as {
       _emit: (changes: Record<string, { newValue?: unknown; oldValue?: unknown }>) => void;
     };
-    onChanged._emit({ session: { newValue: { did: 'did:plc:alice123' } } });
+    onChanged._emit({ activeDid: { newValue: 'did:plc:alice123' } });
 
     await flushMicrotasks(3);
     await vi.advanceTimersByTimeAsync(120);
@@ -154,7 +154,7 @@ describe('content-script', () => {
     const onChanged = globalThis.browser.storage.onChanged as unknown as {
       _emit: (changes: Record<string, { newValue?: unknown; oldValue?: unknown }>) => void;
     };
-    onChanged._emit({ session: { newValue: null } });
+    onChanged._emit({ activeDid: { newValue: null } });
 
     expect(document.querySelector('[data-skeeditor-edit-button]')).toBeNull();
   });
@@ -235,7 +235,7 @@ describe('content-script', () => {
     const onChanged = globalThis.browser.storage.onChanged as unknown as {
       _emit: (changes: Record<string, { newValue?: unknown; oldValue?: unknown }>) => void;
     };
-    onChanged._emit({ session: { newValue: null } });
+    onChanged._emit({ activeDid: { newValue: null } });
 
     expect(document.querySelector('edit-modal')).toBeNull();
   });

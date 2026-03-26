@@ -36,6 +36,17 @@ describe('AT URI parser', () => {
     });
   });
 
+  it('should normalize a Bluesky post sub-page URL (e.g. liked-by) stripping the suffix', () => {
+    const parsed = parseBskyPostUrl('https://bsky.app/profile/alice.test/post/3kq2abc/liked-by');
+
+    expect(parsed).toEqual({
+      uri: 'at://alice.test/app.bsky.feed.post/3kq2abc',
+      repo: 'alice.test',
+      collection: 'app.bsky.feed.post',
+      rkey: '3kq2abc',
+    });
+  });
+
   it('should parse from a DOM element data-at-uri attribute', () => {
     document.body.innerHTML = '<article data-at-uri="at://did:plc:bob456/app.bsky.feed.post/3kq2zzz"></article>';
     const article = document.querySelector('article');

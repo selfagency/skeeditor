@@ -54,6 +54,50 @@ describe('post-detector', () => {
     });
   });
 
+  it('should extract post info from a bsky.app feedItem container (profile/home feed)', () => {
+    document.body.innerHTML = `
+      <div data-testid="feedItem-by-did:plc:alice123">
+        <a href="https://bsky.app/profile/alice.bsky.social">alice.bsky.social</a>
+        <a href="https://bsky.app/profile/alice.bsky.social/post/3feedrkey">· 2h</a>
+        <p>Post text</p>
+      </div>
+    `;
+
+    const container = document.querySelector<HTMLElement>('[data-testid="feedItem-by-did:plc:alice123"]');
+
+    expect(container).toBeTruthy();
+    expect(extractPostInfo(container as HTMLElement)).toEqual({
+      atUri: 'at://alice.bsky.social/app.bsky.feed.post/3feedrkey',
+      repo: 'alice.bsky.social',
+      collection: 'app.bsky.feed.post',
+      rkey: '3feedrkey',
+      element: container,
+      uri: 'at://alice.bsky.social/app.bsky.feed.post/3feedrkey',
+    });
+  });
+
+  it('should extract post info from a liked-by sub-page link (post thread page)', () => {
+    document.body.innerHTML = `
+      <div data-testid="postThreadItem-by-did:plc:alice123">
+        <a href="https://bsky.app/profile/alice.bsky.social">alice.bsky.social</a>
+        <a href="https://bsky.app/profile/alice.bsky.social/post/3threadrkey/liked-by">3 likes</a>
+        <p>Post text</p>
+      </div>
+    `;
+
+    const container = document.querySelector<HTMLElement>('[data-testid="postThreadItem-by-did:plc:alice123"]');
+
+    expect(container).toBeTruthy();
+    expect(extractPostInfo(container as HTMLElement)).toEqual({
+      atUri: 'at://alice.bsky.social/app.bsky.feed.post/3threadrkey',
+      repo: 'alice.bsky.social',
+      collection: 'app.bsky.feed.post',
+      rkey: '3threadrkey',
+      element: container,
+      uri: 'at://alice.bsky.social/app.bsky.feed.post/3threadrkey',
+    });
+  });
+
   it('should iterate all detected posts in the DOM', () => {
     document.body.innerHTML = `
       <article data-at-uri="at://did:plc:alice123/app.bsky.feed.post/3abc"></article>
