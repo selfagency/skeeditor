@@ -1,9 +1,13 @@
 import { Client, XrpcError, XrpcResponseError, l } from '@atproto/lex';
 
+import { createDpopProof } from '../auth/dpop';
+
 export interface XrpcClientConfig {
   service: string;
   did?: string;
   accessJwt?: string;
+  /** Returns the DPoP key pair for proof-of-possession token binding (RFC 9449). */
+  dpopKeyPairLoader?: () => Promise<CryptoKeyPair>;
 }
 
 export interface GetRecordParams {
@@ -247,7 +251,12 @@ export class XrpcClient {
     // AgentOptions = AgentConfig | string | URL; we use AgentConfig here.
     // did and headers are optional on AgentConfig; build without them then assign
     // to avoid exactOptionalPropertyTypes complaints from spread-with-conditionals.
-    const agentConfig: { service: string; did?: `did:${string}:${string}`; headers?: HeadersInit } = {
+    const agentConfig: {
+      service: string;
+      did?: `did:${string}:${string}`;
+      headers?: HeadersInit;
+      fetch?: typeof globalThis.fetch;
+    } = {
       service: config.service,
     };
     if (config.did !== undefined) {
@@ -258,6 +267,19 @@ export class XrpcClient {
     }
     if (config.accessJwt !== undefined) {
       agentConfig.headers = { Authorization: `Bearer ${config.accessJwt}` };
+    }
+    if (config.dpopKeyPairLoader !== undefined) {
+      const dpopKeyPairLoader = config.dpopKeyPairLoader;
+      const accessJwt = config.accessJwt;
+      agentConfig.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.href : (input as Request).url;
+        const method = (init?.method ?? 'GET').toUpperCase();
+        const keyPair = await dpopKeyPairLoader();
+        const proof = await createDpopProof(keyPair, method, url, accessJwt);
+        const headers = new Headers(init?.headers);
+        headers.set('DPoP', proof);
+        return globalThis.fetch(input, { ...init, headers });
+      };
     }
     this._client = new Client(agentConfig);
   }

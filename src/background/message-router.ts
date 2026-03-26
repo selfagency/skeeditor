@@ -1,6 +1,8 @@
 import type { l } from '@atproto/lex';
 import browser from 'webextension-polyfill';
 
+import { loadOrCreateDpopKeyPair } from '../shared/auth/dpop';
+
 import type {
   GetRecordResult,
   PutRecordResult,
@@ -27,6 +29,19 @@ import type {
   PutRecordResponse,
   PutRecordSuccessResponse,
 } from '../shared/messages';
+
+// ── DPoP key cache ────────────────────────────────────────────────────────────
+
+// Cache the key pair for the lifetime of the service worker so we don't hit
+// storage on every request. The cache is reset when the SW is terminated.
+let dpopKeyPairCache: CryptoKeyPair | null = null;
+
+async function getDpopKeyPair(): Promise<CryptoKeyPair> {
+  if (dpopKeyPairCache === null) {
+    dpopKeyPairCache = await loadOrCreateDpopKeyPair();
+  }
+  return dpopKeyPairCache;
+}
 
 // ── Dependency injection types ────────────────────────────────────────────────
 
@@ -424,7 +439,7 @@ export function createDefaultDeps(): RouterDeps {
       await browser.tabs.create({ url });
     },
     buildAuthReq: buildAuthorizationRequest,
-    createXrpc: (config: XrpcClientConfig) => new XrpcClient(config),
+    createXrpc: (config: XrpcClientConfig) => new XrpcClient({ ...config, dpopKeyPairLoader: getDpopKeyPair }),
     storeAuthState: async (state: string, codeVerifier: string): Promise<void> => {
       const storage = browser.storage.session ?? browser.storage.local;
       await storage.set({ pendingAuth: { state, codeVerifier } });
@@ -449,7 +464,10 @@ export function createDefaultDeps(): RouterDeps {
       const storage = browser.storage.session ?? browser.storage.local;
       await storage.remove('pendingAuth');
     },
-    exchangeCode: exchangeCodeForTokens,
+    exchangeCode: async (tokenEndpoint, code, codeVerifier, clientId, redirectUri) => {
+      const dpopKeyPair = await getDpopKeyPair();
+      return exchangeCodeForTokens(tokenEndpoint, code, codeVerifier, clientId, redirectUri, dpopKeyPair);
+    },
   };
 }
 

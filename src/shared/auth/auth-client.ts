@@ -1,3 +1,4 @@
+import { createDpopProof } from './dpop';
 import { deriveCodeChallenge, generateCodeVerifier, generateState } from './pkce';
 import type { AuthorizationRequest, CallbackParams, OAuthClientParams, TokenResponse } from './types';
 
@@ -80,6 +81,7 @@ export async function exchangeCodeForTokens(
   codeVerifier: string,
   clientId: string,
   redirectUri: string,
+  dpopKeyPair?: CryptoKeyPair,
 ): Promise<TokenResponse> {
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
@@ -89,9 +91,14 @@ export async function exchangeCodeForTokens(
     redirect_uri: redirectUri,
   });
 
+  const headers: Record<string, string> = { 'Content-Type': 'application/x-www-form-urlencoded' };
+  if (dpopKeyPair !== undefined) {
+    headers['DPoP'] = await createDpopProof(dpopKeyPair, 'POST', tokenEndpoint);
+  }
+
   const response = await fetch(tokenEndpoint, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    headers,
     body: body.toString(),
   });
 
