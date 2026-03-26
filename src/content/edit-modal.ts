@@ -220,11 +220,35 @@ export class EditModal {
       this.statusMessage.textContent = message;
       this.statusMessage.classList.remove('hidden');
       if (type === 'error') {
-        this.statusMessage.classList.add('error', 'bg-red-50', 'text-red-700', 'dark:bg-red-400/10', 'dark:text-red-400');
-        this.statusMessage.classList.remove('success', 'bg-green-50', 'text-green-700', 'dark:bg-green-400/10', 'dark:text-green-400');
+        this.statusMessage.classList.add(
+          'error',
+          'bg-red-50',
+          'text-red-700',
+          'dark:bg-red-400/10',
+          'dark:text-red-400',
+        );
+        this.statusMessage.classList.remove(
+          'success',
+          'bg-green-50',
+          'text-green-700',
+          'dark:bg-green-400/10',
+          'dark:text-green-400',
+        );
       } else {
-        this.statusMessage.classList.add('success', 'bg-green-50', 'text-green-700', 'dark:bg-green-400/10', 'dark:text-green-400');
-        this.statusMessage.classList.remove('error', 'bg-red-50', 'text-red-700', 'dark:bg-red-400/10', 'dark:text-red-400');
+        this.statusMessage.classList.add(
+          'success',
+          'bg-green-50',
+          'text-green-700',
+          'dark:bg-green-400/10',
+          'dark:text-green-400',
+        );
+        this.statusMessage.classList.remove(
+          'error',
+          'bg-red-50',
+          'text-red-700',
+          'dark:bg-red-400/10',
+          'dark:text-red-400',
+        );
       }
     }
   }
