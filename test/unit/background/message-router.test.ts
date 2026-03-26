@@ -43,6 +43,10 @@ const makeStoreMock = (session: StoredSession | null = null) => ({
   clearForDid: vi.fn().mockResolvedValue(undefined),
   isAccessTokenValid: vi.fn().mockResolvedValue(session !== null),
   listDids: vi.fn().mockResolvedValue(session !== null ? [session.did] : []),
+  listAll: vi.fn().mockResolvedValue({
+    accounts: session !== null ? [{ did: session.did, handle: session.handle, expiresAt: session.expiresAt }] : [],
+    activeDid: session?.did ?? null,
+  }),
   getActiveDid: vi.fn().mockResolvedValue(session?.did ?? null),
   setActiveDid: vi.fn().mockResolvedValue(undefined),
 });
@@ -813,9 +817,13 @@ describe('createDefaultDeps', () => {
       const session2 = makeSession({ did: 'did:plc:user2' });
       const store = {
         ...makeStoreMock(),
-        listDids: vi.fn().mockResolvedValue(['did:plc:user1', 'did:plc:user2']),
-        getActiveDid: vi.fn().mockResolvedValue('did:plc:user1'),
-        getByDid: vi.fn().mockResolvedValueOnce(session1).mockResolvedValueOnce(session2),
+        listAll: vi.fn().mockResolvedValue({
+          accounts: [
+            { did: session1.did, handle: session1.handle, expiresAt: session1.expiresAt },
+            { did: session2.did, handle: session2.handle, expiresAt: session2.expiresAt },
+          ],
+          activeDid: 'did:plc:user1',
+        }),
       };
       const deps = makeDeps({ store });
 
@@ -833,9 +841,10 @@ describe('createDefaultDeps', () => {
       const session = makeSession({ did: 'did:plc:user1' });
       const store = {
         ...makeStoreMock(),
-        listDids: vi.fn().mockResolvedValue(['did:plc:user1']),
-        getActiveDid: vi.fn().mockResolvedValue(null),
-        getByDid: vi.fn().mockResolvedValue(session),
+        listAll: vi.fn().mockResolvedValue({
+          accounts: [{ did: session.did, handle: session.handle, expiresAt: session.expiresAt }],
+          activeDid: null,
+        }),
       };
       const deps = makeDeps({ store });
 
@@ -849,7 +858,8 @@ describe('createDefaultDeps', () => {
 
   describe('AUTH_SWITCH_ACCOUNT', () => {
     it('calls setActiveDid with the given DID and returns ok', async () => {
-      const store = makeStoreMock(makeSession());
+      const session = makeSession({ did: 'did:plc:user2' });
+      const store = { ...makeStoreMock(session), getByDid: vi.fn().mockResolvedValue(session) };
       const deps = makeDeps({ store });
 
       const result = await handleMessage({ type: 'AUTH_SWITCH_ACCOUNT', did: 'did:plc:user2' }, deps);
@@ -872,6 +882,24 @@ describe('createDefaultDeps', () => {
       const result = await handleMessage({ type: 'AUTH_SWITCH_ACCOUNT', did: '' }, deps);
 
       expect(result).toEqual({ error: 'Invalid AUTH_SWITCH_ACCOUNT payload' });
+    });
+
+    it('returns error for malformed DID', async () => {
+      const deps = makeDeps();
+
+      const result = await handleMessage({ type: 'AUTH_SWITCH_ACCOUNT', did: 'not-a-did' }, deps);
+
+      expect(result).toEqual({ error: 'Invalid AUTH_SWITCH_ACCOUNT payload' });
+    });
+
+    it('returns error when no session exists for the given DID', async () => {
+      const store = { ...makeStoreMock(), getByDid: vi.fn().mockResolvedValue(null) };
+      const deps = makeDeps({ store });
+
+      const result = await handleMessage({ type: 'AUTH_SWITCH_ACCOUNT', did: 'did:plc:nonexistent' }, deps);
+
+      expect(vi.mocked(store.setActiveDid)).not.toHaveBeenCalled();
+      expect(result).toEqual({ error: 'No session found for DID' });
     });
   });
 
@@ -898,6 +926,14 @@ describe('createDefaultDeps', () => {
       const deps = makeDeps();
 
       const result = await handleMessage({ type: 'AUTH_SIGN_OUT_ACCOUNT', did: '' }, deps);
+
+      expect(result).toEqual({ error: 'Invalid AUTH_SIGN_OUT_ACCOUNT payload' });
+    });
+
+    it('returns error for malformed DID', async () => {
+      const deps = makeDeps();
+
+      const result = await handleMessage({ type: 'AUTH_SIGN_OUT_ACCOUNT', did: 'notadid' }, deps);
 
       expect(result).toEqual({ error: 'Invalid AUTH_SIGN_OUT_ACCOUNT payload' });
     });

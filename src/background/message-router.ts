@@ -120,6 +120,7 @@ interface StoreInterface {
   clearForDid: (did: string) => Promise<void>;
   isAccessTokenValid: () => Promise<boolean>;
   listDids: () => Promise<string[]>;
+  listAll: () => Promise<{ accounts: { did: string; handle?: string; expiresAt: number }[]; activeDid: string | null }>;
   getActiveDid: () => Promise<string | null>;
   setActiveDid: (did: string) => Promise<void>;
 }
@@ -381,26 +382,20 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
     }
 
     case 'AUTH_LIST_ACCOUNTS': {
-      const dids = await deps.store.listDids();
-      const activeDid = await deps.store.getActiveDid();
-      const accounts = await Promise.all(
-        dids.map(async did => {
-          const session = await deps.store.getByDid(did);
-          return {
-            did,
-            handle: session?.handle,
-            expiresAt: session?.expiresAt ?? 0,
-            isActive: did === activeDid,
-          };
-        }),
-      );
-      return { accounts };
+      const { accounts, activeDid } = await deps.store.listAll();
+      return {
+        accounts: accounts.map(a => ({ ...a, isActive: a.did === activeDid })),
+      };
     }
 
     case 'AUTH_SWITCH_ACCOUNT': {
       const did = message['did'];
-      if (!isNonEmptyString(did)) {
+      if (!isNonEmptyString(did) || !/^did:[a-z]+:.+$/u.test(did)) {
         return { error: 'Invalid AUTH_SWITCH_ACCOUNT payload' };
+      }
+      const session = await deps.store.getByDid(did);
+      if (session === null) {
+        return { error: 'No session found for DID' };
       }
       await deps.store.setActiveDid(did);
       return { ok: true };
@@ -408,7 +403,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
 
     case 'AUTH_SIGN_OUT_ACCOUNT': {
       const did = message['did'];
-      if (!isNonEmptyString(did)) {
+      if (!isNonEmptyString(did) || !/^did:[a-z]+:.+$/u.test(did)) {
         return { error: 'Invalid AUTH_SIGN_OUT_ACCOUNT payload' };
       }
       await deps.store.clearForDid(did);

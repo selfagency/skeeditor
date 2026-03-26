@@ -50,6 +50,10 @@ const makeRealDeps = (session: ReturnType<typeof makeSession> | null = makeSessi
     clearForDid: vi.fn().mockResolvedValue(undefined),
     isAccessTokenValid: vi.fn().mockResolvedValue(session !== null),
     listDids: vi.fn().mockResolvedValue(session !== null ? [session.did] : []),
+    listAll: vi.fn().mockResolvedValue({
+      accounts: session !== null ? [{ did: session.did, handle: undefined, expiresAt: session.expiresAt }] : [],
+      activeDid: session?.did ?? null,
+    }),
     getActiveDid: vi.fn().mockResolvedValue(session?.did ?? null),
     setActiveDid: vi.fn().mockResolvedValue(undefined),
   },

@@ -113,6 +113,15 @@ describe('auth-popup Web Component', () => {
 
       expect(el.shadowRoot?.querySelector('#add-account')).not.toBeNull();
     });
+
+    it('shows a PDS URL input in authenticated state for adding another account', async () => {
+      mockSendMessage([makeAccount()]);
+
+      const el = createElement();
+      await attach(el);
+
+      expect(el.shadowRoot?.querySelector('#add-pds-url')).not.toBeNull();
+    });
   });
 
   describe('authenticated state (multiple accounts)', () => {
