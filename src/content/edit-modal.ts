@@ -272,8 +272,6 @@ export class EditModal {
 
     this.element.style.display = 'flex';
     this.isOpen = true;
-    this.element.addEventListener('click', this.handleBackgroundClickBound);
-    window.addEventListener('keydown', this.handleKeydownBound);
   }
 
   public close(): void {

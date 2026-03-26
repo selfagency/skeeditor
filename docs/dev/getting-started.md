@@ -9,7 +9,7 @@ This guide walks you through setting up a local development environment so you c
 | Node.js | 20.x            | LTS recommended                                                   |
 | pnpm    | 9.x             | `npm install -g pnpm`                                             |
 | Chrome  | 120+            | For extension development and Playwright E2E                      |
-| Firefox | 121+            | Nightly / Developer Edition required for manual extension loading |
+| Firefox | 125+            | Nightly / Developer Edition required for manual extension loading |
 | Git     | 2.x             | —                                                                 |
 
 ::: info macOS users
@@ -58,13 +58,15 @@ To build all targets at once:
 pnpm build
 ```
 
+> **Note:** `pnpm build` is an alias for `pnpm build:chrome`. To build other targets, use `pnpm build:firefox` or `pnpm build:safari` explicitly.
+
 ---
 
 ## Load the extension in your browser
 
 ### Chrome
 
-1. Run `pnpm dev:chrome` (or `pnpm build:chrome`).
+1. Run `pnpm build:watch:chrome` (or `pnpm build:chrome`).
 2. Open `chrome://extensions`.
 3. Enable **Developer mode**.
 4. Click **Load unpacked** → select `dist/chrome/`.
@@ -73,7 +75,7 @@ The extension reloads automatically when files in `dist/chrome/` change (i.e. wh
 
 ### Firefox
 
-1. Run `pnpm dev:firefox` (or `pnpm build:firefox`).
+1. Run `pnpm build:watch:firefox` (or `pnpm build:firefox`).
 2. Open `about:debugging#/runtime/this-firefox`.
 3. Click **Load Temporary Add-on…** → select `dist/firefox/manifest.json`.
 

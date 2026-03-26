@@ -90,7 +90,7 @@ test('getRecord returns parsed record', async () => {
     )
   );
 
-  const client = new XrpcClient({ pdsUrl: 'https://bsky.social', accessJwt: 'tok' });
+  const client = new XrpcClient({ service: 'https://bsky.social', accessJwt: 'tok' });
 
   const result = await client.getRecord({ repo: 'did:plc:abc', collection: 'app.bsky.feed.post', rkey: '1' });
 
@@ -146,12 +146,12 @@ Automated tests cover the majority of logic, but manual testing in a real browse
 
 ### Prerequisites
 
-| Tool | Purpose |
-| ---- | ------- |
-| Node.js 20+ / pnpm 9+ | Build toolchain |
-| Chrome 120+ | Chrome manual testing |
-| Firefox 121+ (Nightly or Developer Edition recommended) | Firefox manual testing |
-| macOS 14+ (Sonoma), Xcode 15+, Safari 17+ | Safari manual testing |
+| Tool                                                    | Purpose                |
+| ------------------------------------------------------- | ---------------------- |
+| Node.js 20+ / pnpm 9+                                   | Build toolchain        |
+| Chrome 120+                                             | Chrome manual testing  |
+| Firefox 125+ (Nightly or Developer Edition recommended) | Firefox manual testing |
+| macOS 14+ (Sonoma), Xcode 15+, Safari 17+               | Safari manual testing  |
 
 Install Playwright browsers once if you haven't already (needed for the Xcode helper too):
 

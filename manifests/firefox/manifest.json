@@ -6,7 +6,7 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "skeeditor@selfagency.dev",
-      "strict_min_version": "121.0"
+      "strict_min_version": "125.0"
     }
   }
 }

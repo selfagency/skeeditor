@@ -209,11 +209,6 @@ export const cleanupContentScript = (): void => {
 
   mutationObserver?.disconnect();
   mutationObserver = null;
-
-  if (scanTimer !== null) {
-    clearTimeout(scanTimer);
-    scanTimer = null;
-  }
   scanScheduled = false;
 
   if (domContentLoadedHandler) {

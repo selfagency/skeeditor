@@ -67,13 +67,14 @@ skeeditor/
 │       │   ├── at-uri.ts        # AT-URI parser and builder (AtUri class)
 │       │   └── xrpc-client.ts   # XrpcClient: getRecord, putRecord, putRecordWithSwap
 │       ├── auth/
+│       │   ├── app-password.ts  # App password auth (fallback for non-OAuth PDS instances)
 │       │   ├── auth-client.ts   # OAuth PKCE client (initiate flow, exchange code, revoke)
 │       │   ├── pkce.ts          # generateCodeVerifier / generateCodeChallenge utilities
 │       │   ├── session-store.ts # SessionStore: read/write/clear tokens in browser.storage.local
 │       │   ├── token-refresh.ts # TokenRefreshManager: deduplication, proactive refresh
 │       │   └── types.ts         # OAuthTokens, Session, AuthStatus types
 │       └── utils/
-│           ├── facet-offsets.ts # UTF-8 byte offset helpers
+│           ├── facet-offsets.ts # Recalculate facet byte offsets after text edits
 │           ├── facets.ts        # detectLinks / detectMentions / detectHashtags / buildFacets
 │           └── text.ts          # Text-manipulation helpers (grapheme count, etc.)
 │

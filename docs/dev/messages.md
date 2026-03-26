@@ -88,6 +88,7 @@ switch (result.type) {
 | `AUTH_SIGN_OUT`    | —                                                     | `{ ok: true }`                                                          |
 | `AUTH_REAUTHORIZE` | —                                                     | `{ ok: true }`                                                          |
 | `AUTH_GET_STATUS`  | —                                                     | `{ authenticated: false }` or `{ authenticated: true, did, expiresAt }` |
+| `AUTH_CALLBACK`    | `code`, `state`                                       | `{ ok: true }` or `{ error }`                                           |
 | `GET_RECORD`       | `repo`, `collection`, `rkey`                          | `{ value, cid }` or `{ error }`                                         |
 | `PUT_RECORD`       | `repo`, `collection`, `rkey`, `record`, `swapRecord?` | See PUT_RECORD responses below                                          |
 

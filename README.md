@@ -1,20 +1,24 @@
-# skeeditor
+# skeeditor ✏️🦋
 
-A cross-browser extension that lets you **edit your own Bluesky posts directly on bsky.app** — no copy-paste to a third-party site required.
+> **The edit button Bluesky never gave you. Until now.**
 
-Click the **✏ Edit** badge on any of your posts, change the text, and save. skeeditor authenticates via OAuth 2.0 + PKCE, fetches the current record from the Bluesky PDS, and writes the updated record back — preserving rich-text facets, embeds, and timestamps automatically.
+You know the feeling — you hit post, look at it for 0.3 seconds, and spot a typo. Or a bad take that needs a _slightly_ less bad take. Bluesky doesn't have an edit button, but why should that stop us?
 
-**[Full documentation →](https://skeeditor.self.agency/)**
+**skeeditor** is a cross-browser extension that adds a real, working **✏️ Edit** button to your posts on [bsky.app](https://bsky.app). Click it, fix your regrets, save. Done. No copy-paste gymnastics, no deleting and reposting, no shame spiral.
+
+It authenticates via OAuth 2.0 + PKCE, fetches the actual record from the Bluesky PDS, and writes it back — preserving your links, mentions, hashtags, embeds, and timestamps like nothing ever happened. 🤫
+
+**[📖 Full documentation →](https://skeeditor.self.agency/)**
 
 ---
 
-## Features
+## ✨ Features
 
-- **In-place editing** — edit button appears directly on bsky.app next to your posts
-- **Secure by design** — OAuth 2.0 + PKCE; tokens stored only in extension storage, never sent to any third party
-- **Rich text preserved** — links, @mentions, and #hashtags are re-detected and byte-offset facets recalculated on every save
-- **Conflict-safe** — CID-based optimistic locking detects concurrent edits and prompts before overwriting
-- **Cross-browser** — Chrome 120+, Firefox 121+, Safari (macOS 14+)
+- **🖊️ In-place editing** — an edit button appears right on bsky.app next to your posts, where it always should have been
+- **🔒 Secure by design** — OAuth 2.0 + PKCE; tokens stored only in extension storage, never sent to any third party
+- **💅 Rich text preserved** — links, @mentions, and #hashtags are re-detected and byte-offset facets recalculated on every save
+- **🛡️ Conflict-safe** — CID-based optimistic locking detects concurrent edits and prompts before overwriting
+- **🌍 Cross-browser** — Chrome 120+, Firefox 125+, Safari (macOS 14+)
 
 ---
 
@@ -23,7 +27,7 @@ Click the **✏ Edit** badge on any of your posts, change the text, and save. sk
 | Browser | Minimum version    |
 | ------- | ------------------ |
 | Chrome  | 120+               |
-| Firefox | 121+               |
+| Firefox | 125+               |
 | Safari  | macOS 14+ (Sonoma) |
 
 ---

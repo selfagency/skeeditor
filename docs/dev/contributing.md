@@ -79,7 +79,7 @@ Formatter: `oxfmt` with `arrowParens: 'avoid'` (single-parameter arrow functions
 ```sh
 pnpm format        # auto-format
 pnpm format:check  # check without writing
-pnpm lint          # ESLint + oxlint
+pnpm lint          # oxlint
 pnpm lint:fix      # fix auto-fixable issues
 pnpm typecheck     # tsc --noEmit
 ```
