@@ -43,6 +43,16 @@ describe('auth-popup Web Component', () => {
 
       expect(el.shadowRoot?.querySelector('.loading')).not.toBeNull();
     });
+
+    it('falls back to unauthenticated state when AUTH_LIST_ACCOUNTS rejects', async () => {
+      vi.mocked(browser.runtime.sendMessage).mockRejectedValue(new Error('Service worker not ready'));
+
+      const el = createElement();
+      await attach(el);
+
+      expect(el.shadowRoot?.querySelector('#sign-in')).not.toBeNull();
+      expect(el.shadowRoot?.querySelector('.loading')).toBeNull();
+    });
   });
 
   describe('unauthenticated state', () => {

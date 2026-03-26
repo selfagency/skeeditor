@@ -227,6 +227,21 @@ describe('options page', () => {
         pdsUrl: 'https://pds.example.com',
       });
     });
+
+    it('shows an error and does not send AUTH_SIGN_IN for a non-https pdsUrl', async () => {
+      await loadOptionsModule();
+
+      const pdsInput = document.getElementById('add-pds-url') as HTMLInputElement;
+      pdsInput.value = 'http://not-secure.example.com';
+
+      document.getElementById('add-account')?.click();
+      await flushPromises();
+
+      expect(document.getElementById('status')?.textContent).toContain('valid HTTPS URL');
+      expect(vi.mocked(browser.runtime.sendMessage)).not.toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'AUTH_SIGN_IN' }),
+      );
+    });
   });
 
   // ── Settings section ───────────────────────────────────────────────────────

@@ -69,7 +69,7 @@ async function get(): Promise<StoredSession | null> {
 
   const result = await browser.storage.local.get(SESSIONS_KEY);
   const sessions = (result as Record<string, unknown>)[SESSIONS_KEY];
-  if (sessions === null || typeof sessions !== 'object') return null;
+  if (sessions === null || typeof sessions !== 'object' || Array.isArray(sessions)) return null;
 
   const raw = (sessions as Record<string, unknown>)[activeDid];
   return isStoredSession(raw) ? raw : null;
@@ -83,7 +83,7 @@ async function get(): Promise<StoredSession | null> {
 async function getByDid(did: string): Promise<StoredSession | null> {
   const result = await browser.storage.local.get(SESSIONS_KEY);
   const sessions = (result as Record<string, unknown>)[SESSIONS_KEY];
-  if (sessions === null || typeof sessions !== 'object') return null;
+  if (sessions === null || typeof sessions !== 'object' || Array.isArray(sessions)) return null;
   const raw = (sessions as Record<string, unknown>)[did];
   return isStoredSession(raw) ? raw : null;
 }
@@ -144,7 +144,7 @@ async function setActiveDid(did: string): Promise<void> {
 async function listDids(): Promise<string[]> {
   const result = await browser.storage.local.get(SESSIONS_KEY);
   const sessions = (result as Record<string, unknown>)[SESSIONS_KEY];
-  if (sessions === null || typeof sessions !== 'object') return [];
+  if (sessions === null || typeof sessions !== 'object' || Array.isArray(sessions)) return [];
   return Object.keys(sessions as object);
 }
 

@@ -28,10 +28,20 @@ class AuthPopup extends HTMLElement {
   }
 
   private async loadAccounts(): Promise<void> {
-    const response = await sendMessage({ type: 'AUTH_LIST_ACCOUNTS' });
-    this.accounts = response.accounts;
-    this.state = this.accounts.length > 0 ? 'authenticated' : 'unauthenticated';
-    this.render();
+    try {
+      const response = await sendMessage({ type: 'AUTH_LIST_ACCOUNTS' });
+      this.accounts = response.accounts;
+      this.state = this.accounts.length > 0 ? 'authenticated' : 'unauthenticated';
+    } catch (error) {
+      // Ensure the popup does not stay stuck in the loading state if background
+      // messaging fails (e.g., service worker not yet ready). Fall back to the
+      // unauthenticated state so the UI remains usable.
+      console.error('Failed to load accounts', error);
+      this.accounts = [];
+      this.state = 'unauthenticated';
+    } finally {
+      this.render();
+    }
   }
 
   private render(): void {

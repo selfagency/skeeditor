@@ -185,7 +185,11 @@ if (editTimeLimitInput) {
 saveButton?.addEventListener('click', () => void saveSettings());
 
 addAccountButton?.addEventListener('click', () => {
-  const pdsUrl = addPdsUrlInput?.value?.trim() || 'https://bsky.social';
+  const pdsUrl = addPdsUrlInput?.value?.trim() || '';
+  if (!pdsUrl.startsWith('https://')) {
+    setStatus('Please enter a valid HTTPS URL (e.g. https://bsky.social).', 'error');
+    return;
+  }
   void sendMessage({ type: 'AUTH_SIGN_IN', pdsUrl });
 });
 
