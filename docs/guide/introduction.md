@@ -12,8 +12,8 @@ Rich-text facets (links, mentions, hashtags) are re-detected from the edited tex
 
 ## Supported browsers
 
-| Browser | Status       | Minimum version                                            |
-| ------- | ------------ | ---------------------------------------------------------- |
+| Browser | Status      | Minimum version                                            |
+| ------- | ----------- | ---------------------------------------------------------- |
 | Chrome  | ✅ Supported | 120+                                                       |
 | Firefox | ✅ Supported | 125+ (Nightly / Developer Edition recommended for testing) |
 | Safari  | ✅ Supported | macOS 14+ (Sonoma)                                         |
@@ -26,10 +26,10 @@ skeeditor is an early-access project — but the important bits work. The core e
 
 Let's set expectations (for now):
 
-- It does not edit root posts that other people have replied to if the Bluesky character limit would be exceeded after the edit.
-- It does not support editing embedded images or videos (text-only edits for now — we're working on it 🫡).
+- It prevents edits that would exceed Bluesky's 300-grapheme limit, showing an error if your edit is too long.
+- It does not yet support editing embedded images or videos (text-only edits for now — we're working on rich media editing 🫡).
 - It does not edit posts on behalf of other accounts. Your typos are your own.
-- It does not transmit any data except to `bsky.social` (the Bluesky PDS) for authentication and record operations. Your data stays between you and Bluesky.
+- It supports `bsky.social` and custom PDS instances, and transmits no data except for authentication and record operations. Your data stays between you and your PDS.
 
 ## 👉 Next steps
 

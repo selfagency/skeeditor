@@ -8,7 +8,7 @@ You know the feeling — you hit post, look at it for 0.3 seconds, and spot a ty
 
 It authenticates via OAuth 2.0 + PKCE, fetches the actual record from the Bluesky PDS, and writes it back — preserving your links, mentions, hashtags, embeds, and timestamps like nothing ever happened. 🤫
 
-**[📖 Full documentation →](https://skeeditor.self.agency/)**
+**[📖 Full documentation →](https://skeeditor.self.agency/)** | **[🦋 Bluesky Account: @skeeditor.bsky.social](https://bsky.app/profile/skeeditor.bsky.social)**
 
 ---
 

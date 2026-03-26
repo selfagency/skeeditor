@@ -1,5 +1,6 @@
-import { copyFile, mkdir } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { Resvg } from '@resvg/resvg-js';
 import { build, type Plugin } from 'vite';
 
 import { writeMergedManifest } from './merge-manifest';
@@ -21,6 +22,42 @@ if (!(validBrowsers as readonly string[]).includes(browserArg)) {
 const browser = browserArg as Browser;
 const sourceRoot = resolve(projectRoot, 'src');
 const outDir = resolve(projectRoot, 'dist', browser);
+
+// Render an SVG buffer to a PNG buffer at the given pixel width (square).
+const renderSvgToPng = (svg: Buffer, size: number): Buffer => {
+  const resvg = new Resvg(svg, { fitTo: { mode: 'width', value: size } });
+  return Buffer.from(resvg.render().asPng());
+};
+
+// Icon size sets:
+//   icons         — used in extension management pages, store listings, etc.
+//   action icons  — used for the browser toolbar button
+//
+// skeeditor.svg          (transparent background) → icons/
+// skeeditor_button.svg   (solid background)       → icons/action-*.png
+const ICON_SIZES = [16, 32, 48, 128] as const;
+const ACTION_SIZES = [16, 32] as const;
+
+const buildIcons = async (): Promise<void> => {
+  const iconsDir = resolve(outDir, 'icons');
+  await mkdir(iconsDir, { recursive: true });
+
+  const [transparentSvg, buttonSvg] = await Promise.all([
+    readFile(resolve(projectRoot, 'skeeditor.svg')),
+    readFile(resolve(projectRoot, 'skeeditor_button.svg')),
+  ]);
+
+  await Promise.all([
+    ...ICON_SIZES.map(async size => {
+      const png = renderSvgToPng(transparentSvg, size);
+      await writeFile(resolve(iconsDir, `icon-${size}.png`), png);
+    }),
+    ...ACTION_SIZES.map(async size => {
+      const png = renderSvgToPng(buttonSvg, size);
+      await writeFile(resolve(iconsDir, `action-${size}.png`), png);
+    }),
+  ]);
+};
 
 // Rebuild the content script as a self-contained IIFE so Chrome can load it
 // as a classic script.  Playwright's bundled Chromium does not honour
@@ -44,6 +81,7 @@ const buildContentScript = async (): Promise<void> => {
       emptyOutDir: false,
       sourcemap: true,
       target: 'es2022',
+      cssMinify: 'esbuild',
       modulePreload: { polyfill: false },
       rollupOptions: {
         input: resolve(sourceRoot, 'content/content-script.ts'),
@@ -80,6 +118,7 @@ const iifeContentPlugin = (): Plugin => ({
   apply: 'build',
   async closeBundle() {
     await buildContentScript();
+    await buildIcons();
     await writeMergedManifest(browser, `dist/${browser}/manifest.json`, projectRoot);
   },
 });

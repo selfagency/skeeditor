@@ -1,3 +1,4 @@
+import globalStyles from '../shadow-styles.css?inline';
 import { graphemeLength } from '../shared/utils/text';
 
 const EDIT_MODAL_TEMPLATE = `
@@ -10,183 +11,36 @@ const EDIT_MODAL_TEMPLATE = `
       z-index: 10000;
       background: rgba(0, 0, 0, 0.5);
     }
-
-    .modal {
-      display: flex;
-      flex-direction: column;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: min(90vw, 600px);
-      max-width: 600px;
-      max-height: 80vh;
-      background: var(--bsky-color-white, #ffffff);
-      border-radius: 8px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    }
-
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--bsky-color-border, #e5e5e5);
-    }
-
-    .title {
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--bsky-color-text, #1d1d1d);
-    }
-
-    .close-button {
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 4px;
-      border-radius: 4px;
-    }
-
-    .close-button:hover {
-      background: var(--bsky-color-hover, #f5f5f5);
-    }
-
-    .close-button svg {
-      width: 20px;
-      height: 20px;
-      fill: var(--bsky-color-text, #1d1d1d);
-    }
-
-    .content {
-      display: flex;
-      flex-direction: column;
-      padding: 20px;
-      overflow-y: auto;
-    }
-
-    .textarea-container {
-      position: relative;
-      flex: 1;
-      min-height: 150px;
-    }
-
-    textarea {
-      width: 100%;
-      min-height: 150px;
-      padding: 12px;
-      border: 1px solid var(--bsky-color-border, #e5e5e5);
-      border-radius: 8px;
-      font-size: 15px;
-      line-height: 1.5;
-      resize: vertical;
-      background: var(--bsky-color-white, #ffffff);
-      color: var(--bsky-color-text, #1d1d1d);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    }
-
-    textarea:focus {
-      outline: none;
-      border-color: var(--bsky-color-primary, #1185fb);
-      box-shadow: 0 0 0 2px rgba(17, 133, 251, 0.2);
-    }
-
-    .char-count {
-      display: flex;
-      justify-content: flex-end;
-      padding: 8px 12px;
-      font-size: 12px;
-      color: var(--bsky-color-text-light, #666666);
-    }
-
-    .char-count.error {
-      color: var(--bsky-color-error, #ff3b30);
-    }
-
-    .footer {
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
-      padding: 16px 20px;
-      border-top: 1px solid var(--bsky-color-border, #e5e5e5);
-    }
-
-    button {
-      padding: 10px 20px;
-      border-radius: 20px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity 0.15s;
-    }
-
-    button:hover {
-      opacity: 0.9;
-    }
-
-    button:active {
-      opacity: 0.8;
-    }
-
-    .cancel-button {
-      background: var(--bsky-color-white, #ffffff);
-      border: 1px solid var(--bsky-color-border, #e5e5e5);
-      color: var(--bsky-color-text, #1d1d1d);
-    }
-
-    .save-button {
-      background: var(--bsky-color-primary, #1185fb);
-      border: 1px solid var(--bsky-color-primary, #1185fb);
-      color: var(--bsky-color-white, #ffffff);
-    }
-
-    .save-button:disabled {
-      background: var(--bsky-color-disabled, #e5e5e5);
-      border-color: var(--bsky-color-disabled, #e5e5e5);
-      color: var(--bsky-color-text-disabled, #999999);
-      cursor: not-allowed;
-    }
-
-    .status-message {
-      margin-top: 12px;
-      padding: 12px;
-      border-radius: 8px;
-      font-size: 14px;
-    }
-
-    .status-message.error {
-      background: var(--bsky-color-error-bg, #ffe5e5);
-      color: var(--bsky-color-error, #ff3b30);
-    }
-
-    .status-message.success {
-      background: var(--bsky-color-success-bg, #e5ffe5);
-      color: var(--bsky-color-success, #51d051);
-    }
+    ${globalStyles}
   </style>
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
-    <div class="header">
-      <span class="title" id="edit-modal-title">Edit Post</span>
-      <button class="close-button" type="button" aria-label="Close">
-        <svg viewBox="0 0 24 24">
+  <div class="relative m-auto flex w-full max-w-xl flex-col rounded-lg bg-white shadow-xl dark:bg-gray-800 dark:outline dark:-outline-offset-1 dark:outline-white/10" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
+    <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-white/10">
+      <span class="text-base font-semibold text-gray-900 dark:text-white" id="edit-modal-title">Edit Post</span>
+      <button class="close-button rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500 focus:outline-2 focus:outline-offset-2 focus:outline-indigo-600 dark:hover:bg-white/10 dark:hover:text-white dark:focus:outline-indigo-500" type="button" aria-label="Close">
+        <svg viewBox="0 0 24 24" class="size-5 fill-current" aria-hidden="true">
           <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
         </svg>
       </button>
     </div>
-    <div class="content">
-      <div class="textarea-container">
-        <textarea aria-label="Edit post content"></textarea>
+    <div class="flex flex-col gap-3 overflow-y-auto p-5" style="max-height:60vh">
+      <div>
+        <textarea aria-label="Edit post content" class="block min-h-36 w-full resize-y rounded-md bg-white px-3 py-2 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus:outline-indigo-500"></textarea>
       </div>
-      <div class="char-count"></div>
-      <div class="status-message" aria-live="polite" style="display: none;"></div>
+      <div class="char-count flex justify-end text-xs text-gray-500 dark:text-gray-400"></div>
+      <div class="media-upload flex flex-col gap-2">
+        <input type="file" accept="image/*,video/mp4" multiple class="hidden">
+        <button class="upload-button rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20" type="button">Add Media</button>
+        <div class="media-preview flex flex-wrap gap-2"></div>
+      </div>
+      <div class="status-message hidden rounded-md px-3 py-2 text-sm" aria-live="polite"></div>
     </div>
-    <div class="footer">
-      <button class="cancel-button" type="button">Cancel</button>
-      <button class="save-button" type="button" disabled>Save</button>
+    <div class="flex justify-end gap-3 border-t border-gray-200 px-5 py-4 dark:border-white/10">
+      <button class="cancel-button rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20" type="button">Cancel</button>
+      <button class="save-button rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500 dark:bg-indigo-500 dark:shadow-none dark:hover:bg-indigo-400 dark:focus-visible:outline-indigo-500 dark:disabled:bg-white/10 dark:disabled:text-white/30" type="button" disabled>Save</button>
     </div>
   </div>
 `;
-
+// Bluesky's post limit is 300 graphemes (user-perceived characters)
 const MAX_POST_LENGTH = 300;
 
 export class EditModal {
@@ -195,6 +49,11 @@ export class EditModal {
   private charCount: HTMLElement | null = null;
   private saveButton: HTMLButtonElement | null = null;
   private statusMessage: HTMLElement | null = null;
+  private uploadButton: HTMLButtonElement | null = null;
+  private fileInput: HTMLInputElement | null = null;
+  private mediaPreview: HTMLElement | null = null;
+  private uploadedMedia: File[] = [];
+  private objectUrls: Map<File, string> = new Map();
   private originalText = '';
   private currentText = '';
   private maxLength = MAX_POST_LENGTH;
@@ -207,6 +66,7 @@ export class EditModal {
   private closeBound = this.close.bind(this);
   private handleBackgroundClickBound = this.handleBackgroundClick.bind(this);
   private handleKeydownBound = this.handleKeydown.bind(this);
+  private handleUploadBound = this.handleUpload.bind(this);
 
   public constructor() {
     this.element = document.createElement('edit-modal');
@@ -222,6 +82,9 @@ export class EditModal {
     this.textarea = shadow.querySelector<HTMLTextAreaElement>('textarea');
     this.charCount = shadow.querySelector<HTMLElement>('.char-count');
     this.saveButton = shadow.querySelector<HTMLButtonElement>('.save-button');
+    this.uploadButton = shadow.querySelector<HTMLButtonElement>('.upload-button');
+    this.fileInput = shadow.querySelector<HTMLInputElement>('input[type="file"]');
+    this.mediaPreview = shadow.querySelector<HTMLElement>('.media-preview');
     this.statusMessage = shadow.querySelector<HTMLElement>('.status-message');
 
     if (this.textarea) {
@@ -240,6 +103,14 @@ export class EditModal {
 
     if (this.saveButton) {
       this.saveButton.addEventListener('click', this.handleSaveBound);
+    }
+
+    if (this.uploadButton) {
+      this.uploadButton.addEventListener('click', this.handleUploadBound);
+    }
+
+    if (this.fileInput) {
+      this.fileInput.addEventListener('change', this.handleUploadBound);
     }
   }
 
@@ -275,6 +146,12 @@ export class EditModal {
   }
 
   public close(): void {
+    for (const url of this.objectUrls.values()) {
+      URL.revokeObjectURL(url);
+    }
+    this.objectUrls.clear();
+    this.uploadedMedia = [];
+
     this.element.style.display = 'none';
     if (this.element.isConnected) {
       document.body.removeChild(this.element);
@@ -328,32 +205,66 @@ export class EditModal {
     const isError = remaining < 0;
 
     this.charCount.textContent = `${length} / ${this.maxLength}`;
-    this.charCount.className = isError ? 'char-count error' : 'char-count';
-
     if (isError) {
+      this.charCount.classList.remove('text-gray-500', 'dark:text-gray-400');
+      this.charCount.classList.add('text-red-500', 'dark:text-red-400');
       this.textarea.setCustomValidity('Post exceeds maximum length');
     } else {
+      this.charCount.classList.remove('text-red-500', 'dark:text-red-400');
+      this.charCount.classList.add('text-gray-500', 'dark:text-gray-400');
       this.textarea.setCustomValidity('');
     }
   }
 
   private updateSaveButtonState(): void {
     if (this.saveButton && this.textarea) {
-      this.saveButton.disabled = this.textarea.value === this.originalText;
+      const textChanged = this.textarea.value !== this.originalText;
+      const hasMedia = this.uploadedMedia.length > 0;
+      this.saveButton.disabled = !textChanged && !hasMedia;
     }
   }
 
   private showStatusMessage(message: string, type: 'error' | 'success'): void {
     if (this.statusMessage) {
       this.statusMessage.textContent = message;
-      this.statusMessage.style.display = 'block';
-      this.statusMessage.className = `status-message ${type}`;
+      this.statusMessage.classList.remove('hidden');
+      if (type === 'error') {
+        this.statusMessage.classList.add(
+          'error',
+          'bg-red-50',
+          'text-red-700',
+          'dark:bg-red-400/10',
+          'dark:text-red-400',
+        );
+        this.statusMessage.classList.remove(
+          'success',
+          'bg-green-50',
+          'text-green-700',
+          'dark:bg-green-400/10',
+          'dark:text-green-400',
+        );
+      } else {
+        this.statusMessage.classList.add(
+          'success',
+          'bg-green-50',
+          'text-green-700',
+          'dark:bg-green-400/10',
+          'dark:text-green-400',
+        );
+        this.statusMessage.classList.remove(
+          'error',
+          'bg-red-50',
+          'text-red-700',
+          'dark:bg-red-400/10',
+          'dark:text-red-400',
+        );
+      }
     }
   }
 
   private hideStatusMessage(): void {
     if (this.statusMessage) {
-      this.statusMessage.style.display = 'none';
+      this.statusMessage.classList.add('hidden');
     }
   }
 
@@ -422,6 +333,104 @@ export class EditModal {
             : 'An unexpected error occurred while saving the post.';
         this.setError(message);
       });
+    }
+  }
+
+  private handleUpload(event: Event): void {
+    const target = event.target as HTMLInputElement | HTMLButtonElement;
+
+    if (target.tagName === 'BUTTON' && this.fileInput) {
+      // Button click - trigger file input
+      this.fileInput.click();
+      return;
+    }
+
+    if (target.tagName === 'INPUT') {
+      const inputTarget = target as HTMLInputElement;
+      if (inputTarget.files) {
+        // File input change - handle selected files
+        const files = Array.from(inputTarget.files) as File[];
+        this.uploadedMedia = [...this.uploadedMedia, ...files];
+        this.updateMediaPreview();
+        this.updateSaveButtonState();
+        inputTarget.value = ''; // Reset input to allow selecting same file again
+      }
+    }
+  }
+
+  private updateMediaPreview(): void {
+    if (!this.mediaPreview) return;
+
+    this.mediaPreview.innerHTML = '';
+
+    this.uploadedMedia.forEach((file, index) => {
+      const mediaItem = document.createElement('div');
+      mediaItem.className = 'relative size-20 overflow-hidden rounded-md';
+
+      const mediaElement = file.type.startsWith('image/')
+        ? this.createImageElement(file)
+        : this.createVideoElement(file);
+
+      const removeButton = document.createElement('button');
+      removeButton.type = 'button';
+      removeButton.className =
+        'absolute right-1 top-1 flex size-5 cursor-pointer items-center justify-center rounded-full border-none bg-black/70 p-0 text-xs text-white';
+      removeButton.textContent = '×';
+      removeButton.addEventListener('click', () => this.removeMedia(index));
+
+      mediaItem.appendChild(mediaElement);
+      mediaItem.appendChild(removeButton);
+      this.mediaPreview?.appendChild(mediaItem);
+    });
+  }
+
+  private createImageElement(file: File): HTMLImageElement {
+    const img = document.createElement('img');
+    const url = URL.createObjectURL(file);
+    this.objectUrls.set(file, url);
+    img.src = url;
+    img.alt = file.name;
+    img.className = 'size-full object-cover';
+    return img;
+  }
+
+  private createVideoElement(file: File): HTMLVideoElement {
+    const video = document.createElement('video');
+    const url = URL.createObjectURL(file);
+    this.objectUrls.set(file, url);
+    video.src = url;
+    video.controls = true;
+    video.muted = true;
+    video.className = 'size-full object-cover';
+    return video;
+  }
+
+  private removeMedia(index: number): void {
+    const file = this.uploadedMedia[index];
+    if (file) {
+      const url = this.objectUrls.get(file);
+      if (url) {
+        URL.revokeObjectURL(url);
+        this.objectUrls.delete(file);
+      }
+    }
+    this.uploadedMedia.splice(index, 1);
+    this.updateMediaPreview();
+    this.updateSaveButtonState();
+  }
+
+  public getUploadedMedia(): File[] {
+    return this.uploadedMedia;
+  }
+
+  public clearMedia(): void {
+    for (const url of this.objectUrls.values()) {
+      URL.revokeObjectURL(url);
+    }
+    this.objectUrls.clear();
+    this.uploadedMedia = [];
+    if (this.mediaPreview) {
+      this.mediaPreview.innerHTML = '';
     }
   }
 }

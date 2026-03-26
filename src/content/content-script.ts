@@ -68,7 +68,42 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
   const initialRecordText = typeof currentRecord.text === 'string' ? currentRecord.text : initialText;
 
   modal.open(initialRecordText, undefined, async text => {
-    const updatedRecord = buildUpdatedPostRecord(currentRecord, text);
+    const uploadedMedia = modal.getUploadedMedia();
+    const updatedRecord = buildUpdatedPostRecord(currentRecord, text, uploadedMedia);
+
+    // Upload media files if any
+    if (uploadedMedia.length > 0) {
+      try {
+        const uploadPromises = uploadedMedia.map(file =>
+          sendMessage({
+            type: 'UPLOAD_BLOB',
+            data: file,
+            repo: info.repo,
+          }),
+        );
+
+        const uploadResults = await Promise.all(uploadPromises);
+
+        // Update the embed with the actual blob references
+        if (updatedRecord.embed && 'images' in updatedRecord.embed) {
+          updatedRecord.embed.images = updatedRecord.embed.images.map((image, index) => {
+            const result = uploadResults[index];
+            if (!result || 'error' in result)
+              throw new Error(result && 'error' in result ? result.error : 'Upload failed');
+            return { ...image, image: result.blobRef };
+          });
+        } else if (updatedRecord.embed && 'video' in updatedRecord.embed) {
+          const result = uploadResults[0];
+          if (!result || 'error' in result)
+            throw new Error(result && 'error' in result ? result.error : 'Upload failed');
+          updatedRecord.embed.video = result.blobRef;
+        }
+      } catch (error) {
+        console.error('Error uploading media:', error);
+        modal.setError('Failed to upload media. Please try again.');
+        return;
+      }
+    }
 
     const writeResponse = await sendMessage({
       type: 'PUT_RECORD',

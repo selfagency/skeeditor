@@ -1,0 +1,20 @@
+{
+  "client_id": "https://skeeditor.self.agency/oauth/client-metadata.json",
+  "application_type": "web",
+  "client_name": "skeeditor",
+  "client_uri": "https://skeeditor.self.agency",
+  "dpop_bound_access_tokens": true,
+  "grant_types": [
+    "authorization_code",
+    "refresh_token"
+  ],
+  "redirect_uris": [
+    "https://skeeditor.self.agency/callback.html",
+    "http://localhost:3000/callback.html"
+  ],
+  "response_types": [
+    "code"
+  ],
+  "scope": "atproto transition:generic",
+  "token_endpoint_auth_method": "none"
+}

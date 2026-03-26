@@ -1,6 +1,6 @@
 import '@src/popup/auth-popup';
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { StoredSession } from '@src/shared/auth/session-store';
 
@@ -99,7 +99,10 @@ describe('auth-popup Web Component', () => {
 
       el.shadowRoot?.querySelector<HTMLButtonElement>('#sign-in')?.click();
 
-      expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({ type: 'AUTH_SIGN_IN' });
+      expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({
+        type: 'AUTH_SIGN_IN',
+        pdsUrl: expect.any(String),
+      });
     });
 
     it('sends AUTH_SIGN_OUT when sign-out button is clicked', async () => {
@@ -138,7 +141,10 @@ describe('auth-popup Web Component', () => {
 
       el.shadowRoot?.querySelector<HTMLButtonElement>('#reauthorize')?.click();
 
-      expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({ type: 'AUTH_REAUTHORIZE' });
+      expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({
+        type: 'AUTH_REAUTHORIZE',
+        pdsUrl: expect.any(String),
+      });
     });
   });
 });

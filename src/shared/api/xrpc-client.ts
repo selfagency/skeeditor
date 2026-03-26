@@ -1,4 +1,4 @@
-import { Client, XrpcError, XrpcResponseError } from '@atproto/lex';
+import { Client, XrpcError, XrpcResponseError, l } from '@atproto/lex';
 
 export interface XrpcClientConfig {
   service: string;
@@ -354,6 +354,28 @@ export class XrpcClient {
       } catch {
         return { success: false, error: structuredError };
       }
+    }
+  }
+
+  /**
+   * Upload a blob (image, video, etc.) to the PDS.
+   *
+   * @param params - `{ data: Blob|File }`
+   * @returns `{ blobRef: { $link: string }, mimeType: string }`
+   * @throws `XrpcClientError` on any XRPC or network failure
+   */
+  public async uploadBlob(params: { data: Blob | File }): Promise<{ blobRef: l.BlobRef; mimeType: string }> {
+    const { data } = params;
+
+    try {
+      const response = await this._client.uploadBlob(data);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { blob } = response.body as any;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return { blobRef: blob as unknown as l.BlobRef, mimeType: blob.mimeType };
+    } catch (err) {
+      throw mapXrpcError(err, 'uploadBlob');
     }
   }
 }

@@ -8,7 +8,10 @@ describe('post-editor', () => {
       $type: 'app.bsky.feed.post' as const,
       text: 'Hello @alice.test https://example.com',
       createdAt: '2026-03-18T12:00:00.000Z',
-      embed: { $type: 'app.bsky.embed.external', external: { uri: 'https://example.com', title: 'Example' } },
+      embed: {
+        $type: 'app.bsky.embed.external',
+        external: { uri: 'https://example.com', title: 'Example', description: '' },
+      },
       langs: ['en'],
     };
 
@@ -22,6 +25,13 @@ describe('post-editor', () => {
       langs: ['en'],
     });
     expect(nextRecord.facets).toHaveLength(1);
+    expect(nextRecord.labels).toEqual({
+      $type: 'com.atproto.label.defs#selfLabels',
+      values: [{ $type: 'com.atproto.label.defs#selfLabel', val: 'edited' }],
+    });
+    expect(nextRecord.tags).toBeDefined();
+    expect(nextRecord.tags).toHaveLength(1);
+    expect(nextRecord.tags?.[0]).toMatch(/^skeeditor-edit-/);
   });
 
   it('should omit facets when the updated text has no detected facets', () => {
@@ -46,6 +56,13 @@ describe('post-editor', () => {
     const nextRecord = buildUpdatedPostRecord(currentRecord, 'Plain post text');
 
     expect(nextRecord).not.toHaveProperty('facets');
+    expect(nextRecord.labels).toEqual({
+      $type: 'com.atproto.label.defs#selfLabels',
+      values: [{ $type: 'com.atproto.label.defs#selfLabel', val: 'edited' }],
+    });
+    expect(nextRecord.tags).toBeDefined();
+    expect(nextRecord.tags).toHaveLength(1);
+    expect(nextRecord.tags?.[0]).toMatch(/^skeeditor-edit-/);
   });
 
   it('should preserve mention facets when the current record already resolved the DID', () => {
@@ -71,6 +88,13 @@ describe('post-editor', () => {
         }),
       ]),
     );
+    expect(nextRecord.labels).toEqual({
+      $type: 'com.atproto.label.defs#selfLabels',
+      values: [{ $type: 'com.atproto.label.defs#selfLabel', val: 'edited' }],
+    });
+    expect(nextRecord.tags).toBeDefined();
+    expect(nextRecord.tags).toHaveLength(1);
+    expect(nextRecord.tags?.[0]).toMatch(/^skeeditor-edit-/);
   });
 
   it('should resolve mention DIDs correctly when text contains multi-byte characters before the mention', () => {
@@ -97,5 +121,86 @@ describe('post-editor', () => {
         }),
       ]),
     );
+    expect(nextRecord.labels).toEqual({
+      $type: 'com.atproto.label.defs#selfLabels',
+      values: [{ $type: 'com.atproto.label.defs#selfLabel', val: 'edited' }],
+    });
+    expect(nextRecord.tags).toBeDefined();
+    expect(nextRecord.tags).toHaveLength(1);
+    expect(nextRecord.tags?.[0]).toMatch(/^skeeditor-edit-/);
+  });
+
+  it('should add edited self-label to all updated posts', () => {
+    const currentRecord: EditablePostRecord = {
+      $type: 'app.bsky.feed.post' as const,
+      text: 'Original text',
+      createdAt: '2026-03-18T12:00:00.000Z',
+    };
+
+    const nextRecord = buildUpdatedPostRecord(currentRecord, 'Updated text');
+
+    expect(nextRecord.labels).toBeDefined();
+    expect(nextRecord.labels).toEqual({
+      $type: 'com.atproto.label.defs#selfLabels',
+      values: [{ $type: 'com.atproto.label.defs#selfLabel', val: 'edited' }],
+    });
+  });
+
+  it('should preserve existing labels when present', () => {
+    const currentRecord: EditablePostRecord = {
+      $type: 'app.bsky.feed.post' as const,
+      text: 'Original text',
+      createdAt: '2026-03-18T12:00:00.000Z',
+      labels: {
+        $type: 'com.atproto.label.defs#selfLabels',
+        values: [{ $type: 'com.atproto.label.defs#selfLabel', val: 'bot' }],
+      },
+    };
+
+    const nextRecord = buildUpdatedPostRecord(currentRecord, 'Updated text');
+
+    // Should preserve existing labels and add edited label
+    expect(nextRecord.labels).toBeDefined();
+    expect(nextRecord.labels?.values).toContainEqual({ $type: 'com.atproto.label.defs#selfLabel', val: 'bot' });
+    expect(nextRecord.labels?.values).toContainEqual({ $type: 'com.atproto.label.defs#selfLabel', val: 'edited' });
+    // Should also add edit history tag
+    expect(nextRecord.tags).toBeDefined();
+    expect(nextRecord.tags).toHaveLength(1);
+    expect(nextRecord.tags?.[0]).toMatch(/^skeeditor-edit-/);
+  });
+
+  it('should add edit history tags for content tracking', () => {
+    const currentRecord: EditablePostRecord = {
+      $type: 'app.bsky.feed.post' as const,
+      text: 'Original content that will be edited',
+      createdAt: '2026-03-18T12:00:00.000Z',
+    };
+
+    const nextRecord = buildUpdatedPostRecord(currentRecord, 'Modified content');
+
+    expect(nextRecord.tags).toBeDefined();
+    expect(nextRecord.tags).toHaveLength(1);
+    expect(nextRecord.tags?.[0]).toMatch(/^skeeditor-edit-/);
+
+    // The tag should be deterministic for the same content
+    const sameRecord = buildUpdatedPostRecord(currentRecord, 'Modified content');
+    expect(sameRecord.tags?.[0]).toBe(nextRecord.tags?.[0]);
+  });
+
+  it('should preserve existing tags when adding edit history', () => {
+    const currentRecord: EditablePostRecord = {
+      $type: 'app.bsky.feed.post' as const,
+      text: 'Original content',
+      createdAt: '2026-03-18T12:00:00.000Z',
+      tags: ['existing-tag', 'another-tag'],
+    };
+
+    const nextRecord = buildUpdatedPostRecord(currentRecord, 'Modified content');
+
+    expect(nextRecord.tags).toBeDefined();
+    expect(nextRecord.tags).toHaveLength(3);
+    expect(nextRecord.tags).toContain('existing-tag');
+    expect(nextRecord.tags).toContain('another-tag');
+    expect(nextRecord.tags?.find(tag => tag.startsWith('skeeditor-edit-'))).toBeDefined();
   });
 });

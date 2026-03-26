@@ -1,4 +1,5 @@
 import browser from 'webextension-polyfill';
+import type { l } from '@atproto/lex';
 
 import type {
   GetRecordResult,
@@ -12,11 +13,13 @@ import { buildAuthorizationRequest, exchangeCodeForTokens } from '../shared/auth
 import type { StoredSession } from '../shared/auth/session-store';
 import { sessionStore } from '../shared/auth/session-store';
 import {
-  BSKY_OAUTH_AUTHORIZE_URL,
   BSKY_OAUTH_CLIENT_ID,
+  BSKY_OAUTH_REDIRECT_URI,
   BSKY_OAUTH_SCOPE,
-  BSKY_OAUTH_TOKEN_URL,
-  BSKY_PDS_URL,
+  getCurrentPdsUrl,
+  getOAuthAuthorizeUrl,
+  getOAuthTokenUrl,
+  setCurrentPdsUrl,
 } from '../shared/constants';
 import type {
   PutRecordConflictResponse,
@@ -44,6 +47,7 @@ interface XrpcInterface {
     swapRecord: string;
     validate?: boolean;
   }) => Promise<PutRecordWithSwapResult>;
+  uploadBlob: (params: { data: Blob | File; repo: string }) => Promise<{ blobRef: l.BlobRef; mimeType: string }>;
 }
 
 interface StoreInterface {
@@ -81,6 +85,9 @@ const KNOWN_TYPES = new Set([
   'AUTH_CALLBACK',
   'GET_RECORD',
   'PUT_RECORD',
+  'UPLOAD_BLOB',
+  'SET_PDS_URL',
+  'GET_PDS_URL',
 ]);
 
 type IncomingMessage = Record<string, unknown> & { type: string };
@@ -141,6 +148,17 @@ function isValidPutRecordPayload(msg: IncomingMessage): msg is IncomingMessage &
   return true;
 }
 
+function isUploadBlobPayload(message: unknown): message is { data: Blob | File; repo: string } {
+  return (
+    typeof message === 'object' &&
+    message !== null &&
+    'data' in message &&
+    'repo' in message &&
+    typeof message['repo'] === 'string' &&
+    (message['data'] instanceof Blob || message['data'] instanceof File)
+  );
+}
+
 // ── Handler ──────────────────────────────────────────────────────────────────
 
 /**
@@ -160,14 +178,24 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
   switch (message['type']) {
     case 'AUTH_SIGN_IN':
     case 'AUTH_REAUTHORIZE': {
+      // Use PDS URL from message or default
+      const pdsUrl =
+        message['pdsUrl'] && typeof message['pdsUrl'] === 'string' ? message['pdsUrl'] : await getCurrentPdsUrl();
+
       const authReq = await deps.buildAuthReq({
         clientId: BSKY_OAUTH_CLIENT_ID,
         redirectUri: deps.redirectUri,
         scope: BSKY_OAUTH_SCOPE,
-        authorizationEndpoint: BSKY_OAUTH_AUTHORIZE_URL,
+        authorizationEndpoint: getOAuthAuthorizeUrl(pdsUrl),
       });
       await deps.storeAuthState(authReq.state, authReq.codeVerifier);
       await deps.openTab(authReq.url);
+
+      // Also store the PDS URL for future use
+      if (pdsUrl !== (await getCurrentPdsUrl())) {
+        await setCurrentPdsUrl(pdsUrl);
+      }
+
       return { ok: true };
     }
 
@@ -195,8 +223,10 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
       }
 
       try {
+        // Get the current PDS URL for token exchange
+        const pdsUrl = await getCurrentPdsUrl();
         const tokens = await deps.exchangeCode(
-          BSKY_OAUTH_TOKEN_URL,
+          getOAuthTokenUrl(pdsUrl),
           code,
           pending.codeVerifier,
           BSKY_OAUTH_CLIENT_ID,
@@ -257,7 +287,8 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
         return { error: 'Not authenticated' };
       }
       try {
-        const client = deps.createXrpc({ service: BSKY_PDS_URL, did: stored.did, accessJwt: stored.accessToken });
+        const pdsUrl = await getCurrentPdsUrl();
+        const client = deps.createXrpc({ service: pdsUrl, did: stored.did, accessJwt: stored.accessToken });
         return await client.getRecord({
           repo: message['repo'],
           collection: message['collection'],
@@ -278,7 +309,8 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
         return { type: 'PUT_RECORD_ERROR', message: 'Not authenticated' } satisfies PutRecordErrorResponse;
       }
       try {
-        const client = deps.createXrpc({ service: BSKY_PDS_URL, did: stored.did, accessJwt: stored.accessToken });
+        const pdsUrl = await getCurrentPdsUrl();
+        const client = deps.createXrpc({ service: pdsUrl, did: stored.did, accessJwt: stored.accessToken });
         const record = message['record'];
         const params: Parameters<XrpcInterface['putRecord']>[0] = {
           repo: message['repo'],
@@ -330,6 +362,53 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
       }
     }
 
+    case 'UPLOAD_BLOB': {
+      if (!isUploadBlobPayload(message)) {
+        return { error: 'Invalid UPLOAD_BLOB payload' };
+      }
+
+      const stored = await deps.store.get();
+      const valid = await deps.store.isAccessTokenValid();
+      if (stored === null || !valid) {
+        return { error: 'Not authenticated' };
+      }
+
+      try {
+        const pdsUrl = await getCurrentPdsUrl();
+        const client = deps.createXrpc({ service: pdsUrl, did: stored.did, accessJwt: stored.accessToken });
+        const result = await client.uploadBlob({
+          data: message.data,
+          repo: message.repo,
+        });
+        return result;
+      } catch (error) {
+        console.error('Upload blob error:', error);
+        return { error: error instanceof Error ? error.message : 'Failed to upload blob' };
+      }
+    }
+
+    case 'SET_PDS_URL': {
+      if (typeof message['url'] !== 'string' || !message['url'].startsWith('https://')) {
+        return { error: 'Invalid PDS URL. Must be a valid HTTPS URL.' };
+      }
+
+      try {
+        await setCurrentPdsUrl(message['url']);
+        return { ok: true };
+      } catch (error) {
+        return { error: error instanceof Error ? error.message : 'Failed to set PDS URL' };
+      }
+    }
+
+    case 'GET_PDS_URL': {
+      try {
+        const url = await getCurrentPdsUrl();
+        return { url };
+      } catch (error) {
+        return { error: error instanceof Error ? error.message : 'Failed to get PDS URL' };
+      }
+    }
+
     default:
       return { error: 'Unknown message type' };
   }
@@ -340,7 +419,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
 export function createDefaultDeps(): RouterDeps {
   return {
     store: sessionStore,
-    redirectUri: browser.runtime.getURL('callback.html'),
+    redirectUri: BSKY_OAUTH_REDIRECT_URI,
     openTab: async (url: string): Promise<void> => {
       await browser.tabs.create({ url });
     },
@@ -386,8 +465,40 @@ export function registerMessageRouter(deps: RouterDeps = createDefaultDeps()): (
   const listener = (message: unknown): Promise<unknown> => handleMessage(message, deps);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   browser.runtime.onMessage.addListener(listener as any);
+
+  // Intercept the OAuth callback by watching for tab navigations to the registered redirect URI.
+  // This is required because the redirect target is a web-hosted page (not a bundled extension page),
+  // so `window.opener.postMessage` is not available from the service worker context.
+  const callbackUrl = new URL(BSKY_OAUTH_REDIRECT_URI);
+  const tabListener = (tabId: number, changeInfo: { status?: string }, tab: { url?: string }): void => {
+    if (changeInfo.status !== 'loading' || !tab.url) return;
+
+    let url: URL;
+    try {
+      url = new URL(tab.url);
+    } catch {
+      return;
+    }
+
+    if (url.origin !== callbackUrl.origin || url.pathname !== callbackUrl.pathname) return;
+
+    const code = url.searchParams.get('code');
+    const state = url.searchParams.get('state');
+
+    if (!code || !state) return;
+
+    void handleMessage({ type: 'AUTH_CALLBACK', code, state }, deps).then(() => {
+      void browser.tabs.remove(tabId);
+    });
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  browser.tabs.onUpdated.addListener(tabListener as any);
+
   return () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     browser.runtime.onMessage.removeListener(listener as any);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    browser.tabs.onUpdated.removeListener(tabListener as any);
   };
 }
