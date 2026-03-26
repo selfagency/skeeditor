@@ -1,14 +1,24 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { EditModal } from '@src/content/edit-modal';
 
-const createModal = (): EditModal => {
-  const modal = new EditModal();
-  document.body.appendChild(modal.element);
-  return modal;
-};
-
 describe('edit-modal', () => {
+  let modal: EditModal;
+
+  const createModal = (): EditModal => {
+    modal = new EditModal();
+    document.body.appendChild(modal.element);
+    return modal;
+  };
+
+  afterEach(() => {
+    // Remove the window keydown listener registered by initialize() to prevent
+    // cross-test interference when a test does not call modal.close() itself.
+    if (modal?.element?.isConnected) {
+      modal.close();
+    }
+  });
+
   it('should render the initial text and keep save disabled until changes are made', () => {
     const modal = createModal();
 
@@ -38,6 +48,39 @@ describe('edit-modal', () => {
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
 
     expect(charCount.textContent).toBe('21 / 300');
+  });
+
+  it('should count graphemes not UTF-16 code units for character count', () => {
+    const modal = createModal();
+
+    // 👨‍👩‍👧‍👦 is 1 grapheme but 11 UTF-16 code units
+    const emojiText = '👨‍👩‍👧‍👦 Family emoji';
+    modal.open(emojiText);
+
+    const charCount = modal.element.shadowRoot!.querySelector('.char-count') as HTMLElement;
+
+    // "👨‍👩‍👧‍👦 Family emoji" = 1 + 1 + 6 + 1 + 5 = 14 graphemes (not 24 UTF-16 code units)
+    expect(charCount.textContent).toBe('14 / 300');
+  });
+
+  it('should enforce 300 grapheme limit not 300 UTF-16 code unit limit on save', () => {
+    const modal = createModal();
+    const onSave = vi.fn();
+
+    // Create text that's under 300 graphemes but over 300 UTF-16 code units
+    // Each 👨‍👩‍👧‍👦 is 1 grapheme but 11 code units. 28 of them = 28 graphemes, 308 code units
+    const emojiText = '👨‍👩‍👧‍👦'.repeat(28);
+    modal.open('something else', undefined, onSave);
+
+    const textarea = modal.element.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+    const saveButton = modal.element.shadowRoot!.querySelector('.save-button') as HTMLButtonElement;
+
+    textarea.value = emojiText;
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    saveButton.click();
+
+    // 28 graphemes is well under 300, so save should succeed
+    expect(onSave).toHaveBeenCalledWith(emojiText);
   });
 
   it('should call the save callback when Save is clicked after editing', () => {
@@ -73,5 +116,87 @@ describe('edit-modal', () => {
 
     const statusMessage = modal.element.shadowRoot!.querySelector('.status-message') as HTMLElement;
     expect(statusMessage.textContent).toContain('save failed');
+  });
+
+  it('should close the modal when Escape is pressed', () => {
+    const modal = createModal();
+    const onCancel = vi.fn();
+
+    modal.open('Hello Bluesky', onCancel);
+
+    expect(modal.element.style.display).toBe('flex');
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    expect(modal.element.style.display).toBe('none');
+    expect(onCancel).toHaveBeenCalledOnce();
+  });
+
+  it('should respond to Escape key after close and reopen', () => {
+    const modal = createModal();
+    const onCancel = vi.fn();
+
+    modal.open('First open', onCancel);
+    modal.close();
+
+    // Reopen — keydown listener should be active again
+    const onCancel2 = vi.fn();
+    modal.open('Second open', onCancel2);
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+    expect(onCancel2).toHaveBeenCalledOnce();
+  });
+
+  it('should trigger save when Cmd+Enter is pressed', () => {
+    const modal = createModal();
+    const onSave = vi.fn();
+
+    modal.open('Hello Bluesky', undefined, onSave);
+
+    const textarea = modal.element.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+    textarea.value = 'Edited text';
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', metaKey: true, bubbles: true }));
+
+    expect(onSave).toHaveBeenCalledWith('Edited text');
+  });
+
+  it('should trigger save when Ctrl+Enter is pressed', () => {
+    const modal = createModal();
+    const onSave = vi.fn();
+
+    modal.open('Hello Bluesky', undefined, onSave);
+
+    const textarea = modal.element.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+    textarea.value = 'Edited text';
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true }));
+
+    expect(onSave).toHaveBeenCalledWith('Edited text');
+  });
+
+  it('should show error and not save when text exceeds 300 characters', () => {
+    const modal = createModal();
+    const onSave = vi.fn();
+
+    modal.open('Hello', undefined, onSave);
+
+    const textarea = modal.element.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+    const saveButton = modal.element.shadowRoot!.querySelector('.save-button') as HTMLButtonElement;
+
+    textarea.value = 'a'.repeat(301);
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+
+    // Force-enable save button to test the length validation in handleSave
+    saveButton.disabled = false;
+    saveButton.click();
+
+    expect(onSave).not.toHaveBeenCalled();
+
+    const statusMessage = modal.element.shadowRoot!.querySelector('.status-message') as HTMLElement;
+    expect(statusMessage.textContent).toContain('exceeds maximum length');
   });
 });

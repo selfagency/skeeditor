@@ -182,4 +182,20 @@ describe('buildFacets', () => {
       },
     ]);
   });
+
+  it('should omit mention facet when DID resolver returns undefined', () => {
+    const text = 'Hey @unknown.user and @known.user';
+    const facets = buildFacets(text, {
+      resolveMentionDid: handle => {
+        if (handle === 'known.user') return 'did:plc:known123';
+        return undefined;
+      },
+    });
+
+    expect(facets).toHaveLength(1);
+    expect(facets[0]!.features[0]).toEqual({
+      $type: 'app.bsky.richtext.facet#mention',
+      did: 'did:plc:known123',
+    });
+  });
 });

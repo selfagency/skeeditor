@@ -211,6 +211,11 @@ if (document.readyState === 'loading') {
 }
 
 export const cleanupContentScript = (): void => {
+  if (scanTimer) {
+    clearTimeout(scanTimer);
+    scanTimer = null;
+  }
+
   mutationObserver?.disconnect();
   mutationObserver = null;
 

@@ -204,11 +204,20 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
         if (!isNonEmptyString(tokens.access_token)) {
           return { error: 'Invalid token response from authorization server: missing access token' };
         }
-        if (!isNonEmptyString(tokens.sub) || !tokens.sub.startsWith('did:')) {
+        if (!isNonEmptyString(tokens.sub) || !/^did:[a-z]+:.+$/u.test(tokens.sub)) {
           return { error: 'Invalid token response from authorization server: missing or invalid subject DID' };
         }
         if (!isNonEmptyString(tokens.refresh_token)) {
           return { error: 'Invalid token response from authorization server: missing refresh token' };
+        }
+        if (
+          tokens.expires_in !== undefined &&
+          (typeof tokens.expires_in !== 'number' ||
+            !Number.isFinite(tokens.expires_in) ||
+            tokens.expires_in <= 0 ||
+            tokens.expires_in > 86_400)
+        ) {
+          return { error: 'Invalid token response from authorization server: invalid expiry' };
         }
         const session: StoredSession = {
           accessToken: tokens.access_token,
@@ -220,7 +229,8 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
         await deps.store.set(session);
         return { ok: true };
       } catch (err) {
-        return { error: err instanceof Error ? err.message : 'Token exchange failed' };
+        console.error('[AUTH_CALLBACK] token exchange failed:', err);
+        return { error: 'Token exchange failed' };
       } finally {
         await deps.clearAuthState();
       }
@@ -252,7 +262,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
           rkey: message['rkey'],
         });
       } catch (err) {
-        return { error: err instanceof Error ? err.message : 'Failed to fetch record' };
+        return { error: 'Failed to fetch record' };
       }
     }
 
@@ -290,7 +300,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
           if (result.error.kind !== 'conflict') {
             return {
               type: 'PUT_RECORD_ERROR',
-              message: result.error.message,
+              message: 'Failed to update record',
             } satisfies PutRecordErrorResponse;
           }
 
@@ -313,7 +323,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
       } catch (err) {
         return {
           type: 'PUT_RECORD_ERROR',
-          message: err instanceof Error ? err.message : 'Failed to update record',
+          message: 'Failed to update record',
         } satisfies PutRecordErrorResponse;
       }
     }
@@ -335,10 +345,12 @@ export function createDefaultDeps(): RouterDeps {
     buildAuthReq: buildAuthorizationRequest,
     createXrpc: (config: XrpcClientConfig) => new XrpcClient(config),
     storeAuthState: async (state: string, codeVerifier: string): Promise<void> => {
-      await browser.storage.local.set({ pendingAuth: { state, codeVerifier } });
+      const storage = browser.storage.session ?? browser.storage.local;
+      await storage.set({ pendingAuth: { state, codeVerifier } });
     },
     getAuthState: async (): Promise<{ state: string; codeVerifier: string } | null> => {
-      const result = await browser.storage.local.get('pendingAuth');
+      const storage = browser.storage.session ?? browser.storage.local;
+      const result = await storage.get('pendingAuth');
       const raw: unknown = (result as Record<string, unknown>)['pendingAuth'];
       if (
         raw !== null &&
@@ -353,7 +365,8 @@ export function createDefaultDeps(): RouterDeps {
       return null;
     },
     clearAuthState: async (): Promise<void> => {
-      await browser.storage.local.remove('pendingAuth');
+      const storage = browser.storage.session ?? browser.storage.local;
+      await storage.remove('pendingAuth');
     },
     exchangeCode: exchangeCodeForTokens,
   };
