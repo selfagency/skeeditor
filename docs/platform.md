@@ -44,6 +44,8 @@ combining `manifests/base.json` with the per-browser overlay at
 
 ### Safari
 
+> **Requires Safari 15.4+** (first version to support Manifest V3 web extensions).
+
 1. `pnpm build:safari`
 2. Convert the output to a native Safari extension:
 

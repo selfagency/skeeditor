@@ -1,3 +1,5 @@
+import { graphemeLength } from '../shared/utils/text';
+
 const EDIT_MODAL_TEMPLATE = `
   <style>
     :host {
@@ -262,6 +264,12 @@ export class EditModal {
 
     this.hideStatusMessage();
 
+    // Remove before adding to prevent duplicate handlers on repeated open() calls
+    this.element.removeEventListener('click', this.handleBackgroundClickBound);
+    window.removeEventListener('keydown', this.handleKeydownBound);
+    this.element.addEventListener('click', this.handleBackgroundClickBound);
+    window.addEventListener('keydown', this.handleKeydownBound);
+
     this.element.style.display = 'flex';
     this.isOpen = true;
     this.element.addEventListener('click', this.handleBackgroundClickBound);
@@ -317,7 +325,7 @@ export class EditModal {
   private updateCharCount(): void {
     if (!this.charCount || !this.textarea) return;
 
-    const length = this.currentText.length;
+    const length = graphemeLength(this.currentText);
     const remaining = this.maxLength - length;
     const isError = remaining < 0;
 
@@ -401,7 +409,7 @@ export class EditModal {
       return;
     }
 
-    if (this.textarea && this.textarea.value.length > this.maxLength) {
+    if (this.textarea && graphemeLength(this.textarea.value) > this.maxLength) {
       this.setError(`Post exceeds maximum length of ${this.maxLength} characters`);
       return;
     }

@@ -134,9 +134,15 @@ const mapStructuredPutRecordError = (error: XrpcClientError): PutRecordWithSwapE
   return withOptionalStatus('network');
 };
 
-const valuesEqual = (left: unknown, right: unknown): boolean => {
+const MAX_DEPTH = 20;
+
+const valuesEqual = (left: unknown, right: unknown, depth = 0): boolean => {
   if (Object.is(left, right)) {
     return true;
+  }
+
+  if (depth >= MAX_DEPTH) {
+    return false;
   }
 
   if (typeof left !== typeof right) {
@@ -152,7 +158,7 @@ const valuesEqual = (left: unknown, right: unknown): boolean => {
       return false;
     }
 
-    return left.every((value, index) => valuesEqual(value, right[index]));
+    return left.every((value, index) => valuesEqual(value, right[index], depth + 1));
   }
 
   if (typeof left === 'object' && typeof right === 'object') {
@@ -161,11 +167,11 @@ const valuesEqual = (left: unknown, right: unknown): boolean => {
     const leftKeys = Object.keys(leftRecord).sort();
     const rightKeys = Object.keys(rightRecord).sort();
 
-    if (!valuesEqual(leftKeys, rightKeys)) {
+    if (!valuesEqual(leftKeys, rightKeys, depth + 1)) {
       return false;
     }
 
-    return leftKeys.every(key => valuesEqual(leftRecord[key], rightRecord[key]));
+    return leftKeys.every(key => valuesEqual(leftRecord[key], rightRecord[key], depth + 1));
   }
 
   return false;

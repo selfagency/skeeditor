@@ -1,29 +1,33 @@
 ---
 # skeeditor-edhe
 title: perf mutationobserver debounce observer narrowing
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-25T17:56:35Z
-updated_at: 2026-03-25T17:56:35Z
+updated_at: 2026-03-25T23:32:57Z
 parent: skeeditor-pjwz
-id: skeeditor-edhe
 ---
+
 Fix performance issues found in the codebase audit:
-
-1. **MutationObserver not debounced** — `content-script.ts:142-150`: `scheduleScanForPosts()` is called on every mutation, enqueueing N timeouts for rapidly firing mutations. Replace with a coalescing 100ms debounce so burst mutations result in a single scan.
-
-2. **Observer watches all of `document.body`** — `content-script.ts:147`: narrow the observer target to the feed container element when available; fall back to `document.body` if not.
-
-3. **Subtree `querySelectorAll` in `parseAtUriFromElement`** — `at-uri.ts:131-174`: `getElementCandidates` runs a full descendant-tree `querySelectorAll` inside every call. Memoize the result per element, or move the lookup to happen only once per post rather than per-element.
 
 ## Todo
 
-- [ ] Read `src/content/content-script.ts` observer setup
-- [ ] Implement coalescing debounce (100ms) for `scheduleScanForPosts`
-- [ ] Identify the feed container selector used by bsky.app and narrow the observer to it with body fallback
-- [ ] Read `src/shared/api/at-uri.ts` `getElementCandidates` function
-- [ ] Memoize or restructure the subtree search to avoid O(n) per call
-- [ ] Add/update unit tests for debounce behavior
-- [ ] `pnpm test` + `tsc --noEmit` clean
-- [ ] Commit with `perf(content)` prefix
+- [x] Read `src/content/content-script.ts` observer setup
+- [x] Implement coalescing debounce (100ms) for `scheduleScanForPosts`
+- [x] Identify the feed container selector used by bsky.app and narrow the observer to it with body fallback
+- [x] Read `src/shared/api/at-uri.ts` `getElementCandidates` function
+- [x] Memoize or restructure the subtree search to avoid O(n) per call
+- [x] Add/update unit tests for debounce behavior
+- [x] `pnpm test` + `tsc --noEmit` clean
+- [x] Commit with `perf(content)` prefix
+
+## Summary of Changes
+
+All 3 performance items implemented:
+
+1. **Observer narrowing**: Added `FEED_CONTAINER_SELECTORS` and `findObserverTarget()` to scope MutationObserver to the feed container instead of `document.body`
+2. **Debounce**: Changed `scheduleScanForPosts` from `setTimeout(0)` to `setTimeout(100)` with proper coalescing and cleanup
+3. **Memoization**: Added `WeakMap<Element, Element[]>` cache to `getElementCandidates` in `at-uri.ts`
+
+branch: perf/edhe-observer-narrowing-memoize
