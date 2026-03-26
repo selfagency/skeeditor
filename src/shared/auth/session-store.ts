@@ -12,6 +12,8 @@ export interface StoredSession {
   scope: string;
   /** Authenticated user DID */
   did: string;
+  /** Authenticated user handle (e.g. user.bsky.social); optional for backward compat */
+  handle?: string;
 }
 
 /** Non-sensitive session metadata safe to expose in popup context (no tokens) */

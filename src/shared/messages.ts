@@ -30,7 +30,7 @@ export interface AuthCallbackRequest {
 }
 
 export type AuthUnauthenticatedStatus = { authenticated: false };
-export type AuthAuthenticatedStatus = { authenticated: true; did: string; expiresAt: number };
+export type AuthAuthenticatedStatus = { authenticated: true; did: string; handle?: string; expiresAt: number };
 export type AuthGetStatusResponse = AuthUnauthenticatedStatus | AuthAuthenticatedStatus;
 
 export interface OkResponse {

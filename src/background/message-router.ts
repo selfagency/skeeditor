@@ -1,7 +1,7 @@
 import type { l } from '@atproto/lex';
 import browser from 'webextension-polyfill';
 
-import { loadOrCreateDpopKeyPair } from '../shared/auth/dpop';
+import { createDpopProof, loadOrCreateDpopKeyPair } from '../shared/auth/dpop';
 
 import type {
   GetRecordResult,
@@ -43,6 +43,45 @@ async function getDpopKeyPair(): Promise<CryptoKeyPair> {
   return dpopKeyPairCache;
 }
 
+/**
+ * Fetch the account handle from the PDS using com.atproto.server.getSession.
+ * Returns the handle string, or null if unavailable (non-fatal).
+ */
+async function fetchHandle(pdsUrl: string, accessToken: string): Promise<string | null> {
+  const url = `${pdsUrl}/xrpc/com.atproto.server.getSession`;
+
+  const makeRequest = async (nonce?: string): Promise<Response> => {
+    const keyPair = await getDpopKeyPair();
+    const dpopProof = await createDpopProof(keyPair, 'GET', url, accessToken, nonce);
+    return fetch(url, {
+      headers: {
+        Authorization: `DPoP ${accessToken}`,
+        DPoP: dpopProof,
+      },
+    });
+  };
+
+  try {
+    let response = await makeRequest();
+
+    // Server may require a nonce on the first attempt
+    if (!response.ok) {
+      const serverNonce = response.headers.get('DPoP-Nonce');
+      if (serverNonce !== null) {
+        response = await makeRequest(serverNonce);
+      }
+    }
+
+    if (!response.ok) return null;
+
+    const data = (await response.json()) as Record<string, unknown>;
+    const handle = data['handle'];
+    return typeof handle === 'string' && handle.length > 0 ? handle : null;
+  } catch {
+    return null;
+  }
+}
+
 // ── Dependency injection types ────────────────────────────────────────────────
 
 interface XrpcInterface {
@@ -66,7 +105,7 @@ interface XrpcInterface {
 }
 
 interface StoreInterface {
-  get: () => Promise<{ did: string; accessToken: string; expiresAt: number } | null>;
+  get: () => Promise<{ did: string; handle?: string; accessToken: string; expiresAt: number } | null>;
   set: (session: StoredSession) => Promise<void>;
   clear: () => Promise<void>;
   isAccessTokenValid: () => Promise<boolean>;
@@ -274,6 +313,13 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
           did: tokens.sub,
         };
         await deps.store.set(session);
+
+        // Fetch the handle (best-effort; non-fatal if it fails)
+        const handle = await fetchHandle(pdsUrl, tokens.access_token);
+        if (handle !== null) {
+          await deps.store.set({ ...session, handle });
+        }
+
         return { ok: true };
       } catch (err) {
         console.error('[AUTH_CALLBACK] token exchange failed:', err);
@@ -287,7 +333,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
       const stored = await deps.store.get();
       const valid = await deps.store.isAccessTokenValid();
       if (stored !== null && valid) {
-        return { authenticated: true, did: stored.did, expiresAt: stored.expiresAt };
+        return { authenticated: true, did: stored.did, handle: stored.handle, expiresAt: stored.expiresAt };
       }
       return { authenticated: false };
     }

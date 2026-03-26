@@ -12,6 +12,7 @@ const EDIT_BUTTON_ATTRIBUTE = 'data-skeeditor-edit-button';
 
 let mutationObserver: MutationObserver | null = null;
 let currentDid: string | null = null;
+let currentHandle: string | null = null;
 let domContentLoadedHandler: (() => void) | null = null;
 let scanScheduled = false;
 let scanTimer: ReturnType<typeof setTimeout> | null = null;
@@ -40,11 +41,12 @@ const isPutRecordConflictResponse = (response: PutRecordResponse): response is P
 const refreshAuthState = async (): Promise<void> => {
   const status = await sendMessage({ type: 'AUTH_GET_STATUS' });
   currentDid = status.authenticated ? status.did : null;
+  currentHandle = status.authenticated ? (status.handle ?? null) : null;
 };
 
 const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
   const info = extractPostInfo(postElement);
-  if (!info || currentDid !== info.repo) {
+  if (!info || (currentDid !== info.repo && currentHandle !== info.repo)) {
     return;
   }
 
@@ -170,7 +172,7 @@ const scanForPosts = (): void => {
   }
 
   for (const postInfo of findPosts(document)) {
-    if (postInfo.repo !== currentDid) {
+    if (postInfo.repo !== currentDid && postInfo.repo !== currentHandle) {
       continue;
     }
 
@@ -252,4 +254,5 @@ export const cleanupContentScript = (): void => {
   }
 
   currentDid = null;
+  currentHandle = null;
 };
