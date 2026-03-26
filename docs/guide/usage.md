@@ -27,7 +27,7 @@ OAuth tokens expire. When your session expires, the popup will prompt you to **R
 The editor modal contains:
 
 - A **text area** pre-filled with the full current text of the post.
-- A **character counter** that tracks the 300-character limit.
+- A **character counter** that tracks the 300-grapheme limit.
 - A **Save** button to write the changes back to your Bluesky repository.
 - A **Cancel** button to close without saving.
 
