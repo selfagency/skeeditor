@@ -1,14 +1,24 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { EditModal } from '@src/content/edit-modal';
 
-const createModal = (): EditModal => {
-  const modal = new EditModal();
-  document.body.appendChild(modal.element);
-  return modal;
-};
-
 describe('edit-modal', () => {
+  let modal: EditModal;
+
+  const createModal = (): EditModal => {
+    modal = new EditModal();
+    document.body.appendChild(modal.element);
+    return modal;
+  };
+
+  afterEach(() => {
+    // Remove the window keydown listener registered by initialize() to prevent
+    // cross-test interference when a test does not call modal.close() itself.
+    if (modal?.element?.isConnected) {
+      modal.close();
+    }
+  });
+
   it('should render the initial text and keep save disabled until changes are made', () => {
     const modal = createModal();
 
