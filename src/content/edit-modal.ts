@@ -154,6 +154,56 @@ const EDIT_MODAL_TEMPLATE = `
       font-size: 14px;
     }
 
+    .media-upload {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .upload-button {
+      padding: 8px 16px;
+      background: var(--bsky-color-button-secondary-bg, #f0f0f0);
+      border: 1px solid var(--bsky-color-border, #e5e5e5);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .media-preview {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .media-item {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .media-item img, .media-item video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .remove-media {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
     .status-message.error {
       background: var(--bsky-color-error-bg, #ffe5e5);
       color: var(--bsky-color-error, #ff3b30);
@@ -178,6 +228,11 @@ const EDIT_MODAL_TEMPLATE = `
         <textarea aria-label="Edit post content"></textarea>
       </div>
       <div class="char-count"></div>
+      <div class="media-upload">
+        <input type="file" accept="image/*,video/mp4" multiple style="display: none;">
+        <button class="upload-button" type="button">Add Media</button>
+        <div class="media-preview"></div>
+      </div>
       <div class="status-message" aria-live="polite" style="display: none;"></div>
     </div>
     <div class="footer">
@@ -187,6 +242,7 @@ const EDIT_MODAL_TEMPLATE = `
   </div>
 `;
 
+// Bluesky's post limit is 300 graphemes (user-perceived characters)
 const MAX_POST_LENGTH = 300;
 
 export class EditModal {
@@ -195,6 +251,10 @@ export class EditModal {
   private charCount: HTMLElement | null = null;
   private saveButton: HTMLButtonElement | null = null;
   private statusMessage: HTMLElement | null = null;
+  private uploadButton: HTMLButtonElement | null = null;
+  private fileInput: HTMLInputElement | null = null;
+  private mediaPreview: HTMLElement | null = null;
+  private uploadedMedia: File[] = [];
   private originalText = '';
   private currentText = '';
   private maxLength = MAX_POST_LENGTH;
@@ -207,6 +267,7 @@ export class EditModal {
   private closeBound = this.close.bind(this);
   private handleBackgroundClickBound = this.handleBackgroundClick.bind(this);
   private handleKeydownBound = this.handleKeydown.bind(this);
+  private handleUploadBound = this.handleUpload.bind(this);
 
   public constructor() {
     this.element = document.createElement('edit-modal');
@@ -222,6 +283,9 @@ export class EditModal {
     this.textarea = shadow.querySelector<HTMLTextAreaElement>('textarea');
     this.charCount = shadow.querySelector<HTMLElement>('.char-count');
     this.saveButton = shadow.querySelector<HTMLButtonElement>('.save-button');
+    this.uploadButton = shadow.querySelector<HTMLButtonElement>('.upload-button');
+    this.fileInput = shadow.querySelector<HTMLInputElement>('input[type="file"]');
+    this.mediaPreview = shadow.querySelector<HTMLElement>('.media-preview');
     this.statusMessage = shadow.querySelector<HTMLElement>('.status-message');
 
     if (this.textarea) {
@@ -240,6 +304,14 @@ export class EditModal {
 
     if (this.saveButton) {
       this.saveButton.addEventListener('click', this.handleSaveBound);
+    }
+
+    if (this.uploadButton) {
+      this.uploadButton.addEventListener('click', this.handleUploadBound);
+    }
+
+    if (this.fileInput) {
+      this.fileInput.addEventListener('change', this.handleUploadBound);
     }
   }
 
@@ -422,6 +494,82 @@ export class EditModal {
             : 'An unexpected error occurred while saving the post.';
         this.setError(message);
       });
+    }
+  }
+
+  private handleUpload(event: Event): void {
+    const target = event.target as HTMLInputElement | HTMLButtonElement;
+
+    if (target.tagName === 'BUTTON' && this.fileInput) {
+      // Button click - trigger file input
+      this.fileInput.click();
+      return;
+    }
+
+    if (target.tagName === 'INPUT') {
+      const inputTarget = target as HTMLInputElement;
+      if (inputTarget.files) {
+        // File input change - handle selected files
+        const files = Array.from(inputTarget.files) as File[];
+        this.uploadedMedia = [...this.uploadedMedia, ...files];
+        this.updateMediaPreview();
+        inputTarget.value = ''; // Reset input to allow selecting same file again
+      }
+    }
+  }
+
+  private updateMediaPreview(): void {
+    if (!this.mediaPreview) return;
+
+    this.mediaPreview.innerHTML = '';
+
+    this.uploadedMedia.forEach((file, index) => {
+      const mediaItem = document.createElement('div');
+      mediaItem.className = 'media-item';
+
+      const mediaElement = file.type.startsWith('image/')
+        ? this.createImageElement(file)
+        : this.createVideoElement(file);
+
+      const removeButton = document.createElement('button');
+      removeButton.className = 'remove-media';
+      removeButton.textContent = '×';
+      removeButton.addEventListener('click', () => this.removeMedia(index));
+
+      mediaItem.appendChild(mediaElement);
+      mediaItem.appendChild(removeButton);
+      this.mediaPreview?.appendChild(mediaItem);
+    });
+  }
+
+  private createImageElement(file: File): HTMLImageElement {
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(file);
+    img.alt = file.name;
+    return img;
+  }
+
+  private createVideoElement(file: File): HTMLVideoElement {
+    const video = document.createElement('video');
+    video.src = URL.createObjectURL(file);
+    video.controls = true;
+    video.muted = true;
+    return video;
+  }
+
+  private removeMedia(index: number): void {
+    this.uploadedMedia.splice(index, 1);
+    this.updateMediaPreview();
+  }
+
+  public getUploadedMedia(): File[] {
+    return this.uploadedMedia;
+  }
+
+  public clearMedia(): void {
+    this.uploadedMedia = [];
+    if (this.mediaPreview) {
+      this.mediaPreview.innerHTML = '';
     }
   }
 }

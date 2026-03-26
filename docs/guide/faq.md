@@ -40,7 +40,7 @@ No. skeeditor stores your refresh token and automatically renews it in the backg
 
 ### What is the character limit for edits?
 
-300 characters — same as a new Bluesky post.
+300 graphemes — same as a new Bluesky post. This means the limit is based on user-perceived characters, not code points or bytes.
 
 ### Can I add or remove images and videos?
 
