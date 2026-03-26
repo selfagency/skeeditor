@@ -23,6 +23,16 @@ describe('sendMessage', () => {
     expect(result).toEqual(mockResponse);
   });
 
+  it('forwards GET_SETTINGS and returns the response', async () => {
+    const mockResponse = { editTimeLimit: 5 };
+    vi.mocked(browser.runtime.sendMessage).mockResolvedValueOnce(mockResponse as never);
+
+    const result = await sendMessage({ type: 'GET_SETTINGS' });
+
+    expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({ type: 'GET_SETTINGS' });
+    expect(result).toEqual(mockResponse);
+  });
+
   it('forwards GET_RECORD with the full record payload', async () => {
     const mockResponse = { value: { $type: 'app.bsky.feed.post', text: 'hello' }, cid: 'bafyreiabc' };
     vi.mocked(browser.runtime.sendMessage).mockResolvedValueOnce(mockResponse as never);

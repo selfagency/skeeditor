@@ -19,8 +19,10 @@ import {
   BSKY_OAUTH_REDIRECT_URI,
   BSKY_OAUTH_SCOPE,
   getCurrentPdsUrl,
+  getSettings,
   getOAuthAuthorizeUrl,
   getOAuthTokenUrl,
+  setSettings,
   setCurrentPdsUrl,
 } from '../shared/constants';
 import type {
@@ -137,6 +139,8 @@ const KNOWN_TYPES = new Set([
   'AUTH_REAUTHORIZE',
   'AUTH_GET_STATUS',
   'AUTH_CALLBACK',
+  'GET_SETTINGS',
+  'SET_SETTINGS',
   'GET_RECORD',
   'PUT_RECORD',
   'UPLOAD_BLOB',
@@ -210,6 +214,21 @@ function isUploadBlobPayload(message: unknown): message is { data: Blob | File; 
     'repo' in message &&
     typeof message['repo'] === 'string' &&
     (message['data'] instanceof Blob || message['data'] instanceof File)
+  );
+}
+
+function isValidSettingsPayload(
+  msg: IncomingMessage,
+): msg is IncomingMessage & { settings: { editTimeLimit: number | null } } {
+  const settings = msg['settings'];
+  if (settings === null || typeof settings !== 'object' || Array.isArray(settings)) {
+    return false;
+  }
+
+  const editTimeLimit = (settings as Record<string, unknown>)['editTimeLimit'];
+  return (
+    editTimeLimit === null ||
+    (typeof editTimeLimit === 'number' && Number.isFinite(editTimeLimit) && editTimeLimit >= 0.5 && editTimeLimit <= 5)
   );
 }
 
@@ -346,6 +365,27 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
         return { authenticated: true, did: stored.did, handle: stored.handle, expiresAt: stored.expiresAt };
       }
       return { authenticated: false };
+    }
+
+    case 'GET_SETTINGS': {
+      try {
+        return await getSettings();
+      } catch (error) {
+        return { error: error instanceof Error ? error.message : 'Failed to get settings' };
+      }
+    }
+
+    case 'SET_SETTINGS': {
+      if (!isValidSettingsPayload(message)) {
+        return { error: 'Invalid settings payload' };
+      }
+
+      try {
+        await setSettings(message['settings']);
+        return { ok: true };
+      } catch (error) {
+        return { error: error instanceof Error ? error.message : 'Failed to save settings' };
+      }
     }
 
     case 'GET_RECORD': {

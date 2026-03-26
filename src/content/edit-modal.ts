@@ -61,6 +61,7 @@ export class EditModal {
   private onSave: ((text: string) => void | Promise<void>) | undefined = undefined;
   private previouslyFocused: Element | null = null;
   private isOpen = false;
+  private editingEnabled = true;
   private handleInputBound = this.handleInput.bind(this);
   private handleSaveBound = this.handleSave.bind(this);
   private closeBound = this.close.bind(this);
@@ -128,6 +129,7 @@ export class EditModal {
 
     if (this.textarea) {
       this.textarea.value = text;
+      this.setEditable(true);
       this.updateCharCount();
       this.updateSaveButtonState();
       this.textarea.focus();
@@ -176,6 +178,24 @@ export class EditModal {
     this.showStatusMessage(message, 'success');
   }
 
+  public setEditable(editable: boolean): void {
+    this.editingEnabled = editable;
+
+    if (this.textarea) {
+      this.textarea.disabled = !editable;
+    }
+
+    if (this.uploadButton) {
+      this.uploadButton.disabled = !editable;
+    }
+
+    if (this.fileInput) {
+      this.fileInput.disabled = !editable;
+    }
+
+    this.updateSaveButtonState();
+  }
+
   public markSaved(text: string): void {
     this.originalText = text;
     this.currentText = text;
@@ -218,6 +238,11 @@ export class EditModal {
 
   private updateSaveButtonState(): void {
     if (this.saveButton && this.textarea) {
+      if (!this.editingEnabled) {
+        this.saveButton.disabled = true;
+        return;
+      }
+
       const textChanged = this.textarea.value !== this.originalText;
       const hasMedia = this.uploadedMedia.length > 0;
       this.saveButton.disabled = !textChanged && !hasMedia;

@@ -13,11 +13,11 @@ Implement Phase B edit time limit settings: settings storage/messages/router han
 
 ## Todo
 
-- [ ] Inspect current settings/message/content-script flow
-- [ ] Add settings storage and message types for edit time limit
-- [ ] Implement router handlers for GET_SETTINGS / SET_SETTINGS
-- [ ] Add options UI and persistence for edit time limit
-- [ ] Enforce edit time limit in content script using record.createdAt
-- [ ] Add/update tests for settings and enforcement
-- [ ] Run targeted tests and typecheck
+- [x] Inspect current settings/message/content-script flow
+- [x] Add settings storage and message types for edit time limit
+- [x] Implement router handlers for GET_SETTINGS / SET_SETTINGS
+- [x] Add options UI and persistence for edit time limit
+- [x] Enforce edit time limit in content script using record.createdAt
+- [x] Add/update tests for settings and enforcement
+- [x] Run targeted tests and typecheck
 - [ ] Commit and push PR updates
