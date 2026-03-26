@@ -20,16 +20,16 @@ skeeditor authenticates with the Bluesky PDS via **OAuth 2.0 with PKCE** (Proof 
 
 ## Key modules
 
-| Module | Purpose |
-| ------ | ------- |
-| `src/shared/auth/auth-client.ts` | OAuth PKCE authorization: build auth URL, exchange code for tokens |
-| `src/shared/auth/pkce.ts` | PKCE code verifier/challenge generation, CSRF state |
-| `src/shared/auth/session-store.ts` | Persist/read/clear tokens in `browser.storage.local` |
-| `src/shared/auth/token-refresh.ts` | Token refresh with in-flight deduplication |
-| `src/shared/auth/app-password.ts` | App password authentication (fallback for non-OAuth PDS) |
-| `src/shared/auth/types.ts` | OAuth type definitions |
-| `src/popup/auth-popup.ts` | `<auth-popup>` Web Component for sign-in/sign-out UI |
-| `src/background/message-router.ts` | Routes auth messages, stores PKCE state, validates callbacks |
+| Module                             | Purpose                                                            |
+| ---------------------------------- | ------------------------------------------------------------------ |
+| `src/shared/auth/auth-client.ts`   | OAuth PKCE authorization: build auth URL, exchange code for tokens |
+| `src/shared/auth/pkce.ts`          | PKCE code verifier/challenge generation, CSRF state                |
+| `src/shared/auth/session-store.ts` | Persist/read/clear tokens in `browser.storage.local`               |
+| `src/shared/auth/token-refresh.ts` | Token refresh with in-flight deduplication                         |
+| `src/shared/auth/app-password.ts`  | App password authentication (fallback for non-OAuth PDS)           |
+| `src/shared/auth/types.ts`         | OAuth type definitions                                             |
+| `src/popup/auth-popup.ts`          | `<auth-popup>` Web Component for sign-in/sign-out UI               |
+| `src/background/message-router.ts` | Routes auth messages, stores PKCE state, validates callbacks       |
 
 ---
 

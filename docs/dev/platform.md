@@ -52,11 +52,11 @@ if (platform.isFirefox) {
 
 ### Background execution model
 
-| Browser | Manifest key            | Notes                                           |
-| ------- | ----------------------- | ----------------------------------------------- |
-| Chrome  | `"service_worker": "…"` | Non-persistent, wakes on events                 |
-| Firefox | `"scripts": ["…"]`      | Non-persistent background script                |
-| Safari  | `"service_worker": "…"` | Non-persistent, mirrors Chrome                  |
+| Browser | Manifest key            | Notes                            |
+| ------- | ----------------------- | -------------------------------- |
+| Chrome  | `"service_worker": "…"` | Non-persistent, wakes on events  |
+| Firefox | `"scripts": ["…"]`      | Non-persistent background script |
+| Safari  | `"service_worker": "…"` | Non-persistent, mirrors Chrome   |
 
 **Never store in-memory state between background wake cycles.** Use `browser.storage.local` for any data that must survive the background being unloaded.
 
@@ -132,8 +132,8 @@ To allow unsigned extensions during development: Safari → Settings → Advance
 
 ## Minimum supported versions
 
-| Browser | Minimum version      | Key requirement                       |
-| ------- | -------------------- | ------------------------------------- |
-| Chrome  | 120                  | MV3 service worker stability          |
-| Firefox | 125                  | MV3 + `Intl.Segmenter` support        |
-| Safari  | 17 (macOS 14/Sonoma) | Baseline WebExtensions MV3            |
+| Browser | Minimum version      | Key requirement                |
+| ------- | -------------------- | ------------------------------ |
+| Chrome  | 120                  | MV3 service worker stability   |
+| Firefox | 125                  | MV3 + `Intl.Segmenter` support |
+| Safari  | 17 (macOS 14/Sonoma) | Baseline WebExtensions MV3     |

@@ -2,7 +2,7 @@
 
 > **The edit button Bluesky never gave you. Until now.**
 
-You know the feeling — you hit post, look at it for 0.3 seconds, and spot a typo. Or a bad take that needs a *slightly* less bad take. Bluesky doesn't have an edit button, but that's never stopped us before.
+You know the feeling — you hit post, look at it for 0.3 seconds, and spot a typo. Or a bad take that needs a *slightly* less bad take. Bluesky doesn't have an edit button, but why should that stop us?
 
 **skeeditor** is a cross-browser extension that adds a real, working **✏️ Edit** button to your posts on [bsky.app](https://bsky.app). Click it, fix your regrets, save. Done. No copy-paste gymnastics, no deleting and reposting, no shame spiral.
 
