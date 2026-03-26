@@ -1,6 +1,7 @@
 import tailwindcss from '@tailwindcss/vite';
 import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
+import { ViteImageOptimizer } from 'vite-plugin-image-optimizer';
 
 const projectRoot = process.cwd();
 const sourceRoot = resolve(projectRoot, 'src');
@@ -14,7 +15,7 @@ export default defineConfig({
   base: './',
   publicDir: false,
   root: sourceRoot,
-  plugins: [tailwindcss()],
+  plugins: [tailwindcss(), ViteImageOptimizer()],
   build: {
     emptyOutDir: true,
     outDir: resolve(projectRoot, 'dist'),
