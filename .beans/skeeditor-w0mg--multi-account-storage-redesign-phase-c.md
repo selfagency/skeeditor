@@ -5,7 +5,7 @@ status: completed
 type: feature
 priority: high
 created_at: 2026-03-26T19:19:43Z
-updated_at: 2026-03-26T19:34:00Z
+updated_at: 2026-03-26T19:44:56Z
 ---
 
 
@@ -21,3 +21,4 @@ updated_at: 2026-03-26T19:34:00Z
 - All 285 unit tests + 33 integration tests pass; typecheck clean
 
 Branch: `feat/w0mg-multi-account-storage`
+PR: #54
