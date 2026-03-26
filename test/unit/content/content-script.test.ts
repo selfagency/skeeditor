@@ -239,4 +239,55 @@ describe('content-script', () => {
 
     expect(document.querySelector('edit-modal')).toBeNull();
   });
+
+  it('should block editing when the post is older than the configured edit time limit', async () => {
+    const sendMessage = vi.fn(async request => {
+      if (request.type === 'AUTH_GET_STATUS') {
+        return {
+          authenticated: true,
+          did: 'did:plc:alice123',
+          expiresAt: Date.now() + 60_000,
+        };
+      }
+
+      if (request.type === 'GET_RECORD') {
+        return {
+          value: {
+            $type: 'app.bsky.feed.post',
+            text: 'Hello Bluesky',
+            createdAt: new Date(Date.now() - 10 * 60_000).toISOString(),
+          },
+          cid: 'bafyreitest',
+        };
+      }
+
+      if (request.type === 'GET_SETTINGS') {
+        return { editTimeLimit: 5 };
+      }
+
+      return { ok: true };
+    });
+
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    await import('@src/content/content-script');
+    await flushMicrotasks();
+
+    const editButton = document.querySelector<HTMLButtonElement>('[data-skeeditor-edit-button]');
+    expect(editButton).toBeTruthy();
+    editButton?.click();
+    await flushMicrotasks(4);
+
+    const modal = document.querySelector<HTMLElement>('edit-modal');
+    expect(modal).toBeTruthy();
+
+    const shadowRoot = modal?.shadowRoot;
+    const textarea = shadowRoot?.querySelector<HTMLTextAreaElement>('textarea');
+    const saveButton = shadowRoot?.querySelector<HTMLButtonElement>('.save-button');
+    const statusMessage = shadowRoot?.querySelector<HTMLElement>('.status-message');
+
+    expect(textarea?.disabled).toBe(true);
+    expect(saveButton?.disabled).toBe(true);
+    expect(statusMessage?.textContent).toContain('older than your edit time limit of 5 minutes');
+  });
 });

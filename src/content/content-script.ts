@@ -46,6 +46,27 @@ const refreshAuthState = async (): Promise<void> => {
   currentHandle = status.authenticated ? (status.handle ?? null) : null;
 };
 
+const formatEditTimeLimit = (minutes: number): string => {
+  if (minutes === 0.5) {
+    return '30 seconds';
+  }
+
+  return minutes === 1 ? '1 minute' : `${minutes} minutes`;
+};
+
+const exceedsEditTimeLimit = (createdAt: unknown, editTimeLimit: number | null): boolean => {
+  if (editTimeLimit === null || typeof createdAt !== 'string') {
+    return false;
+  }
+
+  const createdAtMs = Date.parse(createdAt);
+  if (Number.isNaN(createdAtMs)) {
+    return false;
+  }
+
+  return Date.now() - createdAtMs > editTimeLimit * 60_000;
+};
+
 const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
   const info = extractPostInfo(postElement);
   if (!info || (currentDid !== info.repo && currentHandle !== info.repo)) {
@@ -70,6 +91,16 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
 
   const currentRecord = recordResponse.value as EditablePostRecord;
   const initialRecordText = typeof currentRecord.text === 'string' ? currentRecord.text : initialText;
+
+  const settingsResponse = await sendMessage({ type: 'GET_SETTINGS' });
+  const editTimeLimit = 'error' in settingsResponse ? null : settingsResponse.editTimeLimit;
+
+  if (exceedsEditTimeLimit(currentRecord.createdAt, editTimeLimit)) {
+    modal.open(initialRecordText);
+    modal.setEditable(false);
+    modal.setError(`This post is older than your edit time limit of ${formatEditTimeLimit(editTimeLimit!)}.`);
+    return;
+  }
 
   modal.open(initialRecordText, undefined, async text => {
     const uploadedMedia = modal.getUploadedMedia();

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { RouterDeps } from '@src/background/message-router';
 import { createDefaultDeps, handleMessage } from '@src/background/message-router';
+import * as constants from '@src/shared/constants';
 import type { GetRecordResult, PutRecordResult, PutRecordWithSwapResult } from '@src/shared/api/xrpc-client';
 import type { AuthorizationRequest } from '@src/shared/auth/auth-client';
 import type { StoredSession } from '@src/shared/auth/session-store';
@@ -186,6 +187,31 @@ describe('handleMessage', () => {
       expect(vi.mocked(deps.storeAuthState)).toHaveBeenCalledWith(authRequest.state, authRequest.codeVerifier);
       expect(vi.mocked(deps.openTab)).toHaveBeenCalledWith(authRequest.url);
       expect(result).toEqual({ ok: true });
+    });
+  });
+
+  describe('settings', () => {
+    it('returns stored settings for GET_SETTINGS', async () => {
+      vi.spyOn(constants, 'getSettings').mockResolvedValue({ editTimeLimit: 5 });
+
+      const result = await handleMessage({ type: 'GET_SETTINGS' }, makeDeps());
+
+      expect(result).toEqual({ editTimeLimit: 5 });
+    });
+
+    it('persists settings for SET_SETTINGS', async () => {
+      const setSettingsSpy = vi.spyOn(constants, 'setSettings').mockResolvedValue(undefined);
+
+      const result = await handleMessage({ type: 'SET_SETTINGS', settings: { editTimeLimit: 0.5 } }, makeDeps());
+
+      expect(setSettingsSpy).toHaveBeenCalledWith({ editTimeLimit: 0.5 });
+      expect(result).toEqual({ ok: true });
+    });
+
+    it('rejects invalid settings payloads', async () => {
+      const result = await handleMessage({ type: 'SET_SETTINGS', settings: { editTimeLimit: 10 } }, makeDeps());
+
+      expect(result).toEqual({ error: 'Invalid settings payload' });
     });
   });
 

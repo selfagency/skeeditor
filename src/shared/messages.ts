@@ -2,6 +2,7 @@ import browser from 'webextension-polyfill';
 import type { l } from '@atproto/lex';
 
 import type { GetRecordResult, PutRecordConflictDetails, PutRecordWithSwapError } from './api/xrpc-client';
+import type { ExtensionSettings } from './constants';
 
 // ── Auth messages ─────────────────────────────────────────────────────────────
 
@@ -38,6 +39,20 @@ export interface OkResponse {
 }
 
 export type AuthCallbackResponse = OkResponse | { error: string };
+
+// ── Settings messages ─────────────────────────────────────────────────────────
+
+export interface GetSettingsRequest {
+  type: 'GET_SETTINGS';
+}
+
+export interface SetSettingsRequest {
+  type: 'SET_SETTINGS';
+  settings: ExtensionSettings;
+}
+
+export type GetSettingsResponse = ExtensionSettings | { error: string };
+export type SetSettingsResponse = OkResponse | { error: string };
 
 // ── Record messages ───────────────────────────────────────────────────────────
 
@@ -105,6 +120,8 @@ export type MessageRequest =
   | AuthReauthorizeRequest
   | AuthGetStatusRequest
   | AuthCallbackRequest
+  | GetSettingsRequest
+  | SetSettingsRequest
   | GetRecordRequest
   | PutRecordRequest
   | UploadBlobRequest
@@ -131,19 +148,23 @@ export type ResponseFor<T extends MessageRequest> = T extends AuthGetStatusReque
   ? AuthGetStatusResponse
   : T extends AuthCallbackRequest
     ? AuthCallbackResponse
-    : T extends AuthSignInRequest | AuthSignOutRequest | AuthReauthorizeRequest
-      ? OkResponse
-      : T extends GetRecordRequest
-        ? GetRecordResponse
-        : T extends PutRecordRequest
-          ? PutRecordResponse
-          : T extends UploadBlobRequest
-            ? UploadBlobResponse
-            : T extends SetPdsUrlRequest
-              ? SetPdsUrlResponse
-              : T extends GetPdsUrlRequest
-                ? GetPdsUrlResponse
-                : never;
+    : T extends GetSettingsRequest
+      ? GetSettingsResponse
+      : T extends SetSettingsRequest
+        ? SetSettingsResponse
+        : T extends AuthSignInRequest | AuthSignOutRequest | AuthReauthorizeRequest
+          ? OkResponse
+          : T extends GetRecordRequest
+            ? GetRecordResponse
+            : T extends PutRecordRequest
+              ? PutRecordResponse
+              : T extends UploadBlobRequest
+                ? UploadBlobResponse
+                : T extends SetPdsUrlRequest
+                  ? SetPdsUrlResponse
+                  : T extends GetPdsUrlRequest
+                    ? GetPdsUrlResponse
+                    : never;
 
 /**
  * Type-safe wrapper around `browser.runtime.sendMessage`.
