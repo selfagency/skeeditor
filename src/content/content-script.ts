@@ -1,6 +1,6 @@
 import browser from 'webextension-polyfill';
 import { APP_NAME } from '../shared/constants';
-import type { PutRecordConflictResponse, PutRecordResponse } from '../shared/messages';
+import type { AuthListAccountsAccount, PutRecordConflictResponse, PutRecordResponse } from '../shared/messages';
 import { sendMessage } from '../shared/messages';
 import { EditModal } from './edit-modal';
 import { markPostAsEdited } from './post-badges';
@@ -19,6 +19,13 @@ let storageChangeHandler: ((changes: Record<string, browser.Storage.StorageChang
 let scanScheduled = false;
 let scanTimer: ReturnType<typeof setTimeout> | null = null;
 let activeModal: EditModal | null = null;
+
+// ── Phase F: SPA navigation + account auto-switch ─────────────────────────────
+
+let knownAccounts: AuthListAccountsAccount[] = [];
+let originalPushState: typeof history.pushState | null = null;
+let originalReplaceState: typeof history.replaceState | null = null;
+let navigationHandler: (() => void) | null = null;
 
 /** Selectors for the main feed container on bsky.app. */
 const FEED_CONTAINER_SELECTORS = ['[data-testid="feed"]', '[data-testid="feedPage-feed"]', 'main', '[role="main"]'];
@@ -44,6 +51,67 @@ const refreshAuthState = async (): Promise<void> => {
   const status = await sendMessage({ type: 'AUTH_GET_STATUS' });
   currentDid = status.authenticated ? status.did : null;
   currentHandle = status.authenticated ? (status.handle ?? null) : null;
+};
+
+const loadKnownAccounts = async (): Promise<void> => {
+  try {
+    const response = await sendMessage({ type: 'AUTH_LIST_ACCOUNTS' });
+    knownAccounts = response.accounts;
+  } catch {
+    knownAccounts = [];
+  }
+};
+
+/** Extract the profile identifier from a bsky.app-style URL pathname. */
+const extractProfileIdentifier = (url: string): string | null => {
+  const match = /\/profile\/([^/?#]+)/.exec(url);
+  return match?.[1] ?? null;
+};
+
+/**
+ * If the URL points to a profile belonging to a non-active known account,
+ * auto-switch to that account so edit buttons appear without a manual switch.
+ */
+const checkProfileSwitch = async (url: string): Promise<void> => {
+  const identifier = extractProfileIdentifier(url);
+  if (!identifier) return;
+
+  const account = knownAccounts.find(acc => !acc.isActive && (acc.handle === identifier || acc.did === identifier));
+  if (!account) return;
+
+  try {
+    await sendMessage({ type: 'AUTH_SWITCH_ACCOUNT', did: account.did });
+    // Reload account list so isActive flags are up to date.
+    await loadKnownAccounts();
+    await refreshAuthState();
+    removeInjectedElements();
+    scheduleScanForPosts();
+  } catch (err) {
+    console.error(`${APP_NAME}: auto-switch failed`, err);
+  }
+};
+
+const ensureNavigationListeners = (): void => {
+  if (originalPushState !== null) return; // Already installed.
+
+  originalPushState = history.pushState.bind(history);
+  originalReplaceState = history.replaceState.bind(history);
+
+  history.pushState = function (...args: Parameters<typeof history.pushState>): void {
+    originalPushState!(...args);
+    void checkProfileSwitch(location.href);
+  };
+
+  history.replaceState = function (...args: Parameters<typeof history.replaceState>): void {
+    originalReplaceState!(...args);
+    void checkProfileSwitch(location.href);
+  };
+
+  navigationHandler = (): void => {
+    void checkProfileSwitch(location.href);
+  };
+
+  window.addEventListener('popstate', navigationHandler);
 };
 
 const formatEditTimeLimit = (minutes: number): string => {
@@ -296,8 +364,9 @@ const ensureObserver = (): void => {
 const start = (): void => {
   ensureObserver();
   ensureStorageListener();
+  ensureNavigationListeners();
 
-  void refreshAuthState()
+  void Promise.all([refreshAuthState(), loadKnownAccounts()])
     .then(() => {
       scanForPosts();
       document.documentElement.setAttribute('data-skeeditor-initialized', 'true');
@@ -338,8 +407,23 @@ export const cleanupContentScript = (): void => {
     storageChangeHandler = null;
   }
 
+  // Restore patched history methods and remove popstate listener.
+  if (originalPushState !== null) {
+    history.pushState = originalPushState;
+    originalPushState = null;
+  }
+  if (originalReplaceState !== null) {
+    history.replaceState = originalReplaceState;
+    originalReplaceState = null;
+  }
+  if (navigationHandler !== null) {
+    window.removeEventListener('popstate', navigationHandler);
+    navigationHandler = null;
+  }
+
   dismissActiveModal();
 
   currentDid = null;
   currentHandle = null;
+  knownAccounts = [];
 };

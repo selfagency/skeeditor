@@ -240,6 +240,158 @@ describe('content-script', () => {
     expect(document.querySelector('edit-modal')).toBeNull();
   });
 
+  // ── Phase F: auto-switch on profile navigation ────────────────────────────
+
+  it('should load known accounts on startup via AUTH_LIST_ACCOUNTS', async () => {
+    const sendMessage = vi.fn(async request => {
+      if (request.type === 'AUTH_GET_STATUS') return { authenticated: false };
+      if (request.type === 'AUTH_LIST_ACCOUNTS') return { accounts: [] };
+      return { ok: true };
+    });
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    await import('@src/content/content-script');
+    await flushMicrotasks(3);
+
+    expect(sendMessage).toHaveBeenCalledWith({ type: 'AUTH_LIST_ACCOUNTS' });
+  });
+
+  it('should send AUTH_SWITCH_ACCOUNT when navigating to a non-active known account profile', async () => {
+    const sendMessage = vi.fn(async request => {
+      if (request.type === 'AUTH_GET_STATUS')
+        return {
+          authenticated: true,
+          did: 'did:plc:alice123',
+          handle: 'alice.bsky.social',
+          expiresAt: Date.now() + 60_000,
+        };
+      if (request.type === 'AUTH_LIST_ACCOUNTS')
+        return {
+          accounts: [
+            { did: 'did:plc:alice123', handle: 'alice.bsky.social', expiresAt: Date.now() + 60_000, isActive: true },
+            { did: 'did:plc:bob456', handle: 'bob.bsky.social', expiresAt: Date.now() + 60_000, isActive: false },
+          ],
+        };
+      return { ok: true };
+    });
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    await import('@src/content/content-script');
+    await flushMicrotasks(3);
+
+    history.pushState({}, '', '/profile/bob.bsky.social');
+    await flushMicrotasks(3);
+
+    expect(sendMessage).toHaveBeenCalledWith({ type: 'AUTH_SWITCH_ACCOUNT', did: 'did:plc:bob456' });
+  });
+
+  it('should match by DID as well as handle when auto-switching', async () => {
+    const sendMessage = vi.fn(async request => {
+      if (request.type === 'AUTH_GET_STATUS')
+        return { authenticated: true, did: 'did:plc:alice123', expiresAt: Date.now() + 60_000 };
+      if (request.type === 'AUTH_LIST_ACCOUNTS')
+        return {
+          accounts: [
+            { did: 'did:plc:alice123', expiresAt: Date.now() + 60_000, isActive: true },
+            { did: 'did:plc:bob456', expiresAt: Date.now() + 60_000, isActive: false },
+          ],
+        };
+      return { ok: true };
+    });
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    await import('@src/content/content-script');
+    await flushMicrotasks(3);
+
+    history.pushState({}, '', '/profile/did:plc:bob456');
+    await flushMicrotasks(3);
+
+    expect(sendMessage).toHaveBeenCalledWith({ type: 'AUTH_SWITCH_ACCOUNT', did: 'did:plc:bob456' });
+  });
+
+  it('should not send AUTH_SWITCH_ACCOUNT when navigating to the already-active account', async () => {
+    const sendMessage = vi.fn(async request => {
+      if (request.type === 'AUTH_GET_STATUS')
+        return {
+          authenticated: true,
+          did: 'did:plc:alice123',
+          handle: 'alice.bsky.social',
+          expiresAt: Date.now() + 60_000,
+        };
+      if (request.type === 'AUTH_LIST_ACCOUNTS')
+        return {
+          accounts: [
+            { did: 'did:plc:alice123', handle: 'alice.bsky.social', expiresAt: Date.now() + 60_000, isActive: true },
+          ],
+        };
+      return { ok: true };
+    });
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    await import('@src/content/content-script');
+    await flushMicrotasks(3);
+
+    history.pushState({}, '', '/profile/alice.bsky.social');
+    await flushMicrotasks(3);
+
+    expect(sendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'AUTH_SWITCH_ACCOUNT' }));
+  });
+
+  it('should not send AUTH_SWITCH_ACCOUNT for non-profile URLs', async () => {
+    const sendMessage = vi.fn(async request => {
+      if (request.type === 'AUTH_GET_STATUS')
+        return { authenticated: true, did: 'did:plc:alice123', expiresAt: Date.now() + 60_000 };
+      if (request.type === 'AUTH_LIST_ACCOUNTS')
+        return {
+          accounts: [
+            { did: 'did:plc:alice123', expiresAt: Date.now() + 60_000, isActive: true },
+            { did: 'did:plc:bob456', expiresAt: Date.now() + 60_000, isActive: false },
+          ],
+        };
+      return { ok: true };
+    });
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    await import('@src/content/content-script');
+    await flushMicrotasks(3);
+
+    history.pushState({}, '', '/');
+    await flushMicrotasks(3);
+
+    expect(sendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'AUTH_SWITCH_ACCOUNT' }));
+  });
+
+  it('should trigger auto-switch on popstate (browser back/forward)', async () => {
+    const sendMessage = vi.fn(async request => {
+      if (request.type === 'AUTH_GET_STATUS')
+        return {
+          authenticated: true,
+          did: 'did:plc:alice123',
+          handle: 'alice.bsky.social',
+          expiresAt: Date.now() + 60_000,
+        };
+      if (request.type === 'AUTH_LIST_ACCOUNTS')
+        return {
+          accounts: [
+            { did: 'did:plc:alice123', handle: 'alice.bsky.social', expiresAt: Date.now() + 60_000, isActive: true },
+            { did: 'did:plc:bob456', handle: 'bob.bsky.social', expiresAt: Date.now() + 60_000, isActive: false },
+          ],
+        };
+      return { ok: true };
+    });
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    await import('@src/content/content-script');
+    await flushMicrotasks(3);
+
+    // Simulate the URL having changed before popstate fires (as browsers do)
+    history.pushState({}, '', '/profile/bob.bsky.social');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    await flushMicrotasks(3);
+
+    expect(sendMessage).toHaveBeenCalledWith({ type: 'AUTH_SWITCH_ACCOUNT', did: 'did:plc:bob456' });
+  });
+
   it('should block editing when the post is older than the configured edit time limit', async () => {
     const sendMessage = vi.fn(async request => {
       if (request.type === 'AUTH_GET_STATUS') {
