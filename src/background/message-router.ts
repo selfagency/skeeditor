@@ -493,10 +493,18 @@ export function registerMessageRouter(deps: RouterDeps = createDefaultDeps()): (
   // a filter argument is provided, so we rely on manual filtering inside the callback instead.
   const callbackUrl = new URL(BSKY_OAUTH_REDIRECT_URI);
 
-  const tabListener = (tabId: number, changeInfo: { status?: string; url?: string }, tab: { url?: string }): void => {
-    // Prefer changeInfo.url (set exactly when the URL changes) over tab.url
-    const urlString = changeInfo.url ?? (changeInfo.status === 'loading' ? tab.url : undefined);
+  // Track tabs already being handled to prevent double token exchange.
+  // tabs.onUpdated can fire multiple times for the same navigation (once when
+  // changeInfo.url is set, and again on status changes with the same tab.url).
+  const handledTabs = new Set<number>();
+
+  const tabListener = (tabId: number, changeInfo: { status?: string; url?: string }): void => {
+    // Only act when the URL itself changes — ignore status-only updates.
+    const urlString = changeInfo.url;
     if (!urlString) return;
+
+    // Dedup: ignore if we already started handling this tab's callback.
+    if (handledTabs.has(tabId)) return;
 
     let url: URL;
     try {
@@ -512,7 +520,9 @@ export function registerMessageRouter(deps: RouterDeps = createDefaultDeps()): (
 
     if (!code || !state) return;
 
+    handledTabs.add(tabId);
     void handleMessage({ type: 'AUTH_CALLBACK', code, state }, deps).then(() => {
+      handledTabs.delete(tabId);
       void browser.tabs.remove(tabId);
     });
   };
