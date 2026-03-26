@@ -1,3 +1,5 @@
+import browser from 'webextension-polyfill';
+
 /** Token session data persisted in browser.storage.local */
 export interface StoredSession {
   /** OAuth access token */
