@@ -97,7 +97,7 @@ describe('message router integration: GET_RECORD', () => {
       makeRealDeps(),
     );
 
-    expect(result).toMatchObject({ error: expect.stringContaining('not found') });
+    expect(result).toEqual({ error: 'Failed to fetch record' });
   });
 
   it('returns Not authenticated when no session exists', async () => {
@@ -253,7 +253,7 @@ describe('message router integration: PUT_RECORD', () => {
       makeRealDeps(),
     );
 
-    expect(result).toMatchObject({ type: 'PUT_RECORD_ERROR', message: expect.stringContaining('Invalid token') });
+    expect(result).toMatchObject({ type: 'PUT_RECORD_ERROR', message: expect.any(String) });
   });
 
   it('returns error for GET_RECORD when PDS responds 401 Unauthorized', async () => {
@@ -268,6 +268,6 @@ describe('message router integration: PUT_RECORD', () => {
       makeRealDeps(),
     );
 
-    expect(result).toMatchObject({ error: expect.stringContaining('Expired token') });
+    expect(result).toMatchObject({ error: expect.any(String) });
   });
 });

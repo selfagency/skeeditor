@@ -13,12 +13,15 @@ interface BrowserTabsMock {
   create: (options: { url: string }) => Promise<{ id: number }>;
 }
 
+interface BrowserStorageAreaMock {
+  get: (key: string) => Promise<Record<string, unknown>>;
+  remove: (key: string) => Promise<void>;
+  set: (value: Record<string, unknown>) => Promise<void>;
+}
+
 interface BrowserStorageMock {
-  local: {
-    get: (key: string) => Promise<Record<string, unknown>>;
-    remove: (key: string) => Promise<void>;
-    set: (value: Record<string, unknown>) => Promise<void>;
-  };
+  local: BrowserStorageAreaMock;
+  session: BrowserStorageAreaMock;
 }
 
 interface BrowserApiMock {
@@ -59,6 +62,11 @@ const createBrowserApiMock = (): BrowserApiMock => {
           Object.assign(store, value);
           return Promise.resolve();
         }),
+      },
+      session: {
+        get: vi.fn().mockResolvedValue({}),
+        remove: vi.fn().mockResolvedValue(undefined),
+        set: vi.fn().mockResolvedValue(undefined),
       },
     },
     tabs: {

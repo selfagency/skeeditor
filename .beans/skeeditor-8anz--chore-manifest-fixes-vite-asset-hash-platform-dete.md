@@ -36,3 +36,5 @@ All 7 build/config items implemented:
 7. Documented the 30-second refresh buffer in session-store.ts
 
 branch: chore/8anz-manifest-vite-config-fixes
+
+267 unit/integration tests pass, tsc clean.

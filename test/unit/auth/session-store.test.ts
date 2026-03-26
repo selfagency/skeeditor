@@ -42,6 +42,36 @@ describe('sessionStore.get', () => {
 
     expect(result).toBeNull();
   });
+
+  it('should return null when stored data is missing required fields', async () => {
+    vi.mocked(browser.storage.local.get).mockResolvedValueOnce({
+      session: { accessToken: 'at_token', refreshToken: 'rt_token' },
+    } as never);
+
+    const result = await sessionStore.get();
+
+    expect(result).toBeNull();
+  });
+
+  it('should return null when stored data has wrong types', async () => {
+    vi.mocked(browser.storage.local.get).mockResolvedValueOnce({
+      session: { accessToken: 123, refreshToken: 'rt', expiresAt: 'not-a-number', scope: 'x', did: 'did:plc:a' },
+    } as never);
+
+    const result = await sessionStore.get();
+
+    expect(result).toBeNull();
+  });
+
+  it('should return null when stored data is a string instead of an object', async () => {
+    vi.mocked(browser.storage.local.get).mockResolvedValueOnce({
+      session: 'corrupted-string',
+    } as never);
+
+    const result = await sessionStore.get();
+
+    expect(result).toBeNull();
+  });
 });
 
 describe('sessionStore.clear', () => {
