@@ -204,23 +204,32 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
         if (!isNonEmptyString(tokens.access_token)) {
           return { error: 'Invalid token response from authorization server: missing access token' };
         }
-        if (!isNonEmptyString(tokens.sub) || !tokens.sub.startsWith('did:')) {
+        if (!isNonEmptyString(tokens.sub) || !/^did:[a-z]+:.+$/u.test(tokens.sub)) {
           return { error: 'Invalid token response from authorization server: missing or invalid subject DID' };
         }
         if (!isNonEmptyString(tokens.refresh_token)) {
           return { error: 'Invalid token response from authorization server: missing refresh token' };
         }
+        const now = Date.now();
+        const expiresInSeconds =
+          typeof tokens.expires_in === 'number' &&
+          Number.isFinite(tokens.expires_in) &&
+          tokens.expires_in > 0 &&
+          tokens.expires_in <= 86_400
+            ? tokens.expires_in
+            : 3_600;
         const session: StoredSession = {
           accessToken: tokens.access_token,
           refreshToken: tokens.refresh_token,
-          expiresAt: tokens.expires_in !== undefined ? Date.now() + tokens.expires_in * 1000 : Date.now() + 3_600_000,
+          expiresAt: now + expiresInSeconds * 1000,
           scope: tokens.scope ?? BSKY_OAUTH_SCOPE,
           did: tokens.sub,
         };
         await deps.store.set(session);
         return { ok: true };
       } catch (err) {
-        return { error: err instanceof Error ? err.message : 'Token exchange failed' };
+        console.error('[AUTH_CALLBACK] token exchange failed:', err);
+        return { error: 'Token exchange failed' };
       } finally {
         await deps.clearAuthState();
       }
