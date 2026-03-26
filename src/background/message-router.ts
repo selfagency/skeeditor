@@ -1,6 +1,8 @@
 import browser from 'webextension-polyfill';
 import type { l } from '@atproto/lex';
 
+import { detectPlatform } from '../platform/detect';
+
 import type {
   GetRecordResult,
   PutRecordResult,
@@ -470,11 +472,13 @@ export function registerMessageRouter(deps: RouterDeps = createDefaultDeps()): (
   // This is required because the redirect target is a web-hosted page (not a bundled extension page),
   // so `window.opener.postMessage` is not available from the service worker context.
   //
-  // The `urls` filter is essential in MV3: it tells Chrome to wake the service worker specifically
-  // for navigations matching this pattern, avoiding the race where the SW is asleep when the
-  // redirect arrives. Without it, the event may fire before the SW has registered its listener.
+  // The `urls` filter tells Chrome to wake the service worker specifically for navigations
+  // matching this pattern, avoiding the race where the SW is asleep when the redirect arrives.
+  // Firefox does not support this filter on tabs.onUpdated — pass undefined there instead,
+  // relying on the URL check inside the listener to filter events.
   const callbackUrl = new URL(BSKY_OAUTH_REDIRECT_URI);
   const callbackMatchPattern = `${callbackUrl.origin}${callbackUrl.pathname}*`;
+  const { isFirefox } = detectPlatform();
 
   const tabListener = (
     tabId: number,
@@ -504,8 +508,9 @@ export function registerMessageRouter(deps: RouterDeps = createDefaultDeps()): (
     });
   };
 
+  const tabFilter = isFirefox ? undefined : { urls: [callbackMatchPattern] };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  browser.tabs.onUpdated.addListener(tabListener as any, { urls: [callbackMatchPattern] } as any);
+  browser.tabs.onUpdated.addListener(tabListener as any, tabFilter as any);
 
   return () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
