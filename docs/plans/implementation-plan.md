@@ -183,7 +183,7 @@ skeeditor/
 ├── tsconfig.build.json
 ├── package.json
 ├── pnpm-workspace.yaml              # Workspace definitions for the monorepo
-├── turbo.json                       # Task pipeline orchestration for builds/tests/linting
+├── # Task orchestration handled by pnpm workspaces
 ├── .oxlintrc.json                   # Oxlint configuration
 ├── .oxfmtrc.json                    # Oxfmt configuration
 └── README.md
@@ -271,7 +271,7 @@ Dependencies listed below are mirrored in Beans through `blocked-by` relationshi
 
 - **Language**: TypeScript (strict) — type safety for AT Protocol records, facet byte math, and cross-browser APIs.
 - **Bundler**: Vite — fast builds, multi-entry support, and a strong extension ecosystem.
-- **Monorepo manager**: `pnpm workspaces` + `turbo` — shared dependency management and task orchestration across packages/apps in the extension monorepo.
+- **Monorepo manager**: `pnpm workspaces` — shared dependency management and task orchestration
 - **Test runner**: Vitest (unit & integration) — fast native ESM/TS support compatible with Vite config.
 - **E2E framework**: Playwright — native extension loading support for Chrome + Firefox while Vitest covers unit and integration tests.
 - **Linting**: `oxlint` — fast linting with TypeScript-aware rules for the repository's JS/TS workflow.

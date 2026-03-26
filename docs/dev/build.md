@@ -4,7 +4,7 @@
 
 skeeditor uses [Vite](https://vite.dev/) as its bundler with a custom build script (`scripts/build.ts`) that orchestrates manifest merging, lexicon generation, and per-browser output.
 
-[Turborepo](https://turbo.build/repo) (`turbo.json`) provides task caching for the monorepo if workspace packages are added in the future.
+Using `pnpm workspaces` directly for dependency management and task orchestration.
 
 ---
 
