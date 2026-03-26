@@ -11,8 +11,8 @@ parent: skeeditor-pjwz
 
 Build config, manifest, and code quality fixes from the codebase audit:
 
-1. **Missing `minimum_chrome_version`** — `manifests/chrome/manifest.json` should declare `\"minimum_chrome_version\": \"88\"` (MV3 baseline).
-2. **`incognito` mode unspecified** — `manifests/base.json` should explicitly declare `\"incognito\": \"not_allowed\"` or `\"spanning\"`.
+1. **Missing `minimum_chrome_version`** — `manifests/chrome/manifest.json` should declare `"minimum_chrome_version": "88"` (MV3 baseline).
+2. **`incognito` mode unspecified** — `manifests/base.json` should explicitly declare `"incognito": "not_allowed"` or `"spanning"`.
 3. **Vite asset names have no hash** — `vite.config.ts` `assetFileNames` pattern lacks `[hash]`, so cached assets won't bust on update.
 4. **Safari service worker undocumented** — `manifests/safari/manifest.json` should note Safari 15.4+ requirement in a comment or README.
 5. **`AppPasswordAuthError` naming** — `src/shared/auth/app-password.ts` error class name is inconsistent with the `<Module>Error` convention; rename to `AppPasswordError`.
@@ -21,7 +21,7 @@ Build config, manifest, and code quality fixes from the codebase audit:
 
 ## Todo
 
-- [x] Add `minimum_chrome_version: \"88\"` to `manifests/chrome/manifest.json`
+- [x] Add `minimum_chrome_version: "88"` to `manifests/chrome/manifest.json`
 - [x] Add explicit `incognito` mode to `manifests/base.json`
 - [x] Add `[hash]` to `assetFileNames` in `vite.config.ts`
 - [x] Add Safari 15.4+ note to `docs/platform.md`
@@ -33,8 +33,8 @@ Build config, manifest, and code quality fixes from the codebase audit:
 
 ## Summary of Changes
 
-- `manifests/chrome/manifest.json`: added `minimum_chrome_version: \"88\"`
-- `manifests/base.json`: added `incognito: \"not_allowed\"`
+- `manifests/chrome/manifest.json`: added `minimum_chrome_version: "88"`
+- `manifests/base.json`: added `incognito: "not_allowed"`
 - `vite.config.ts` + `scripts/build.ts`: `assetFileNames` now includes `[hash]` for cache busting
 - `docs/platform.md`: added Safari 15.4+ requirement note in Safari section
 - `src/shared/auth/app-password.ts`: renamed class to `AppPasswordError`, kept deprecated re-export for backwards compat
