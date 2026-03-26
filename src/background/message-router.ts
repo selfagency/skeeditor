@@ -47,10 +47,7 @@ interface XrpcInterface {
     swapRecord: string;
     validate?: boolean;
   }) => Promise<PutRecordWithSwapResult>;
-  uploadBlob: (params: {
-    data: Blob | File;
-    repo: string;
-  }) => Promise<{ blobRef: l.BlobRef; mimeType: string }>;
+  uploadBlob: (params: { data: Blob | File; repo: string }) => Promise<{ blobRef: l.BlobRef; mimeType: string }>;
 }
 
 interface StoreInterface {

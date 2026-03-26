@@ -88,12 +88,14 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
         if (updatedRecord.embed && 'images' in updatedRecord.embed) {
           updatedRecord.embed.images = updatedRecord.embed.images.map((image, index) => {
             const result = uploadResults[index];
-            if (!result || 'error' in result) throw new Error(result && 'error' in result ? result.error : 'Upload failed');
+            if (!result || 'error' in result)
+              throw new Error(result && 'error' in result ? result.error : 'Upload failed');
             return { ...image, image: result.blobRef };
           });
         } else if (updatedRecord.embed && 'video' in updatedRecord.embed) {
           const result = uploadResults[0];
-          if (!result || 'error' in result) throw new Error(result && 'error' in result ? result.error : 'Upload failed');
+          if (!result || 'error' in result)
+            throw new Error(result && 'error' in result ? result.error : 'Upload failed');
           updatedRecord.embed.video = result.blobRef;
         }
       } catch (error) {
