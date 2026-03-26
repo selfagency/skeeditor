@@ -92,7 +92,7 @@ detection** to identify the current browser — never `navigator.userAgent`.
 Example:
 
 ```ts
-import { platform } from '@src/platform';
+import { platform } from "@src/platform";
 
 if (platform.isFirefox) {
   // Firefox-specific path

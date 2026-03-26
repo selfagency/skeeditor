@@ -165,9 +165,10 @@ async function listAll(): Promise<{ accounts: AccountSummary[]; activeDid: strin
   const result = await browser.storage.local.get([SESSIONS_KEY, ACTIVE_DID_KEY]);
   const raw = result as Record<string, unknown>;
   const sessions = raw[SESSIONS_KEY];
-  const activeDid = typeof raw[ACTIVE_DID_KEY] === 'string' && (raw[ACTIVE_DID_KEY] as string).length > 0
-    ? (raw[ACTIVE_DID_KEY] as string)
-    : null;
+  const activeDid =
+    typeof raw[ACTIVE_DID_KEY] === 'string' && (raw[ACTIVE_DID_KEY] as string).length > 0
+      ? (raw[ACTIVE_DID_KEY] as string)
+      : null;
 
   if (sessions === null || typeof sessions !== 'object') {
     return { accounts: [], activeDid };

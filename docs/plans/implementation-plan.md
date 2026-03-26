@@ -61,25 +61,25 @@ at://<did>/app.bsky.feed.post/<rkey>
 ### Using `@atproto/lex` SDK
 
 ```typescript
-import { Client } from '@atproto/lex'
-import * as Post from './lexicons/app/bsky/feed/post'
+import { Client } from "@atproto/lex";
+import * as Post from "./lexicons/app/bsky/feed/post";
 
 // Read
-const { value, cid } = await client.get(Post, { rkey })
+const { value, cid } = await client.get(Post, { rkey });
 
 // Modify
 const updatedRecord = Post.$build({
   ...value,
   text: newText,
   facets: recalculatedFacets,
-})
+});
 
 // Write
 await client.put(Post, {
   rkey,
   swapRecord: cid,
   record: updatedRecord,
-})
+});
 ```
 
 ---
