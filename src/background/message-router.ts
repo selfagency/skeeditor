@@ -419,7 +419,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
 export function createDefaultDeps(): RouterDeps {
   return {
     store: sessionStore,
-    redirectUri: browser.runtime.getURL('callback.html'),
+    redirectUri: BSKY_OAUTH_REDIRECT_URI,
     openTab: async (url: string): Promise<void> => {
       await browser.tabs.create({ url });
     },
@@ -465,8 +465,40 @@ export function registerMessageRouter(deps: RouterDeps = createDefaultDeps()): (
   const listener = (message: unknown): Promise<unknown> => handleMessage(message, deps);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   browser.runtime.onMessage.addListener(listener as any);
+
+  // Intercept the OAuth callback by watching for tab navigations to the registered redirect URI.
+  // This is required because the redirect target is a web-hosted page (not a bundled extension page),
+  // so `window.opener.postMessage` is not available from the service worker context.
+  const callbackUrl = new URL(BSKY_OAUTH_REDIRECT_URI);
+  const tabListener = (tabId: number, changeInfo: { status?: string }, tab: { url?: string }): void => {
+    if (changeInfo.status !== 'loading' || !tab.url) return;
+
+    let url: URL;
+    try {
+      url = new URL(tab.url);
+    } catch {
+      return;
+    }
+
+    if (url.origin !== callbackUrl.origin || url.pathname !== callbackUrl.pathname) return;
+
+    const code = url.searchParams.get('code');
+    const state = url.searchParams.get('state');
+
+    if (!code || !state) return;
+
+    void handleMessage({ type: 'AUTH_CALLBACK', code, state }, deps).then(() => {
+      void browser.tabs.remove(tabId);
+    });
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  browser.tabs.onUpdated.addListener(tabListener as any);
+
   return () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     browser.runtime.onMessage.removeListener(listener as any);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    browser.tabs.onUpdated.removeListener(tabListener as any);
   };
 }
