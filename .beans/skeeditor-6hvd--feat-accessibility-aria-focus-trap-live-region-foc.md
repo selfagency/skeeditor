@@ -9,6 +9,7 @@ updated_at: 2026-03-25T23:14:34Z
 parent: skeeditor-pjwz
 blocked_by:
     - skeeditor-z761
+branch: feat/6hvd-accessibility-aria-focus-trap
 ---
 
 ## Todo
@@ -28,5 +29,3 @@ Added comprehensive WCAG 2.2 Level AA accessibility support to the edit modal:
 - **Focus trap**: Tab and Shift+Tab cycle through focusable elements (close button, textarea, cancel button, save button) within the shadow DOM, preventing focus from escaping the modal.
 - **Focus restoration**: The previously focused element is saved before modal opens and restored when the modal closes.
 - **Tests**: 7 new unit tests covering all accessibility features.
-
-branch: feat/6hvd-accessibility-aria-focus-trap

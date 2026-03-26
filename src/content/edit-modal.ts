@@ -199,6 +199,7 @@ export class EditModal {
   private onCancel: (() => void) | undefined = undefined;
   private onSave: ((text: string) => void | Promise<void>) | undefined = undefined;
   private previouslyFocused: Element | null = null;
+  private isOpen = false;
   private handleInputBound = this.handleInput.bind(this);
   private handleSaveBound = this.handleSave.bind(this);
   private closeBound = this.close.bind(this);
@@ -238,9 +239,6 @@ export class EditModal {
     if (this.saveButton) {
       this.saveButton.addEventListener('click', this.handleSaveBound);
     }
-
-    this.element.addEventListener('click', this.handleBackgroundClickBound);
-    window.addEventListener('keydown', this.handleKeydownBound);
   }
 
   public open(text: string, onCancel?: () => void, onSave?: (text: string) => void | Promise<void>): void {
@@ -265,6 +263,9 @@ export class EditModal {
     this.hideStatusMessage();
 
     this.element.style.display = 'flex';
+    this.isOpen = true;
+    this.element.addEventListener('click', this.handleBackgroundClickBound);
+    window.addEventListener('keydown', this.handleKeydownBound);
   }
 
   public close(): void {
@@ -274,6 +275,7 @@ export class EditModal {
     }
     window.removeEventListener('keydown', this.handleKeydownBound);
     this.element.removeEventListener('click', this.handleBackgroundClickBound);
+    this.isOpen = false;
 
     if (this.previouslyFocused instanceof HTMLElement) {
       this.previouslyFocused.focus();
@@ -359,6 +361,7 @@ export class EditModal {
   }
 
   private handleKeydown(event: KeyboardEvent): void {
+    if (!this.isOpen) return;
     if (event.key === 'Escape') {
       this.close();
     } else if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
