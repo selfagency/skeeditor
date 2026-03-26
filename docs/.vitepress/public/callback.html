@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>skeeditor - OAuth Callback</title>
+  <script>
+    // Parse the URL parameters
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    const state = params.get('state');
+
+    // Send the authorization code back to the extension
+    if (code && state) {
+      // This will communicate with your extension
+      window.opener.postMessage({
+        type: 'AUTH_CALLBACK',
+        code: code,
+        state: state
+      }, '*');
+      window.close();
+    } else {
+      document.body.innerHTML = '<h1>Error: Missing authorization code</h1>';
+    }
+  </script>
+</head>
+
+<body>
+  <h1>Authentication complete. You can close this window.</h1>
+</body>
+
+</html>
