@@ -51,7 +51,7 @@ Never submit a PR without tests covering the changed behaviour. Bug fixes must i
 
 [Conventional Commits](https://www.conventionalcommits.org/):
 
-```
+```text
 <type>(<scope>): <description>
 
 [optional body]

@@ -64,7 +64,7 @@
     "msw": "^2.12.14",
     "oxfmt": "^0.42.0",
     "oxlint": "^1.57.0",
-    "oxlint-tsgolint": "^0.17.3",
+    "oxlint-tsgolint": "^0.17.4",
     "tsx": "^4.21.0",
     "turbo": "^2.8.20",
     "typescript": "6.0.2",
