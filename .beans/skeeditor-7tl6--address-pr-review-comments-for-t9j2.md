@@ -13,8 +13,8 @@ Address PR feedback on t9j2: ensure sign-out cleanup removes active edit modal, 
 
 ## Todo
 
-- [ ] Add sign-out cleanup for active edit modal in content script
-- [ ] Update content-script storage-change test to use fake timers (no wall-clock wait)
-- [ ] Ensure message-router tests restore mocked fetch between tests
-- [ ] Run targeted unit tests for modified files
+- [x] Add sign-out cleanup for active edit modal in content script
+- [x] Update content-script storage-change test to use fake timers (no wall-clock wait)
+- [x] Ensure message-router tests restore mocked fetch between tests
+- [x] Run targeted unit tests for modified files
 - [ ] Commit and push PR updates

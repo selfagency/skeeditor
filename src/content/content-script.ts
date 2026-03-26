@@ -211,6 +211,13 @@ const removeInjectedElements = (): void => {
   });
 };
 
+const dismissActiveModal = (): void => {
+  if (activeModal !== null) {
+    activeModal.close();
+    activeModal = null;
+  }
+};
+
 const ensureStorageListener = (): void => {
   if (storageChangeHandler !== null) {
     return;
@@ -225,6 +232,7 @@ const ensureStorageListener = (): void => {
       // Session cleared — signed out. Remove edit buttons immediately.
       currentDid = null;
       currentHandle = null;
+      dismissActiveModal();
       removeInjectedElements();
     } else {
       // Session updated (new login or token refresh) — re-check auth and re-scan.
@@ -294,6 +302,8 @@ export const cleanupContentScript = (): void => {
     browser.storage.onChanged.removeListener(storageChangeHandler);
     storageChangeHandler = null;
   }
+
+  dismissActiveModal();
 
   currentDid = null;
   currentHandle = null;

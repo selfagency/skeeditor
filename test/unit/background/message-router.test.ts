@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { RouterDeps } from '@src/background/message-router';
 import { createDefaultDeps, handleMessage } from '@src/background/message-router';
@@ -74,6 +74,10 @@ const makeDeps = (overrides: Partial<RouterDeps> = {}): RouterDeps => ({
     sub: 'did:plc:testuser',
   }),
   ...overrides,
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe('handleMessage', () => {
