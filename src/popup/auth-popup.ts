@@ -1,3 +1,5 @@
+import browser from 'webextension-polyfill';
+
 import globalStyles from '../shadow-styles.css?inline';
 import type { AuthListAccountsAccount } from '../shared/messages';
 import { sendMessage } from '../shared/messages';
@@ -26,10 +28,20 @@ class AuthPopup extends HTMLElement {
   }
 
   private async loadAccounts(): Promise<void> {
-    const response = await sendMessage({ type: 'AUTH_LIST_ACCOUNTS' });
-    this.accounts = response.accounts;
-    this.state = this.accounts.length > 0 ? 'authenticated' : 'unauthenticated';
-    this.render();
+    try {
+      const response = await sendMessage({ type: 'AUTH_LIST_ACCOUNTS' });
+      this.accounts = response.accounts;
+      this.state = this.accounts.length > 0 ? 'authenticated' : 'unauthenticated';
+    } catch (error) {
+      // Ensure the popup does not stay stuck in the loading state if background
+      // messaging fails (e.g., service worker not yet ready). Fall back to the
+      // unauthenticated state so the UI remains usable.
+      console.error('Failed to load accounts', error);
+      this.accounts = [];
+      this.state = 'unauthenticated';
+    } finally {
+      this.render();
+    }
   }
 
   private render(): void {
@@ -110,6 +122,15 @@ class AuthPopup extends HTMLElement {
               class="flex w-full justify-center rounded-md bg-white px-3 py-1.5 text-sm/6 font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20">
               Add another account
             </button>
+            <div class="border-t border-gray-200 pt-3 dark:border-white/10">
+              <button id="open-settings" type="button"
+                class="flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M6.955 1.45A.5.5 0 0 1 7.452 1h1.096a.5.5 0 0 1 .497.45l.17 1.699c.484.12.94.312 1.356.562l1.38-.966a.5.5 0 0 1 .633.062l.775.775a.5.5 0 0 1 .062.633l-.966 1.38c.25.417.441.872.562 1.356l1.699.17a.5.5 0 0 1 .45.497v1.096a.5.5 0 0 1-.45.497l-1.699.17c-.12.484-.312.94-.562 1.356l.966 1.38a.5.5 0 0 1-.062.633l-.775.775a.5.5 0 0 1-.633.062l-1.38-.966c-.417.25-.872.441-1.356.562l-.17 1.699a.5.5 0 0 1-.497.45H7.452a.5.5 0 0 1-.497-.45l-.17-1.699a5.002 5.002 0 0 1-1.356-.562l-1.38.966a.5.5 0 0 1-.633-.062l-.775-.775a.5.5 0 0 1-.062-.633l.966-1.38a5.002 5.002 0 0 1-.562-1.356l-1.699-.17A.5.5 0 0 1 1 8.548V7.452a.5.5 0 0 1 .45-.497l1.699-.17c.12-.484.312-.94.562-1.356l-.966-1.38a.5.5 0 0 1 .062-.633l.775-.775a.5.5 0 0 1 .633-.062l1.38.966c.417-.25.872-.441 1.356-.562l.17-1.699ZM8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" clip-rule="evenodd" />
+                </svg>
+                Settings
+              </button>
+            </div>
           </div>`;
       }
     }
@@ -130,6 +151,10 @@ class AuthPopup extends HTMLElement {
 
     this.shadow.getElementById('reauthorize')?.addEventListener('click', () => {
       void sendMessage({ type: 'AUTH_REAUTHORIZE' });
+    });
+
+    this.shadow.getElementById('open-settings')?.addEventListener('click', () => {
+      void browser.runtime.openOptionsPage();
     });
 
     this.shadow.querySelectorAll<HTMLButtonElement>('.account-switch').forEach(btn => {

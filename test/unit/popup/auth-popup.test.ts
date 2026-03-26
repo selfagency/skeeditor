@@ -43,6 +43,16 @@ describe('auth-popup Web Component', () => {
 
       expect(el.shadowRoot?.querySelector('.loading')).not.toBeNull();
     });
+
+    it('falls back to unauthenticated state when AUTH_LIST_ACCOUNTS rejects', async () => {
+      vi.mocked(browser.runtime.sendMessage).mockRejectedValue(new Error('Service worker not ready'));
+
+      const el = createElement();
+      await attach(el);
+
+      expect(el.shadowRoot?.querySelector('#sign-in')).not.toBeNull();
+      expect(el.shadowRoot?.querySelector('.loading')).toBeNull();
+    });
   });
 
   describe('unauthenticated state', () => {
@@ -256,6 +266,18 @@ describe('auth-popup Web Component', () => {
       expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({
         type: 'AUTH_REAUTHORIZE',
       });
+    });
+
+    it('opens options page when the settings button is clicked', async () => {
+      mockSendMessage([makeAccount({ isActive: true })]);
+      vi.mocked(browser.runtime.openOptionsPage).mockResolvedValue(undefined);
+
+      const el = createElement();
+      await attach(el);
+
+      el.shadowRoot?.querySelector<HTMLButtonElement>('#open-settings')?.click();
+
+      expect(vi.mocked(browser.runtime.openOptionsPage)).toHaveBeenCalled();
     });
   });
 });

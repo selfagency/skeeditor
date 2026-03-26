@@ -182,6 +182,10 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0;
 }
 
+function isValidDid(value: unknown): value is string {
+  return isNonEmptyString(value) && /^did:[a-z]+:.+$/u.test(value);
+}
+
 interface GetRecordPayload {
   repo: string;
   collection: string;
@@ -390,7 +394,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
 
     case 'AUTH_SWITCH_ACCOUNT': {
       const did = message['did'];
-      if (!isNonEmptyString(did) || !/^did:[a-z]+:.+$/u.test(did)) {
+      if (!isValidDid(did)) {
         return { error: 'Invalid AUTH_SWITCH_ACCOUNT payload' };
       }
       const session = await deps.store.getByDid(did);
@@ -403,7 +407,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
 
     case 'AUTH_SIGN_OUT_ACCOUNT': {
       const did = message['did'];
-      if (!isNonEmptyString(did) || !/^did:[a-z]+:.+$/u.test(did)) {
+      if (!isValidDid(did)) {
         return { error: 'Invalid AUTH_SIGN_OUT_ACCOUNT payload' };
       }
       await deps.store.clearForDid(did);
