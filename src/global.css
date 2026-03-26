@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles can go here */
+.skeeditor-edit-button {
+  @apply inline-flex items-center justify-center gap-1.5 ml-2 px-3 py-1.5
+         border border-gray-300 rounded-full bg-white text-sm font-semibold
+         text-gray-900 hover:bg-gray-50 hover:border-indigo-600 hover:text-indigo-600
+         transition-colors duration-150 ease-in-out;
+}
+
+.skeeditor-edited-badge {
+  @apply inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium
+         text-gray-600 dark:bg-gray-400/10 dark:text-gray-400;
+}
+
+.dark .skeeditor-edit-button {
+  @apply bg-white/10 text-white border-white/10 hover:bg-white/20;
+}
