@@ -2,14 +2,19 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { EditModal } from '@src/content/edit-modal';
 
+let activeModal: EditModal | null = null;
+
 const createModal = (): EditModal => {
   const modal = new EditModal();
   document.body.appendChild(modal.element);
+  activeModal = modal;
   return modal;
 };
 
 describe('edit-modal', () => {
   afterEach(() => {
+    activeModal?.close();
+    activeModal = null;
     document.body.innerHTML = '';
   });
 
