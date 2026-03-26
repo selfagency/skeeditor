@@ -261,6 +261,9 @@ export class EditModal {
 
     this.hideStatusMessage();
 
+    // Remove before adding to prevent duplicate handlers on repeated open() calls
+    this.element.removeEventListener('click', this.handleBackgroundClickBound);
+    window.removeEventListener('keydown', this.handleKeydownBound);
     this.element.addEventListener('click', this.handleBackgroundClickBound);
     window.addEventListener('keydown', this.handleKeydownBound);
 
