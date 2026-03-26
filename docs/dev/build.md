@@ -30,7 +30,15 @@ dist/chrome/
 ├── background/
 │   └── service-worker.js
 ├── content/
+│   ├── browser-polyfill.js
 │   └── content-script.js
+├── icons/
+│   ├── icon-16.png
+│   ├── icon-32.png
+│   ├── icon-48.png
+│   ├── icon-128.png
+│   ├── action-16.png
+│   └── action-32.png
 ├── assets/
 │   ├── popup-<hash>.js
 │   └── options-<hash>.js
@@ -142,6 +150,34 @@ xcrun safari-web-extension-converter dist/safari \
 ```
 
 Open the generated Xcode project and build it to register the extension with Safari. CI verifies that the converter exits successfully but does not run the Xcode app.
+
+---
+
+## Icon pipeline
+
+Extension icons are generated at build time from two SVG source files at the project root:
+
+| Source file               | Purpose                                                    |
+| ------------------------- | ---------------------------------------------------------- |
+| `skeeditor.svg`           | Transparent background — used for the `icons` manifest key |
+| `skeeditor_button.svg`    | Solid background — used for `action.default_icon`          |
+
+[`@resvg/resvg-js`](https://github.com/yisibl/resvg-js) (installed via [`vite-plugin-render-svg`](https://github.com/russss/vite-plugin-render-svg)) renders the SVGs to PNG at the required pixel sizes. The generated PNGs are written to `dist/<browser>/icons/` by the `buildIcons()` function in `scripts/build.ts`, called from the `iifeContentPlugin` `closeBundle` hook alongside the content-script IIFE build and manifest merge.
+
+### Output files
+
+| File                      | Size   | Referenced by                    |
+| ------------------------- | ------ | -------------------------------- |
+| `icons/icon-16.png`       | 16×16  | `manifest.icons.16`              |
+| `icons/icon-32.png`       | 32×32  | `manifest.icons.32`              |
+| `icons/icon-48.png`       | 48×48  | `manifest.icons.48`              |
+| `icons/icon-128.png`      | 128×128| `manifest.icons.128`             |
+| `icons/action-16.png`     | 16×16  | `manifest.action.default_icon.16`|
+| `icons/action-32.png`     | 32×32  | `manifest.action.default_icon.32`|
+
+### Image optimisation
+
+[`vite-plugin-image-optimizer`](https://github.com/FatehAK/vite-plugin-image-optimizer) is registered in `vite.config.ts` and compresses any SVG and raster images processed through Vite's main bundle (popup assets, options-page assets, etc.).
 
 ---
 
