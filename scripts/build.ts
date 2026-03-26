@@ -23,9 +23,8 @@ const browser = browserArg as Browser;
 const sourceRoot = resolve(projectRoot, 'src');
 const outDir = resolve(projectRoot, 'dist', browser);
 
-// Render an SVG file to a PNG buffer at the given pixel width (square).
-const renderSvgToPng = async (svgPath: string, size: number): Promise<Buffer> => {
-  const svg = await readFile(svgPath);
+// Render an SVG buffer to a PNG buffer at the given pixel width (square).
+const renderSvgToPng = (svg: Buffer, size: number): Buffer => {
   const resvg = new Resvg(svg, { fitTo: { mode: 'width', value: size } });
   return Buffer.from(resvg.render().asPng());
 };
@@ -43,16 +42,18 @@ const buildIcons = async (): Promise<void> => {
   const iconsDir = resolve(outDir, 'icons');
   await mkdir(iconsDir, { recursive: true });
 
-  const transparentSvg = resolve(projectRoot, 'skeeditor.svg');
-  const buttonSvg = resolve(projectRoot, 'skeeditor_button.svg');
+  const [transparentSvg, buttonSvg] = await Promise.all([
+    readFile(resolve(projectRoot, 'skeeditor.svg')),
+    readFile(resolve(projectRoot, 'skeeditor_button.svg')),
+  ]);
 
   await Promise.all([
     ...ICON_SIZES.map(async size => {
-      const png = await renderSvgToPng(transparentSvg, size);
+      const png = renderSvgToPng(transparentSvg, size);
       await writeFile(resolve(iconsDir, `icon-${size}.png`), png);
     }),
     ...ACTION_SIZES.map(async size => {
-      const png = await renderSvgToPng(buttonSvg, size);
+      const png = renderSvgToPng(buttonSvg, size);
       await writeFile(resolve(iconsDir, `action-${size}.png`), png);
     }),
   ]);
