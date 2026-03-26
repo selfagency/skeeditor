@@ -122,7 +122,7 @@ describe('edit-modal', () => {
       const modal = createModal();
       modal.open('Hello');
 
-      const dialogEl = modal.element.shadowRoot!.querySelector('.modal') as HTMLElement;
+      const dialogEl = modal.element.shadowRoot!.querySelector('[role="dialog"]') as HTMLElement;
 
       expect(dialogEl.getAttribute('role')).toBe('dialog');
       expect(dialogEl.getAttribute('aria-modal')).toBe('true');
@@ -132,8 +132,8 @@ describe('edit-modal', () => {
       const modal = createModal();
       modal.open('Hello');
 
-      const dialogEl = modal.element.shadowRoot!.querySelector('.modal') as HTMLElement;
-      const titleEl = modal.element.shadowRoot!.querySelector('.title') as HTMLElement;
+      const dialogEl = modal.element.shadowRoot!.querySelector('[role="dialog"]') as HTMLElement;
+      const titleEl = modal.element.shadowRoot!.querySelector('#edit-modal-title') as HTMLElement;
 
       expect(titleEl.id).toBeTruthy();
       expect(dialogEl.getAttribute('aria-labelledby')).toBe(titleEl.id);

@@ -1,3 +1,4 @@
+import globalStyles from '../shadow-styles.css?inline';
 import { graphemeLength } from '../shared/utils/text';
 
 const EDIT_MODAL_TEMPLATE = `
@@ -10,238 +11,35 @@ const EDIT_MODAL_TEMPLATE = `
       z-index: 10000;
       background: rgba(0, 0, 0, 0.5);
     }
-
-    .modal {
-      display: flex;
-      flex-direction: column;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: min(90vw, 600px);
-      max-width: 600px;
-      max-height: 80vh;
-      background: var(--bsky-color-white, #ffffff);
-      border-radius: 8px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    }
-
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--bsky-color-border, #e5e5e5);
-    }
-
-    .title {
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--bsky-color-text, #1d1d1d);
-    }
-
-    .close-button {
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 4px;
-      border-radius: 4px;
-    }
-
-    .close-button:hover {
-      background: var(--bsky-color-hover, #f5f5f5);
-    }
-
-    .close-button svg {
-      width: 20px;
-      height: 20px;
-      fill: var(--bsky-color-text, #1d1d1d);
-    }
-
-    .content {
-      display: flex;
-      flex-direction: column;
-      padding: 20px;
-      overflow-y: auto;
-    }
-
-    .textarea-container {
-      position: relative;
-      flex: 1;
-      min-height: 150px;
-    }
-
-    textarea {
-      width: 100%;
-      min-height: 150px;
-      padding: 12px;
-      border: 1px solid var(--bsky-color-border, #e5e5e5);
-      border-radius: 8px;
-      font-size: 15px;
-      line-height: 1.5;
-      resize: vertical;
-      background: var(--bsky-color-white, #ffffff);
-      color: var(--bsky-color-text, #1d1d1d);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    }
-
-    textarea:focus {
-      outline: none;
-      border-color: var(--bsky-color-primary, #1185fb);
-      box-shadow: 0 0 0 2px rgba(17, 133, 251, 0.2);
-    }
-
-    .char-count {
-      display: flex;
-      justify-content: flex-end;
-      padding: 8px 12px;
-      font-size: 12px;
-      color: var(--bsky-color-text-light, #666666);
-    }
-
-    .char-count.error {
-      color: var(--bsky-color-error, #ff3b30);
-    }
-
-    .footer {
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
-      padding: 16px 20px;
-      border-top: 1px solid var(--bsky-color-border, #e5e5e5);
-    }
-
-    button {
-      padding: 10px 20px;
-      border-radius: 20px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity 0.15s;
-    }
-
-    button:hover {
-      opacity: 0.9;
-    }
-
-    button:active {
-      opacity: 0.8;
-    }
-
-    .cancel-button {
-      background: var(--bsky-color-white, #ffffff);
-      border: 1px solid var(--bsky-color-border, #e5e5e5);
-      color: var(--bsky-color-text, #1d1d1d);
-    }
-
-    .save-button {
-      background: var(--bsky-color-primary, #1185fb);
-      border: 1px solid var(--bsky-color-primary, #1185fb);
-      color: var(--bsky-color-white, #ffffff);
-    }
-
-    .save-button:disabled {
-      background: var(--bsky-color-disabled, #e5e5e5);
-      border-color: var(--bsky-color-disabled, #e5e5e5);
-      color: var(--bsky-color-text-disabled, #999999);
-      cursor: not-allowed;
-    }
-
-    .status-message {
-      margin-top: 12px;
-      padding: 12px;
-      border-radius: 8px;
-      font-size: 14px;
-    }
-
-    .media-upload {
-      margin-top: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .upload-button {
-      padding: 8px 16px;
-      background: var(--bsky-color-button-secondary-bg, #f0f0f0);
-      border: 1px solid var(--bsky-color-border, #e5e5e5);
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 14px;
-    }
-
-    .media-preview {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .media-item {
-      position: relative;
-      width: 80px;
-      height: 80px;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
-    .media-item img, .media-item video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .remove-media {
-      position: absolute;
-      top: 4px;
-      right: 4px;
-      background: rgba(0, 0, 0, 0.7);
-      color: white;
-      border: none;
-      border-radius: 50%;
-      width: 20px;
-      height: 20px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-
-    .status-message.error {
-      background: var(--bsky-color-error-bg, #ffe5e5);
-      color: var(--bsky-color-error, #ff3b30);
-    }
-
-    .status-message.success {
-      background: var(--bsky-color-success-bg, #e5ffe5);
-      color: var(--bsky-color-success, #51d051);
-    }
+    ${globalStyles}
   </style>
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
-    <div class="header">
-      <span class="title" id="edit-modal-title">Edit Post</span>
-      <button class="close-button" type="button" aria-label="Close">
-        <svg viewBox="0 0 24 24">
+  <div class="relative m-auto flex w-full max-w-xl flex-col rounded-lg bg-white shadow-xl dark:bg-gray-800 dark:outline dark:-outline-offset-1 dark:outline-white/10" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
+    <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-white/10">
+      <span class="text-base font-semibold text-gray-900 dark:text-white" id="edit-modal-title">Edit Post</span>
+      <button class="close-button rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500 focus:outline-2 focus:outline-offset-2 focus:outline-indigo-600 dark:hover:bg-white/10 dark:hover:text-white dark:focus:outline-indigo-500" type="button" aria-label="Close">
+        <svg viewBox="0 0 24 24" class="size-5 fill-current" aria-hidden="true">
           <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
         </svg>
       </button>
     </div>
-    <div class="content">
-      <div class="textarea-container">
-        <textarea aria-label="Edit post content"></textarea>
+    <div class="flex flex-col gap-3 overflow-y-auto p-5" style="max-height:60vh">
+      <div>
+        <textarea aria-label="Edit post content" class="block min-h-36 w-full resize-y rounded-md bg-white px-3 py-2 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus:outline-indigo-500"></textarea>
       </div>
-      <div class="char-count"></div>
-      <div class="media-upload">
-        <input type="file" accept="image/*,video/mp4" multiple style="display: none;">
-        <button class="upload-button" type="button">Add Media</button>
-        <div class="media-preview"></div>
+      <div class="char-count flex justify-end text-xs text-gray-500 dark:text-gray-400"></div>
+      <div class="media-upload flex flex-col gap-2">
+        <input type="file" accept="image/*,video/mp4" multiple class="hidden">
+        <button class="upload-button rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20" type="button">Add Media</button>
+        <div class="media-preview flex flex-wrap gap-2"></div>
       </div>
-      <div class="status-message" aria-live="polite" style="display: none;"></div>
+      <div class="status-message hidden rounded-md px-3 py-2 text-sm" aria-live="polite"></div>
     </div>
-    <div class="footer">
-      <button class="cancel-button" type="button">Cancel</button>
-      <button class="save-button" type="button" disabled>Save</button>
+    <div class="flex justify-end gap-3 border-t border-gray-200 px-5 py-4 dark:border-white/10">
+      <button class="cancel-button rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20" type="button">Cancel</button>
+      <button class="save-button rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500 dark:bg-indigo-500 dark:shadow-none dark:hover:bg-indigo-400 dark:focus-visible:outline-indigo-500 dark:disabled:bg-white/10 dark:disabled:text-white/30" type="button" disabled>Save</button>
     </div>
   </div>
 `;
-
 // Bluesky's post limit is 300 graphemes (user-perceived characters)
 const MAX_POST_LENGTH = 300;
 
@@ -400,11 +198,13 @@ export class EditModal {
     const isError = remaining < 0;
 
     this.charCount.textContent = `${length} / ${this.maxLength}`;
-    this.charCount.className = isError ? 'char-count error' : 'char-count';
-
     if (isError) {
+      this.charCount.classList.remove('text-gray-500', 'dark:text-gray-400');
+      this.charCount.classList.add('text-red-500', 'dark:text-red-400');
       this.textarea.setCustomValidity('Post exceeds maximum length');
     } else {
+      this.charCount.classList.remove('text-red-500', 'dark:text-red-400');
+      this.charCount.classList.add('text-gray-500', 'dark:text-gray-400');
       this.textarea.setCustomValidity('');
     }
   }
@@ -418,14 +218,20 @@ export class EditModal {
   private showStatusMessage(message: string, type: 'error' | 'success'): void {
     if (this.statusMessage) {
       this.statusMessage.textContent = message;
-      this.statusMessage.style.display = 'block';
-      this.statusMessage.className = `status-message ${type}`;
+      this.statusMessage.classList.remove('hidden');
+      if (type === 'error') {
+        this.statusMessage.classList.add('error', 'bg-red-50', 'text-red-700', 'dark:bg-red-400/10', 'dark:text-red-400');
+        this.statusMessage.classList.remove('success', 'bg-green-50', 'text-green-700', 'dark:bg-green-400/10', 'dark:text-green-400');
+      } else {
+        this.statusMessage.classList.add('success', 'bg-green-50', 'text-green-700', 'dark:bg-green-400/10', 'dark:text-green-400');
+        this.statusMessage.classList.remove('error', 'bg-red-50', 'text-red-700', 'dark:bg-red-400/10', 'dark:text-red-400');
+      }
     }
   }
 
   private hideStatusMessage(): void {
     if (this.statusMessage) {
-      this.statusMessage.style.display = 'none';
+      this.statusMessage.classList.add('hidden');
     }
   }
 
@@ -525,14 +331,16 @@ export class EditModal {
 
     this.uploadedMedia.forEach((file, index) => {
       const mediaItem = document.createElement('div');
-      mediaItem.className = 'media-item';
+      mediaItem.className = 'relative size-20 overflow-hidden rounded-md';
 
       const mediaElement = file.type.startsWith('image/')
         ? this.createImageElement(file)
         : this.createVideoElement(file);
 
       const removeButton = document.createElement('button');
-      removeButton.className = 'remove-media';
+      removeButton.type = 'button';
+      removeButton.className =
+        'absolute right-1 top-1 flex size-5 cursor-pointer items-center justify-center rounded-full border-none bg-black/70 p-0 text-xs text-white';
       removeButton.textContent = '×';
       removeButton.addEventListener('click', () => this.removeMedia(index));
 
@@ -546,6 +354,7 @@ export class EditModal {
     const img = document.createElement('img');
     img.src = URL.createObjectURL(file);
     img.alt = file.name;
+    img.className = 'size-full object-cover';
     return img;
   }
 
@@ -554,6 +363,7 @@ export class EditModal {
     video.src = URL.createObjectURL(file);
     video.controls = true;
     video.muted = true;
+    video.className = 'size-full object-cover';
     return video;
   }
 

@@ -1,20 +1,60 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-/* Custom styles can go here */
+@theme {
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --outline-offset--1: -1px;
+}
+
 .skeeditor-edit-button {
-  @apply inline-flex items-center justify-center gap-1.5 ml-2 px-3 py-1.5
-         border border-gray-300 rounded-full bg-white text-sm font-semibold
-         text-gray-900 hover:bg-gray-50 hover:border-indigo-600 hover:text-indigo-600
-         transition-colors duration-150 ease-in-out;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  margin-left: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid rgb(209 213 219);
+  border-radius: 9999px;
+  background-color: rgb(255 255 255);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  color: rgb(17 24 39);
+  transition: color 150ms ease-in-out, background-color 150ms ease-in-out, border-color 150ms ease-in-out;
+}
+
+.skeeditor-edit-button:hover {
+  background-color: rgb(249 250 251);
+  border-color: rgb(79 70 229);
+  color: rgb(79 70 229);
+}
+
+.skeeditor-edit-button:focus-visible {
+  outline: 2px solid rgb(79 70 229);
+  outline-offset: 2px;
 }
 
 .skeeditor-edited-badge {
-  @apply inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium
-         text-gray-600 dark:bg-gray-400/10 dark:text-gray-400;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 0.375rem;
+  background-color: rgb(243 244 246);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgb(75 85 99);
 }
 
 .dark .skeeditor-edit-button {
-  @apply bg-white/10 text-white border-white/10 hover:bg-white/20;
+  background-color: rgb(255 255 255 / 0.1);
+  color: rgb(255 255 255);
+  border-color: rgb(255 255 255 / 0.1);
+}
+
+.dark .skeeditor-edit-button:hover {
+  background-color: rgb(255 255 255 / 0.2);
+}
+
+.dark .skeeditor-edited-badge {
+  background-color: rgb(156 163 175 / 0.1);
+  color: rgb(156 163 175);
 }

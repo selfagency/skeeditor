@@ -5,7 +5,7 @@ const pdsUrlInput = document.querySelector<HTMLInputElement>('#pds-url');
 const saveButton = document.querySelector<HTMLButtonElement>('#save-pds-url');
 
 if (status) {
-  status.textContent = 'Options entry loaded.';
+  status.textContent = '';
 }
 
 async function loadCurrentPdsUrl(): Promise<void> {
@@ -17,19 +17,19 @@ async function loadCurrentPdsUrl(): Promise<void> {
       pdsUrlInput.value = response.url;
       if (status) {
         status.textContent = `Current PDS: ${response.url}`;
-        status.className = 'status success';
+        status.className = 'mb-6 text-sm text-green-400';
       }
     } else {
       if (status) {
         status.textContent = 'Failed to load current PDS URL';
-        status.className = 'status error';
+        status.className = 'mb-6 text-sm text-red-400';
       }
     }
   } catch (error) {
     console.error('Error loading PDS URL:', error);
     if (status) {
       status.textContent = 'Error loading PDS URL';
-      status.className = 'status error';
+      status.className = 'mb-6 text-sm text-red-400';
     }
   }
 }
@@ -41,11 +41,10 @@ async function savePdsUrl(): Promise<void> {
   if (!newUrl || !newUrl.startsWith('https://')) {
     if (status) {
       status.textContent = 'Please enter a valid HTTPS URL';
-      status.className = 'status error';
+      status.className = 'mb-6 text-sm text-red-400';
     }
     return;
   }
-
   saveButton.disabled = true;
   saveButton.textContent = 'Saving...';
 
@@ -54,19 +53,19 @@ async function savePdsUrl(): Promise<void> {
     if ('ok' in response && response.ok) {
       if (status) {
         status.textContent = `PDS URL updated to: ${newUrl}`;
-        status.className = 'status success';
+        status.className = 'mb-6 text-sm text-green-400';
       }
     } else {
       if (status) {
         status.textContent = response.error || 'Failed to update PDS URL';
-        status.className = 'status error';
+        status.className = 'mb-6 text-sm text-red-400';
       }
     }
   } catch (error) {
     console.error('Error saving PDS URL:', error);
     if (status) {
       status.textContent = 'Error saving PDS URL';
-      status.className = 'status error';
+      status.className = 'mb-6 text-sm text-red-400';
     }
   } finally {
     saveButton.disabled = false;
