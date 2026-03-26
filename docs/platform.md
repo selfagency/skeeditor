@@ -44,7 +44,7 @@ combining `manifests/base.json` with the per-browser overlay at
 
 ### Safari
 
-> **Requires Safari 15.4+** (first version to support Manifest V3 web extensions).
+> **Requires Safari 17+** (macOS 14 Sonoma; first version to fully support Manifest V3 web extensions).
 
 1. `pnpm build:safari`
 2. Convert the output to a native Safari extension:
@@ -68,10 +68,11 @@ testing on Safari is manual.
 
 ## Polyfill Strategy
 
-`webextension-polyfill` is imported as the **first statement** in every Vite
-entry point (`service-worker.ts`, `content-script.ts`, `popup.ts`,
-`options.ts`). This ensures `globalThis.browser` is available before any
-extension code runs.
+The `webextension-polyfill` is loaded differently depending on the context:
+
+- **Background service worker** (`service-worker.ts`): polyfill is imported as the first statement, ensuring `globalThis.browser` is available before any extension code runs.
+- **Content script**: polyfill is loaded as a separate script via the manifest's `content_scripts.js` array (`browser-polyfill.js` before `content-script.js`). The content script is built as an IIFE that references the global `browser` object set by the polyfill.
+- **Popup and options pages**: these are HTML pages that load their scripts as ES modules; the polyfill is not explicitly imported since they use `browser.runtime.sendMessage` via the `sendMessage` wrapper.
 
 In test environments (Vitest), `webextension-polyfill` is aliased to a no-op
 stub (`test/mocks/webextension-polyfill.ts`). The `browser` global is provided
@@ -105,7 +106,7 @@ if (platform.isFirefox) {
 | Browser | Manifest key            | Notes                                           |
 | :------ | :---------------------- | :---------------------------------------------- |
 | Chrome  | `"service_worker": "…"` | Non-persistent, MV3 only                        |
-| Firefox | `"scripts": ["…"]`      | Non-persistent background script (Firefox 121+) |
+| Firefox | `"scripts": ["…"]`      | Non-persistent background script (Firefox 125+) |
 | Safari  | `"service_worker": "…"` | Non-persistent, mirrors Chrome                  |
 
 **Do not store in-memory state between wake cycles.** Use `browser.storage.local`
@@ -139,7 +140,7 @@ either API.
 - Limited WebExtension API surface; check Apple's compatibility tables
   before using any new API:
   <https://developer.apple.com/documentation/safari-release-notes>
-- Minimum Safari version: 15.4 (Web Extensions in macOS 12.3+)
+- Minimum Safari version: 17 (macOS 14 Sonoma)
 
 ## Manifest Structure
 

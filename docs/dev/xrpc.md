@@ -28,6 +28,8 @@ interface XrpcClientConfig {
 }
 ```
 
+> **DID validation:** If `did` is provided, it must match `/^did:[a-z]+:.+$/u`. The constructor throws `XrpcClientError('Invalid DID format')` if this check fails.
+
 ---
 
 ## `getRecord`

@@ -14,7 +14,7 @@ Click the **✏ Edit** badge on any of your posts, change the text, and save. sk
 - **Secure by design** — OAuth 2.0 + PKCE; tokens stored only in extension storage, never sent to any third party
 - **Rich text preserved** — links, @mentions, and #hashtags are re-detected and byte-offset facets recalculated on every save
 - **Conflict-safe** — CID-based optimistic locking detects concurrent edits and prompts before overwriting
-- **Cross-browser** — Chrome 120+, Firefox 121+, Safari (macOS 14+)
+- **Cross-browser** — Chrome 120+, Firefox 125+, Safari (macOS 14+)
 
 ---
 
@@ -23,7 +23,7 @@ Click the **✏ Edit** badge on any of your posts, change the text, and save. sk
 | Browser | Minimum version    |
 | ------- | ------------------ |
 | Chrome  | 120+               |
-| Firefox | 121+               |
+| Firefox | 125+               |
 | Safari  | macOS 14+ (Sonoma) |
 
 ---

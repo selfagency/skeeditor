@@ -13,7 +13,7 @@ Rich-text facets (links, mentions, hashtags) are re-detected from the edited tex
 | Browser | Status      | Minimum version                                            |
 | ------- | ----------- | ---------------------------------------------------------- |
 | Chrome  | ✅ Supported | 120+                                                       |
-| Firefox | ✅ Supported | 121+ (Nightly / Developer Edition recommended for testing) |
+| Firefox | ✅ Supported | 125+ (Nightly / Developer Edition recommended for testing) |
 | Safari  | ✅ Supported | macOS 14+ (Sonoma)                                         |
 
 ## Current status

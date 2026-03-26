@@ -42,7 +42,7 @@ dist/chrome/
 
 - **`base: './'`** — relative asset paths so the extension works when loaded unpacked.
 - **`publicDir: false`** — static assets are managed per-browser in the manifest build step, not via Vite's public dir.
-- **`target: 'es2022'`** — both Chrome 120+ and Firefox 121+ fully support ES2022.
+- **`target: 'es2022'`** — both Chrome 120+ and Firefox 125+ fully support ES2022.
 - **`modulePreload: false`** — extensions cannot use `<link rel="modulepreload">`.
 - **Source maps enabled** — always generated (`sourcemap: true`) for debuggability, even in production builds.
 
@@ -58,9 +58,10 @@ pnpm build:chrome    # or :firefox / :safari
 
 The script:
 
-1. Calls `pnpm lex:build` to regenerate TypeScript types from `lexicons/`.
-2. Calls Vite build with the appropriate environment (`VITE_BROWSER=chrome|firefox|safari`).
-3. Calls `scripts/merge-manifest.ts` to write `dist/<browser>/manifest.json`.
+1. Runs the Vite build with the appropriate browser target (via `--browser=chrome|firefox|safari`).
+2. The `iifeContentPlugin` Vite plugin (running in the `closeBundle` hook) rebuilds the content script as a self-contained IIFE, copies the `webextension-polyfill` to `dist/<browser>/content/`, and calls `scripts/merge-manifest.ts` to write `dist/<browser>/manifest.json`.
+
+> **Note:** `pnpm lex:build` is called by the npm script (e.g. `pnpm build:chrome`) before invoking the build script, not by `scripts/build.ts` itself.
 
 ### Watch mode
 
@@ -80,7 +81,7 @@ Each browser target has:
 - `manifests/base.json` — shared fields: `name`, `version`, `description`, `permissions`, `host_permissions`, `content_scripts`, `default_locale`.
 - `manifests/<browser>/manifest.json` — browser-specific overrides merged on top.
 
-The merge is a plain `Object.assign(base, overlay)` at the top level. Nested objects (like `background`) are fully replaced by the overlay.
+The merge uses a recursive `mergeJson()` function: nested objects are deep-merged, while arrays are fully replaced by the overlay.
 
 ### Chrome overlay
 
@@ -96,8 +97,8 @@ The merge is a plain `Object.assign(base, overlay)` at the top level. Nested obj
 {
   "browser_specific_settings": {
     "gecko": {
-      "id": "skeeditor@selfagency.us",
-      "strict_min_version": "121.0"
+      "id": "skeeditor@selfagency.dev",
+      "strict_min_version": "125.0"
     }
   },
   "background": { "scripts": ["background/service-worker.js"] }
@@ -124,19 +125,23 @@ Generated types land in `src/lexicons/` and are committed. `lex:build` is run au
 
 ---
 
-## Safari build (`scripts/build-safari.sh`)
+## Safari build
 
 ```sh
 pnpm build:safari
 ```
 
-This script:
+This runs the standard Vite build with `--browser=safari`, merges the Safari manifest overlay, and outputs to `dist/safari/`. To create a native Safari extension from the build output, run:
 
-1. Runs the standard Vite build with `VITE_BROWSER=safari`.
-2. Merges the Safari manifest overlay.
-3. Invokes `xcrun safari-web-extension-converter` to produce an Xcode project under `dist/safari-xcode/`.
+```sh
+xcrun safari-web-extension-converter dist/safari \
+  --project-location ./safari-xcode \
+  --app-name skeeditor \
+  --bundle-identifier dev.selfagency.skeeditor \
+  --swift
+```
 
-Open the Xcode project and run it to register the extension with Safari. CI verifies that the converter exits successfully but does not run the Xcode app.
+Open the generated Xcode project and build it to register the extension with Safari. CI verifies that the converter exits successfully but does not run the Xcode app.
 
 ---
 

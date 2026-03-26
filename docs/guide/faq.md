@@ -60,7 +60,7 @@ This means the post was updated (by another device, app, or browser extension) b
 
 ### Which browsers are supported?
 
-Chrome 120+, Firefox 121+, and Safari on macOS 14+ (Sonoma). See [Installation](./installation) for browser-specific instructions.
+Chrome 120+, Firefox 125+, and Safari on macOS 14+ (Sonoma). See [Installation](./installation) for browser-specific instructions.
 
 ### Is there a mobile version?
 

@@ -18,14 +18,11 @@ skeeditor targets Chrome, Firefox, and Safari using a shared `src/` codebase. Br
 
 ## Browser API polyfill
 
-`webextension-polyfill` normalises Chromium's callback-based `chrome.*` API into the same Promise-based `browser.*` surface used natively by Firefox and Safari. It is imported as the **first statement** in every Vite entry point:
+`webextension-polyfill` normalises Chromium's callback-based `chrome.*` API into the same Promise-based `browser.*` surface used natively by Firefox and Safari. It is loaded differently depending on the context:
 
-```ts
-// src/background/service-worker.ts (and all other entry points)
-import 'webextension-polyfill';
-```
-
-This ensures `globalThis.browser` is available before any extension code runs.
+- **Background service worker** — imported as the first statement in `src/background/service-worker.ts` (`import 'webextension-polyfill'`).
+- **Content script** — loaded as a separate script via the manifest's `content_scripts.js` array (`browser-polyfill.js` before `content-script.js`). The content script is built as an IIFE that references the global `browser` object.
+- **Popup and options pages** — use `browser.runtime.sendMessage` via the typed `sendMessage` wrapper; the polyfill is available from the extension runtime context.
 
 In unit/integration tests, `webextension-polyfill` is stubbed — the `browser.*` global is provided by `test/mocks/browser-apis.ts` via `test/setup/unit.ts` instead.
 
@@ -58,7 +55,7 @@ if (platform.isFirefox) {
 | Browser | Manifest key            | Notes                                           |
 | ------- | ----------------------- | ----------------------------------------------- |
 | Chrome  | `"service_worker": "…"` | Non-persistent, wakes on events                 |
-| Firefox | `"scripts": ["…"]`      | Non-persistent background script (Firefox 121+) |
+| Firefox | `"scripts": ["…"]`      | Non-persistent background script (Firefox 125+) |
 | Safari  | `"service_worker": "…"` | Non-persistent, mirrors Chrome                  |
 
 **Never store in-memory state between background wake cycles.** Use `browser.storage.local` for any data that must survive the background being unloaded.
