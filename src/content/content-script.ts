@@ -152,7 +152,7 @@ const scanForPosts = (): void => {
   }
 };
 
-const scheduleScanForPosts = (): void => {
+export const scheduleScanForPosts = (): void => {
   if (scanScheduled) {
     return;
   }
