@@ -22,6 +22,21 @@ export interface AuthStatus {
 
 const STORAGE_KEY = 'session';
 
+function isStoredSession(value: unknown): value is StoredSession {
+  if (value === null || typeof value !== 'object') return false;
+  const obj = value as Record<string, unknown>;
+  const expiresAt = obj['expiresAt'];
+  return (
+    typeof obj['accessToken'] === 'string' &&
+    typeof obj['refreshToken'] === 'string' &&
+    typeof expiresAt === 'number' &&
+    Number.isFinite(expiresAt) &&
+    expiresAt > 0 &&
+    typeof obj['scope'] === 'string' &&
+    typeof obj['did'] === 'string'
+  );
+}
+
 /**
  * Persist a session to `browser.storage.local`.
  *
@@ -43,7 +58,7 @@ async function get(): Promise<StoredSession | null> {
 
   if (raw === undefined || raw === null) return null;
 
-  return raw as StoredSession;
+  return isStoredSession(raw) ? raw : null;
 }
 
 /**
