@@ -53,7 +53,7 @@ export { AppPasswordError as AppPasswordAuthError };
  * @param identifier - Username or DID (e.g., user.bsky.social or did:plc:...)
  * @param password - App password (not account password)
  * @returns Promise resolving to session data
- * @throws AppPasswordAuthError if authentication fails
+ * @throws AppPasswordError if authentication fails (AppPasswordAuthError is a deprecated alias)
  */
 export async function authenticateWithAppPassword(
   pdsUrl: string,
