@@ -184,7 +184,11 @@ describe('handleMessage', () => {
       const result = await handleMessage({ type: 'AUTH_SIGN_IN' }, deps);
 
       expect(vi.mocked(deps.buildAuthReq)).toHaveBeenCalledOnce();
-      expect(vi.mocked(deps.storeAuthState)).toHaveBeenCalledWith(authRequest.state, authRequest.codeVerifier);
+      expect(vi.mocked(deps.storeAuthState)).toHaveBeenCalledWith(
+        authRequest.state,
+        authRequest.codeVerifier,
+        expect.any(String),
+      );
       expect(vi.mocked(deps.openTab)).toHaveBeenCalledWith(authRequest.url);
       expect(result).toEqual({ ok: true });
     });
