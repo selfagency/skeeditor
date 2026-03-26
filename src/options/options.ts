@@ -1,5 +1,5 @@
+import { EDIT_TIME_LIMIT_MAX, EDIT_TIME_LIMIT_MIN } from '../shared/constants';
 import { sendMessage } from '../shared/messages';
-import { EDIT_TIME_LIMIT_MIN, EDIT_TIME_LIMIT_MAX } from '../shared/constants';
 
 const status = document.querySelector<HTMLParagraphElement>('#status');
 const pdsUrlInput = document.querySelector<HTMLInputElement>('#pds-url');
@@ -64,7 +64,10 @@ async function saveSettings(): Promise<void> {
 
   const editTimeLimit = rawEditTimeLimit.length === 0 ? null : Number.parseFloat(rawEditTimeLimit);
 
-  if (editTimeLimit !== null && (!Number.isFinite(editTimeLimit) || editTimeLimit < EDIT_TIME_LIMIT_MIN || editTimeLimit > EDIT_TIME_LIMIT_MAX)) {
+  if (
+    editTimeLimit !== null &&
+    (!Number.isFinite(editTimeLimit) || editTimeLimit < EDIT_TIME_LIMIT_MIN || editTimeLimit > EDIT_TIME_LIMIT_MAX)
+  ) {
     if (status) {
       status.textContent = `Edit time limit must be between ${EDIT_TIME_LIMIT_MIN} and ${EDIT_TIME_LIMIT_MAX} minutes, or left blank to disable.`;
       status.className = 'mb-6 text-sm text-red-400';
