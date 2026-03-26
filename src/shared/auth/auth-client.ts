@@ -91,16 +91,31 @@ export async function exchangeCodeForTokens(
     redirect_uri: redirectUri,
   });
 
-  const headers: Record<string, string> = { 'Content-Type': 'application/x-www-form-urlencoded' };
-  if (dpopKeyPair !== undefined) {
-    headers['DPoP'] = await createDpopProof(dpopKeyPair, 'POST', tokenEndpoint);
-  }
+  const doRequest = async (nonce?: string): Promise<Response> => {
+    const headers: Record<string, string> = { 'Content-Type': 'application/x-www-form-urlencoded' };
+    if (dpopKeyPair !== undefined) {
+      headers['DPoP'] = await createDpopProof(dpopKeyPair, 'POST', tokenEndpoint, undefined, nonce);
+    }
+    return fetch(tokenEndpoint, { method: 'POST', headers, body: body.toString() });
+  };
 
-  const response = await fetch(tokenEndpoint, {
-    method: 'POST',
-    headers,
-    body: body.toString(),
-  });
+  let response = await doRequest();
+
+  // RFC 9449 §8 — server may require a nonce on the first attempt.
+  // If so, it responds with 400 use_dpop_nonce and provides the nonce in the DPoP-Nonce header.
+  if (!response.ok && dpopKeyPair !== undefined) {
+    const serverNonce = response.headers.get('DPoP-Nonce');
+    if (serverNonce !== null) {
+      const errorBody: unknown = await response.json().catch(() => ({}));
+      const errorCode =
+        errorBody !== null && typeof errorBody === 'object'
+          ? (errorBody as Record<string, unknown>)['error']
+          : undefined;
+      if (errorCode === 'use_dpop_nonce') {
+        response = await doRequest(serverNonce);
+      }
+    }
+  }
 
   if (!response.ok) {
     await throwParsedOAuthError(response, `Token request failed with HTTP ${response.status}`, 'token_request_failed');

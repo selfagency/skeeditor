@@ -53,12 +53,14 @@ export async function loadOrCreateDpopKeyPair(): Promise<CryptoKeyPair> {
  * @param htm - HTTP method in upper-case (e.g. `"POST"`)
  * @param htu - Full target URL; query and fragment are stripped per §4.2
  * @param accessToken - When provided, the SHA-256 of the token is bound via the `ath` claim
+ * @param nonce - Server-supplied nonce (RFC 9449 §8); include when the server has issued one
  */
 export async function createDpopProof(
   keyPair: CryptoKeyPair,
   htm: string,
   htu: string,
   accessToken?: string,
+  nonce?: string,
 ): Promise<string> {
   const rawPublicJwk = await crypto.subtle.exportKey('jwk', keyPair.publicKey);
   // Keep only the key-material fields; strip key_ops, ext, etc.
@@ -88,6 +90,10 @@ export async function createDpopProof(
   if (accessToken !== undefined) {
     const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(accessToken));
     payload['ath'] = base64urlEncode(new Uint8Array(hashBuffer));
+  }
+
+  if (nonce !== undefined) {
+    payload['nonce'] = nonce;
   }
 
   const encodeJson = (obj: unknown): string => base64urlEncode(new TextEncoder().encode(JSON.stringify(obj)));

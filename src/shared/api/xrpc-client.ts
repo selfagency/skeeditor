@@ -271,14 +271,37 @@ export class XrpcClient {
     if (config.dpopKeyPairLoader !== undefined) {
       const dpopKeyPairLoader = config.dpopKeyPairLoader;
       const accessJwt = config.accessJwt;
+      // Per-instance nonce cache: the server may issue a DPoP-Nonce and expect it on
+      // subsequent requests (RFC 9449 §8). Proactively include it once received.
+      let dpopNonce: string | undefined;
       agentConfig.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
         const url = typeof input === 'string' ? input : input instanceof URL ? input.href : (input as Request).url;
         const method = (init?.method ?? 'GET').toUpperCase();
         const keyPair = await dpopKeyPairLoader();
-        const proof = await createDpopProof(keyPair, method, url, accessJwt);
-        const headers = new Headers(init?.headers);
-        headers.set('DPoP', proof);
-        return globalThis.fetch(input, { ...init, headers });
+
+        const makeHeaders = async (nonce?: string): Promise<Headers> => {
+          const proof = await createDpopProof(keyPair, method, url, accessJwt, nonce);
+          const h = new Headers(init?.headers);
+          h.set('DPoP', proof);
+          return h;
+        };
+
+        let response = await globalThis.fetch(input, { ...init, headers: await makeHeaders(dpopNonce) });
+
+        // Retry once if the server demands a nonce we haven't seen yet.
+        if (response.status === 401 || response.status === 400) {
+          const serverNonce = response.headers.get('DPoP-Nonce');
+          if (serverNonce !== null && serverNonce !== dpopNonce) {
+            dpopNonce = serverNonce;
+            response = await globalThis.fetch(input, { ...init, headers: await makeHeaders(dpopNonce) });
+          }
+        } else {
+          // Proactively update the cached nonce if the server rotates it.
+          const refreshedNonce = response.headers.get('DPoP-Nonce');
+          if (refreshedNonce !== null) dpopNonce = refreshedNonce;
+        }
+
+        return response;
       };
     }
     this._client = new Client(agentConfig);
