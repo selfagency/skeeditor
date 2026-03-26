@@ -81,6 +81,7 @@ const buildContentScript = async (): Promise<void> => {
       emptyOutDir: false,
       sourcemap: true,
       target: 'es2022',
+      cssMinify: 'esbuild',
       modulePreload: { polyfill: false },
       rollupOptions: {
         input: resolve(sourceRoot, 'content/content-script.ts'),

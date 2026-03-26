@@ -21,6 +21,7 @@ export default defineConfig({
     outDir: resolve(projectRoot, 'dist'),
     sourcemap: true,
     target: 'es2022',
+    cssMinify: 'esbuild',
     modulePreload: { polyfill: false },
     rollupOptions: {
       input: {
