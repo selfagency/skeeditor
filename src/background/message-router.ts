@@ -469,13 +469,25 @@ export function registerMessageRouter(deps: RouterDeps = createDefaultDeps()): (
   // Intercept the OAuth callback by watching for tab navigations to the registered redirect URI.
   // This is required because the redirect target is a web-hosted page (not a bundled extension page),
   // so `window.opener.postMessage` is not available from the service worker context.
+  //
+  // The `urls` filter is essential in MV3: it tells Chrome to wake the service worker specifically
+  // for navigations matching this pattern, avoiding the race where the SW is asleep when the
+  // redirect arrives. Without it, the event may fire before the SW has registered its listener.
   const callbackUrl = new URL(BSKY_OAUTH_REDIRECT_URI);
-  const tabListener = (tabId: number, changeInfo: { status?: string }, tab: { url?: string }): void => {
-    if (changeInfo.status !== 'loading' || !tab.url) return;
+  const callbackMatchPattern = `${callbackUrl.origin}${callbackUrl.pathname}*`;
+
+  const tabListener = (
+    tabId: number,
+    changeInfo: { status?: string; url?: string },
+    tab: { url?: string },
+  ): void => {
+    // Prefer changeInfo.url (set exactly when the URL changes) over tab.url
+    const urlString = changeInfo.url ?? (changeInfo.status === 'loading' ? tab.url : undefined);
+    if (!urlString) return;
 
     let url: URL;
     try {
-      url = new URL(tab.url);
+      url = new URL(urlString);
     } catch {
       return;
     }
@@ -493,7 +505,7 @@ export function registerMessageRouter(deps: RouterDeps = createDefaultDeps()): (
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  browser.tabs.onUpdated.addListener(tabListener as any);
+  browser.tabs.onUpdated.addListener(tabListener as any, { urls: [callbackMatchPattern] } as any);
 
   return () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
