@@ -16,7 +16,7 @@ function simpleHash(text: string): string {
   let hash = 0;
   for (let i = 0; i < text.length; i++) {
     const char = text.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash = hash & hash; // Convert to 32bit integer
   }
   return `edit-${Math.abs(hash).toString(16).substring(0, 8)}`;
@@ -110,7 +110,7 @@ Edit history tags:
 {
   "tags": ["skeeditor-edit-a1b2c3d4"],
   "labels": {
-    "values": [{"val": "edited"}]
+    "values": [{ "val": "edited" }]
   }
 }
 ```
@@ -125,7 +125,7 @@ Edit history tags:
     "skeeditor-edit-9i0j1k2l"
   ],
   "labels": {
-    "values": [{"val": "edited"}]
+    "values": [{ "val": "edited" }]
   }
 }
 ```

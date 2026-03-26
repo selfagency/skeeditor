@@ -37,9 +37,18 @@ const makeAuthRequest = (): AuthorizationRequest => ({
 
 const makeStoreMock = (session: StoredSession | null = null) => ({
   get: vi.fn().mockResolvedValue(session),
+  getByDid: vi.fn().mockResolvedValue(session),
   set: vi.fn().mockResolvedValue(undefined),
   clear: vi.fn().mockResolvedValue(undefined),
+  clearForDid: vi.fn().mockResolvedValue(undefined),
   isAccessTokenValid: vi.fn().mockResolvedValue(session !== null),
+  listDids: vi.fn().mockResolvedValue(session !== null ? [session.did] : []),
+  listAll: vi.fn().mockResolvedValue({
+    accounts: session !== null ? [{ did: session.did, handle: session.handle, expiresAt: session.expiresAt }] : [],
+    activeDid: session?.did ?? null,
+  }),
+  getActiveDid: vi.fn().mockResolvedValue(session?.did ?? null),
+  setActiveDid: vi.fn().mockResolvedValue(undefined),
 });
 
 const makeXrpcMock = () => ({
@@ -790,6 +799,143 @@ describe('createDefaultDeps', () => {
 
       expect(globalThis.browser.storage.session.remove).toHaveBeenCalledWith('pendingAuth');
       expect(globalThis.browser.storage.local.remove).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('AUTH_LIST_ACCOUNTS', () => {
+    it('returns empty accounts array when no sessions exist', async () => {
+      const store = makeStoreMock(null);
+      const deps = makeDeps({ store });
+
+      const result = await handleMessage({ type: 'AUTH_LIST_ACCOUNTS' }, deps);
+
+      expect(result).toEqual({ accounts: [] });
+    });
+
+    it('returns all accounts with isActive flag for active DID', async () => {
+      const session1 = makeSession({ did: 'did:plc:user1', handle: 'alice.bsky.social' });
+      const session2 = makeSession({ did: 'did:plc:user2' });
+      const store = {
+        ...makeStoreMock(),
+        listAll: vi.fn().mockResolvedValue({
+          accounts: [
+            { did: session1.did, handle: session1.handle, expiresAt: session1.expiresAt },
+            { did: session2.did, handle: session2.handle, expiresAt: session2.expiresAt },
+          ],
+          activeDid: 'did:plc:user1',
+        }),
+      };
+      const deps = makeDeps({ store });
+
+      const result = await handleMessage({ type: 'AUTH_LIST_ACCOUNTS' }, deps);
+
+      expect(result).toEqual({
+        accounts: [
+          { did: 'did:plc:user1', handle: 'alice.bsky.social', expiresAt: session1.expiresAt, isActive: true },
+          { did: 'did:plc:user2', handle: undefined, expiresAt: session2.expiresAt, isActive: false },
+        ],
+      });
+    });
+
+    it('marks no account as active when activeDid is null', async () => {
+      const session = makeSession({ did: 'did:plc:user1' });
+      const store = {
+        ...makeStoreMock(),
+        listAll: vi.fn().mockResolvedValue({
+          accounts: [{ did: session.did, handle: session.handle, expiresAt: session.expiresAt }],
+          activeDid: null,
+        }),
+      };
+      const deps = makeDeps({ store });
+
+      const result = await handleMessage({ type: 'AUTH_LIST_ACCOUNTS' }, deps);
+
+      expect(result).toEqual({
+        accounts: [{ did: 'did:plc:user1', handle: undefined, expiresAt: session.expiresAt, isActive: false }],
+      });
+    });
+  });
+
+  describe('AUTH_SWITCH_ACCOUNT', () => {
+    it('calls setActiveDid with the given DID and returns ok', async () => {
+      const session = makeSession({ did: 'did:plc:user2' });
+      const store = { ...makeStoreMock(session), getByDid: vi.fn().mockResolvedValue(session) };
+      const deps = makeDeps({ store });
+
+      const result = await handleMessage({ type: 'AUTH_SWITCH_ACCOUNT', did: 'did:plc:user2' }, deps);
+
+      expect(vi.mocked(store.setActiveDid)).toHaveBeenCalledWith('did:plc:user2');
+      expect(result).toEqual({ ok: true });
+    });
+
+    it('returns error for missing DID', async () => {
+      const deps = makeDeps();
+
+      const result = await handleMessage({ type: 'AUTH_SWITCH_ACCOUNT' }, deps);
+
+      expect(result).toEqual({ error: 'Invalid AUTH_SWITCH_ACCOUNT payload' });
+    });
+
+    it('returns error for empty DID string', async () => {
+      const deps = makeDeps();
+
+      const result = await handleMessage({ type: 'AUTH_SWITCH_ACCOUNT', did: '' }, deps);
+
+      expect(result).toEqual({ error: 'Invalid AUTH_SWITCH_ACCOUNT payload' });
+    });
+
+    it('returns error for malformed DID', async () => {
+      const deps = makeDeps();
+
+      const result = await handleMessage({ type: 'AUTH_SWITCH_ACCOUNT', did: 'not-a-did' }, deps);
+
+      expect(result).toEqual({ error: 'Invalid AUTH_SWITCH_ACCOUNT payload' });
+    });
+
+    it('returns error when no session exists for the given DID', async () => {
+      const store = { ...makeStoreMock(), getByDid: vi.fn().mockResolvedValue(null) };
+      const deps = makeDeps({ store });
+
+      const result = await handleMessage({ type: 'AUTH_SWITCH_ACCOUNT', did: 'did:plc:nonexistent' }, deps);
+
+      expect(vi.mocked(store.setActiveDid)).not.toHaveBeenCalled();
+      expect(result).toEqual({ error: 'No session found for DID' });
+    });
+  });
+
+  describe('AUTH_SIGN_OUT_ACCOUNT', () => {
+    it('calls clearForDid with the given DID and returns ok', async () => {
+      const store = makeStoreMock(makeSession());
+      const deps = makeDeps({ store });
+
+      const result = await handleMessage({ type: 'AUTH_SIGN_OUT_ACCOUNT', did: 'did:plc:testuser' }, deps);
+
+      expect(vi.mocked(store.clearForDid)).toHaveBeenCalledWith('did:plc:testuser');
+      expect(result).toEqual({ ok: true });
+    });
+
+    it('returns error for missing DID', async () => {
+      const deps = makeDeps();
+
+      const result = await handleMessage({ type: 'AUTH_SIGN_OUT_ACCOUNT' }, deps);
+
+      expect(result).toEqual({ error: 'Invalid AUTH_SIGN_OUT_ACCOUNT payload' });
+    });
+
+    it('returns error for empty DID string', async () => {
+      const deps = makeDeps();
+
+      const result = await handleMessage({ type: 'AUTH_SIGN_OUT_ACCOUNT', did: '' }, deps);
+
+      expect(result).toEqual({ error: 'Invalid AUTH_SIGN_OUT_ACCOUNT payload' });
+    });
+
+    it('returns error for malformed DID', async () => {
+      const deps = makeDeps();
+
+      const result = await handleMessage({ type: 'AUTH_SIGN_OUT_ACCOUNT', did: 'notadid' }, deps);
+
+      expect(result).toEqual({ error: 'Invalid AUTH_SIGN_OUT_ACCOUNT payload' });
     });
   });
 });

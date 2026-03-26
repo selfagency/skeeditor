@@ -44,9 +44,18 @@ const makeSession = () => ({
 const makeRealDeps = (session: ReturnType<typeof makeSession> | null = makeSession()): RouterDeps => ({
   store: {
     get: vi.fn().mockResolvedValue(session),
+    getByDid: vi.fn().mockResolvedValue(session),
     set: vi.fn().mockResolvedValue(undefined),
     clear: vi.fn().mockResolvedValue(undefined),
+    clearForDid: vi.fn().mockResolvedValue(undefined),
     isAccessTokenValid: vi.fn().mockResolvedValue(session !== null),
+    listDids: vi.fn().mockResolvedValue(session !== null ? [session.did] : []),
+    listAll: vi.fn().mockResolvedValue({
+      accounts: session !== null ? [{ did: session.did, handle: undefined, expiresAt: session.expiresAt }] : [],
+      activeDid: session?.did ?? null,
+    }),
+    getActiveDid: vi.fn().mockResolvedValue(session?.did ?? null),
+    setActiveDid: vi.fn().mockResolvedValue(undefined),
   },
   redirectUri: 'chrome-extension://test/callback.html',
   openTab: vi.fn().mockResolvedValue(undefined),

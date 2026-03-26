@@ -40,6 +40,31 @@ export interface OkResponse {
 
 export type AuthCallbackResponse = OkResponse | { error: string };
 
+// ── Multi-account messages ─────────────────────────────────────────────────────
+
+export interface AuthListAccountsRequest {
+  type: 'AUTH_LIST_ACCOUNTS';
+}
+
+export interface AuthListAccountsAccount {
+  did: string;
+  handle?: string;
+  expiresAt: number;
+  isActive: boolean;
+}
+
+export type AuthListAccountsResponse = { accounts: AuthListAccountsAccount[] };
+
+export interface AuthSwitchAccountRequest {
+  type: 'AUTH_SWITCH_ACCOUNT';
+  did: string;
+}
+
+export interface AuthSignOutAccountRequest {
+  type: 'AUTH_SIGN_OUT_ACCOUNT';
+  did: string;
+}
+
 // ── Settings messages ─────────────────────────────────────────────────────────
 
 export interface GetSettingsRequest {
@@ -120,6 +145,9 @@ export type MessageRequest =
   | AuthReauthorizeRequest
   | AuthGetStatusRequest
   | AuthCallbackRequest
+  | AuthListAccountsRequest
+  | AuthSwitchAccountRequest
+  | AuthSignOutAccountRequest
   | GetSettingsRequest
   | SetSettingsRequest
   | GetRecordRequest
@@ -148,23 +176,30 @@ export type ResponseFor<T extends MessageRequest> = T extends AuthGetStatusReque
   ? AuthGetStatusResponse
   : T extends AuthCallbackRequest
     ? AuthCallbackResponse
-    : T extends GetSettingsRequest
-      ? GetSettingsResponse
-      : T extends SetSettingsRequest
-        ? SetSettingsResponse
-        : T extends AuthSignInRequest | AuthSignOutRequest | AuthReauthorizeRequest
-          ? OkResponse
-          : T extends GetRecordRequest
-            ? GetRecordResponse
-            : T extends PutRecordRequest
-              ? PutRecordResponse
-              : T extends UploadBlobRequest
-                ? UploadBlobResponse
-                : T extends SetPdsUrlRequest
-                  ? SetPdsUrlResponse
-                  : T extends GetPdsUrlRequest
-                    ? GetPdsUrlResponse
-                    : never;
+    : T extends AuthListAccountsRequest
+      ? AuthListAccountsResponse
+      : T extends GetSettingsRequest
+        ? GetSettingsResponse
+        : T extends SetSettingsRequest
+          ? SetSettingsResponse
+          : T extends
+                | AuthSignInRequest
+                | AuthSignOutRequest
+                | AuthReauthorizeRequest
+                | AuthSwitchAccountRequest
+                | AuthSignOutAccountRequest
+            ? OkResponse
+            : T extends GetRecordRequest
+              ? GetRecordResponse
+              : T extends PutRecordRequest
+                ? PutRecordResponse
+                : T extends UploadBlobRequest
+                  ? UploadBlobResponse
+                  : T extends SetPdsUrlRequest
+                    ? SetPdsUrlResponse
+                    : T extends GetPdsUrlRequest
+                      ? GetPdsUrlResponse
+                      : never;
 
 /**
  * Type-safe wrapper around `browser.runtime.sendMessage`.

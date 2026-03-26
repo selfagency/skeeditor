@@ -30,7 +30,7 @@ Example declaration:
         "blurs": "media",
         "defaultSetting": "warn",
         "locales": [
-          {"lang": "en", "name": "Spider Warning", "description": "Spider!!!"}
+          { "lang": "en", "name": "Spider Warning", "description": "Spider!!!" }
         ]
       }
     ]

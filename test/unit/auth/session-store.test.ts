@@ -178,6 +178,43 @@ describe('sessionStore.listDids', () => {
   });
 });
 
+describe('sessionStore.listAll', () => {
+  it('returns all accounts and the active DID in a single read', async () => {
+    const alice = makeSession('did:plc:alice');
+    const bob = makeSession('did:plc:bob');
+    vi.mocked(browser.storage.local.get).mockResolvedValueOnce({
+      sessions: { [alice.did]: alice, [bob.did]: bob },
+      activeDid: 'did:plc:alice',
+    } as never);
+
+    const result = await sessionStore.listAll();
+
+    expect(result.activeDid).toBe('did:plc:alice');
+    expect(result.accounts).toHaveLength(2);
+    expect(result.accounts.map(a => a.did)).toEqual(expect.arrayContaining([alice.did, bob.did]));
+  });
+
+  it('returns empty accounts and null activeDid when no sessions exist', async () => {
+    vi.mocked(browser.storage.local.get).mockResolvedValueOnce({} as never);
+
+    const result = await sessionStore.listAll();
+
+    expect(result).toEqual({ accounts: [], activeDid: null });
+  });
+
+  it('returns null activeDid when activeDid key is absent', async () => {
+    const alice = makeSession('did:plc:alice');
+    vi.mocked(browser.storage.local.get).mockResolvedValueOnce({
+      sessions: { [alice.did]: alice },
+    } as never);
+
+    const result = await sessionStore.listAll();
+
+    expect(result.activeDid).toBeNull();
+    expect(result.accounts).toHaveLength(1);
+  });
+});
+
 describe('sessionStore.migrateFromLegacy', () => {
   it('should migrate a legacy session into the sessions map and remove old keys', async () => {
     const legacySession = makeSession();

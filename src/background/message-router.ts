@@ -114,9 +114,15 @@ interface XrpcInterface {
 
 interface StoreInterface {
   get: () => Promise<StoredSession | null>;
+  getByDid: (did: string) => Promise<StoredSession | null>;
   set: (session: StoredSession) => Promise<void>;
   clear: () => Promise<void>;
+  clearForDid: (did: string) => Promise<void>;
   isAccessTokenValid: () => Promise<boolean>;
+  listDids: () => Promise<string[]>;
+  listAll: () => Promise<{ accounts: { did: string; handle?: string; expiresAt: number }[]; activeDid: string | null }>;
+  getActiveDid: () => Promise<string | null>;
+  setActiveDid: (did: string) => Promise<void>;
 }
 
 export interface RouterDeps {
@@ -146,6 +152,9 @@ const KNOWN_TYPES = new Set([
   'AUTH_REAUTHORIZE',
   'AUTH_GET_STATUS',
   'AUTH_CALLBACK',
+  'AUTH_LIST_ACCOUNTS',
+  'AUTH_SWITCH_ACCOUNT',
+  'AUTH_SIGN_OUT_ACCOUNT',
   'GET_SETTINGS',
   'SET_SETTINGS',
   'GET_RECORD',
@@ -370,6 +379,35 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
         return { authenticated: true, did: stored.did, handle: stored.handle, expiresAt: stored.expiresAt };
       }
       return { authenticated: false };
+    }
+
+    case 'AUTH_LIST_ACCOUNTS': {
+      const { accounts, activeDid } = await deps.store.listAll();
+      return {
+        accounts: accounts.map(a => ({ ...a, isActive: a.did === activeDid })),
+      };
+    }
+
+    case 'AUTH_SWITCH_ACCOUNT': {
+      const did = message['did'];
+      if (!isNonEmptyString(did) || !/^did:[a-z]+:.+$/u.test(did)) {
+        return { error: 'Invalid AUTH_SWITCH_ACCOUNT payload' };
+      }
+      const session = await deps.store.getByDid(did);
+      if (session === null) {
+        return { error: 'No session found for DID' };
+      }
+      await deps.store.setActiveDid(did);
+      return { ok: true };
+    }
+
+    case 'AUTH_SIGN_OUT_ACCOUNT': {
+      const did = message['did'];
+      if (!isNonEmptyString(did) || !/^did:[a-z]+:.+$/u.test(did)) {
+        return { error: 'Invalid AUTH_SIGN_OUT_ACCOUNT payload' };
+      }
+      await deps.store.clearForDid(did);
+      return { ok: true };
     }
 
     case 'GET_SETTINGS': {

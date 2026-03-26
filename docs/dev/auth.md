@@ -45,11 +45,15 @@ Background: closes callback tab, notifies popup of success
 ## PKCE utilities (`src/shared/auth/pkce.ts`)
 
 ```ts
-import { generateCodeVerifier, deriveCodeChallenge, generateState } from '@src/shared/auth/pkce';
+import {
+  generateCodeVerifier,
+  deriveCodeChallenge,
+  generateState,
+} from "@src/shared/auth/pkce";
 
-const codeVerifier  = generateCodeVerifier();              // 43-128 char random string
+const codeVerifier = generateCodeVerifier(); // 43-128 char random string
 const codeChallenge = await deriveCodeChallenge(codeVerifier); // SHA-256, base64url-encoded
-const state         = generateState();                     // 32-char random string for CSRF check
+const state = generateState(); // 32-char random string for CSRF check
 ```
 
 Prefer the higher-level `buildAuthorizationRequest()` from `auth-client.ts` which combines all steps and stores the verifier/state for later retrieval.
@@ -90,13 +94,13 @@ The redirect URI must be listed in the metadata document. Because the extension 
 `SessionStore` reads and writes tokens in `browser.storage.local` — sandboxed to the extension, inaccessible to page context.
 
 ```ts
-import { SessionStore } from '@src/shared/auth/session-store';
+import { SessionStore } from "@src/shared/auth/session-store";
 
 const store = new SessionStore();
 
-await store.write(tokens);        // Persist access + refresh tokens
+await store.write(tokens); // Persist access + refresh tokens
 const tokens = await store.read(); // null if not signed in
-await store.clear();              // Delete tokens (sign-out)
+await store.clear(); // Delete tokens (sign-out)
 ```
 
 ---

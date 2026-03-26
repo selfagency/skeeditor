@@ -39,7 +39,7 @@ Use **feature detection**, never `navigator.userAgent`. The `detectPlatform()` f
 | Neither                                        | Chrome  |
 
 ```ts
-import { platform } from '@src/platform';
+import { platform } from "@src/platform";
 
 if (platform.isFirefox) {
   // Firefox-specific path

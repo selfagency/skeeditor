@@ -148,6 +148,39 @@ async function listDids(): Promise<string[]> {
   return Object.keys(sessions as object);
 }
 
+/** Summary of a stored session — no token credentials, safe for popup context. */
+export interface AccountSummary {
+  did: string;
+  handle?: string;
+  expiresAt: number;
+}
+
+/**
+ * Return all stored accounts and the active DID in a single storage read.
+ *
+ * Prefer this over calling {@link listDids} + {@link getByDid} in a loop to
+ * avoid N+1 `browser.storage.local.get` calls.
+ */
+async function listAll(): Promise<{ accounts: AccountSummary[]; activeDid: string | null }> {
+  const result = await browser.storage.local.get([SESSIONS_KEY, ACTIVE_DID_KEY]);
+  const raw = result as Record<string, unknown>;
+  const sessions = raw[SESSIONS_KEY];
+  const activeDid =
+    typeof raw[ACTIVE_DID_KEY] === 'string' && (raw[ACTIVE_DID_KEY] as string).length > 0
+      ? (raw[ACTIVE_DID_KEY] as string)
+      : null;
+
+  if (sessions === null || typeof sessions !== 'object') {
+    return { accounts: [], activeDid };
+  }
+
+  const accounts: AccountSummary[] = Object.values(sessions as Record<string, unknown>)
+    .filter(isStoredSession)
+    .map(s => ({ did: s.did, ...(s.handle !== undefined && { handle: s.handle }), expiresAt: s.expiresAt }));
+
+  return { accounts, activeDid };
+}
+
 /**
  * One-time migration from the legacy single-slot storage format.
  *
@@ -224,6 +257,7 @@ export const sessionStore = {
   getActiveDid,
   setActiveDid,
   listDids,
+  listAll,
   clear,
   clearForDid,
   isAccessTokenValid,

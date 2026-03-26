@@ -126,6 +126,6 @@ All `src/` imports use the `@src` alias, which maps to the `src/` directory. Thi
 Example:
 
 ```ts
-import { sendMessage } from '@src/shared/messages';
-import { XrpcClient } from '@src/shared/api/xrpc-client';
+import { sendMessage } from "@src/shared/messages";
+import { XrpcClient } from "@src/shared/api/xrpc-client";
 ```

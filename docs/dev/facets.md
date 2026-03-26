@@ -18,10 +18,10 @@ All three functions accept a plain `string` and return an array of `FacetToken`:
 
 ```ts
 interface FacetToken {
-  kind: 'link' | 'mention' | 'tag';
-  value: string;   // URL, handle (without @), or hashtag (without #)
-  start: number;   // character index in the string (inclusive)
-  end: number;     // character index in the string (exclusive)
+  kind: "link" | "mention" | "tag";
+  value: string; // URL, handle (without @), or hashtag (without #)
+  start: number; // character index in the string (inclusive)
+  end: number; // character index in the string (exclusive)
 }
 ```
 
@@ -30,9 +30,9 @@ interface FacetToken {
 Finds bare URLs matching `https?://…`. Trailing punctuation (`.`, `,`, `)`, `!`, `?`, `;`, `:`) is stripped from the end of each match.
 
 ```ts
-import { detectLinks } from '@src/shared/utils/facets';
+import { detectLinks } from "@src/shared/utils/facets";
 
-detectLinks('see https://example.com today');
+detectLinks("see https://example.com today");
 // [{ kind: 'link', value: 'https://example.com', start: 4, end: 23 }]
 ```
 
@@ -41,9 +41,9 @@ detectLinks('see https://example.com today');
 Matches `@handle.bsky.social`-style handles. Must be preceded by a non-alphanumeric character (or be at the start of the string). Handles are normalised to lowercase.
 
 ```ts
-import { detectMentions } from '@src/shared/utils/facets';
+import { detectMentions } from "@src/shared/utils/facets";
 
-detectMentions('hello @alice.bsky.social!');
+detectMentions("hello @alice.bsky.social!");
 // [{ kind: 'mention', value: 'alice.bsky.social', start: 6, end: 24 }]
 ```
 
@@ -52,9 +52,9 @@ detectMentions('hello @alice.bsky.social!');
 Matches `#tag` where `tag` is 1–64 Unicode letters, digits, or underscores. Must be preceded by a non-alphanumeric character (or start of string).
 
 ```ts
-import { detectHashtags } from '@src/shared/utils/facets';
+import { detectHashtags } from "@src/shared/utils/facets";
 
-detectHashtags('A #TypeScript post');
+detectHashtags("A #TypeScript post");
 // [{ kind: 'tag', value: 'TypeScript', start: 2, end: 13 }]
 ```
 
@@ -65,7 +65,7 @@ detectHashtags('A #TypeScript post');
 Converts a character-index range to UTF-8 byte offsets:
 
 ```ts
-import { toByteOffsets } from '@src/shared/utils/facets';
+import { toByteOffsets } from "@src/shared/utils/facets";
 
 interface ByteOffsets {
   byteStart: number;
@@ -84,7 +84,7 @@ Internally uses `utf8ByteLength` from `src/shared/utils/text.ts`, which encodes 
 The high-level function used before every `putRecord`. It detects all three token types, deduplicates overlaps (hashtags and mentions that overlap with a URL are discarded), sorts by start offset, converts to byte offsets, and returns an array of `app.bsky.richtext.facet` records ready to embed in the post.
 
 ```ts
-import { buildFacets } from '@src/shared/utils/facets';
+import { buildFacets } from "@src/shared/utils/facets";
 
 interface BuildFacetsOptions {
   resolveMentionDid?: (handle: string) => string | undefined;
@@ -92,7 +92,7 @@ interface BuildFacetsOptions {
 
 const facets = buildFacets(newText, {
   // Optional: resolve a @handle to its DID for richer mention features
-  resolveMentionDid: handle => lookupDid(handle),
+  resolveMentionDid: (handle) => lookupDid(handle),
 });
 ```
 
@@ -105,9 +105,13 @@ If `resolveMentionDid` is not provided (or returns `undefined` for a given handl
 When text is edited, existing facet byte offsets may need to shift. `recalculateFacets` uses a common-prefix/common-suffix diff algorithm to determine which facets need to move and by how much:
 
 ```ts
-import { recalculateFacets } from '@src/shared/utils/facet-offsets';
+import { recalculateFacets } from "@src/shared/utils/facet-offsets";
 
-const updatedFacets = recalculateFacets(originalText, editedText, originalFacets);
+const updatedFacets = recalculateFacets(
+  originalText,
+  editedText,
+  originalFacets,
+);
 ```
 
 - Facets **before** the edit zone are unchanged.
@@ -122,10 +126,10 @@ The returned facets are plain `app.bsky.richtext.facet` objects that can be embe
 
 ```ts
 const record = {
-  $type: 'app.bsky.feed.post',
+  $type: "app.bsky.feed.post",
   text: newText,
   facets: buildFacets(newText),
-  createdAt: originalRecord.createdAt,  // always preserve
+  createdAt: originalRecord.createdAt, // always preserve
 };
 ```
 

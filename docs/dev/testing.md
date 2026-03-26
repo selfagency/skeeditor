@@ -38,17 +38,17 @@ Unit tests cover pure functions, utilities, parsers, and class methods in isolat
 ### Import example
 
 ```ts
-import { describe, test, expect } from 'vitest';
-import { detectLinks } from '@src/shared/utils/facets';
+import { describe, test, expect } from "vitest";
+import { detectLinks } from "@src/shared/utils/facets";
 
-describe('detectLinks', () => {
-  test('returns a facet for a bare URL', () => {
-    const text = 'check out https://example.com today';
+describe("detectLinks", () => {
+  test("returns a facet for a bare URL", () => {
+    const text = "check out https://example.com today";
 
     const results = detectLinks(text);
 
     expect(results).toHaveLength(1);
-    expect(results[0]?.uri).toBe('https://example.com');
+    expect(results[0]?.uri).toBe("https://example.com");
   });
 });
 ```
@@ -79,22 +79,33 @@ Integration tests verify HTTP request/response flows — primarily XRPC calls to
 ### Example
 
 ```ts
-import { http, HttpResponse } from 'msw';
-import { server } from '@test/mocks/server';
-import { XrpcClient } from '@src/shared/api/xrpc-client';
+import { http, HttpResponse } from "msw";
+import { server } from "@test/mocks/server";
+import { XrpcClient } from "@src/shared/api/xrpc-client";
 
-test('getRecord returns parsed record', async () => {
+test("getRecord returns parsed record", async () => {
   server.use(
-    http.get('https://bsky.social/xrpc/com.atproto.repo.getRecord', () =>
-      HttpResponse.json({ uri: 'at://...', cid: 'baf...', value: { text: 'hello' } })
-    )
+    http.get("https://bsky.social/xrpc/com.atproto.repo.getRecord", () =>
+      HttpResponse.json({
+        uri: "at://...",
+        cid: "baf...",
+        value: { text: "hello" },
+      }),
+    ),
   );
 
-  const client = new XrpcClient({ service: 'https://bsky.social', accessJwt: 'tok' });
+  const client = new XrpcClient({
+    service: "https://bsky.social",
+    accessJwt: "tok",
+  });
 
-  const result = await client.getRecord({ repo: 'did:plc:abc', collection: 'app.bsky.feed.post', rkey: '1' });
+  const result = await client.getRecord({
+    repo: "did:plc:abc",
+    collection: "app.bsky.feed.post",
+    rkey: "1",
+  });
 
-  expect(result.value.text).toBe('hello');
+  expect(result.value.text).toBe("hello");
 });
 ```
 

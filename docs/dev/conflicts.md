@@ -43,12 +43,12 @@ The content script displays a conflict UI and waits for user input.
 When all three versions are available, `buildThreeWayMergeAdvisory` classifies each top-level field:
 
 ```ts
-import { buildThreeWayMergeAdvisory } from '@src/shared/api/xrpc-client';
+import { buildThreeWayMergeAdvisory } from "@src/shared/api/xrpc-client";
 
 const advisory = buildThreeWayMergeAdvisory(
-  originalRecord,     // what we had when the editor opened
-  currentServerRecord,// result.conflict.currentValue
-  localEditedRecord,  // what the user typed
+  originalRecord, // what we had when the editor opened
+  currentServerRecord, // result.conflict.currentValue
+  localEditedRecord, // what the user typed
 );
 
 if (!advisory.hasConflicts) {
@@ -57,7 +57,11 @@ if (!advisory.hasConflicts) {
   await retryPutRecord(merged, result.conflict.currentCid);
 } else {
   // Genuinely conflicting fields — show them to the user
-  showConflictUI(advisory.conflictingFields, currentServerRecord, localEditedRecord);
+  showConflictUI(
+    advisory.conflictingFields,
+    currentServerRecord,
+    localEditedRecord,
+  );
 }
 ```
 
@@ -66,10 +70,10 @@ if (!advisory.hasConflicts) {
 ```ts
 interface PutRecordMergeAdvisory {
   hasConflicts: boolean;
-  clientChanges: string[];      // fields changed only locally
-  serverChanges: string[];      // fields changed only on the server
-  sharedChanges: string[];      // fields changed identically in both
-  conflictingFields: string[];  // fields changed differently in both
+  clientChanges: string[]; // fields changed only locally
+  serverChanges: string[]; // fields changed only on the server
+  sharedChanges: string[]; // fields changed identically in both
+  conflictingFields: string[]; // fields changed differently in both
 }
 ```
 
@@ -91,26 +95,30 @@ interface PutRecordMergeAdvisory {
 ## Example: simple conflict UI
 
 ```ts
-import { sendMessage } from '@src/shared/messages';
+import { sendMessage } from "@src/shared/messages";
 
 const result = await sendMessage({
-  type: 'PUT_RECORD',
-  repo, collection, rkey,
+  type: "PUT_RECORD",
+  repo,
+  collection,
+  rkey,
   record: editedRecord,
   swapRecord: originalCid,
 });
 
-if (result.type === 'PUT_RECORD_CONFLICT') {
+if (result.type === "PUT_RECORD_CONFLICT") {
   const choice = await showConflictDialog({
     currentValue: result.conflict?.currentValue,
     editedValue: editedRecord,
   });
 
-  if (choice === 'force-save' && result.conflict) {
+  if (choice === "force-save" && result.conflict) {
     // Retry with the server's current CID as the new swap target
     await sendMessage({
-      type: 'PUT_RECORD',
-      repo, collection, rkey,
+      type: "PUT_RECORD",
+      repo,
+      collection,
+      rkey,
       record: editedRecord,
       swapRecord: result.conflict.currentCid,
     });

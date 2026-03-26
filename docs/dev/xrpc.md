@@ -9,12 +9,12 @@ All XRPC calls are made from the background service worker. Content scripts and 
 ## Configuration
 
 ```ts
-import { XrpcClient } from '@src/shared/api/xrpc-client';
+import { XrpcClient } from "@src/shared/api/xrpc-client";
 
 const client = new XrpcClient({
-  service: 'https://bsky.social',   // PDS base URL
-  did: 'did:plc:alice',             // Authenticated user's DID (optional for unauth reads)
-  accessJwt: '<token>',             // Access token from SessionStore
+  service: "https://bsky.social", // PDS base URL
+  did: "did:plc:alice", // Authenticated user's DID (optional for unauth reads)
+  accessJwt: "<token>", // Access token from SessionStore
 });
 ```
 
@@ -22,9 +22,9 @@ const client = new XrpcClient({
 
 ```ts
 interface XrpcClientConfig {
-  service: string;       // PDS URL, e.g. 'https://bsky.social'
-  did?: string;          // Authenticated DID for write operations
-  accessJwt?: string;    // OAuth access token; required for putRecord
+  service: string; // PDS URL, e.g. 'https://bsky.social'
+  did?: string; // Authenticated DID for write operations
+  accessJwt?: string; // OAuth access token; required for putRecord
 }
 ```
 
@@ -38,12 +38,12 @@ Fetches a single AT Protocol record.
 
 ```ts
 const result = await client.getRecord({
-  repo: 'did:plc:alice',
-  collection: 'app.bsky.feed.post',
-  rkey: '3jxyz',
+  repo: "did:plc:alice",
+  collection: "app.bsky.feed.post",
+  rkey: "3jxyz",
 });
 
-console.log(result.cid);        // CID string — use as swapRecord for the subsequent put
+console.log(result.cid); // CID string — use as swapRecord for the subsequent put
 console.log(result.value.text); // Record fields
 ```
 
@@ -108,7 +108,11 @@ if (result.success) {
 Types:
 
 ```ts
-type PutRecordWithSwapErrorKind = 'auth' | 'conflict' | 'network' | 'validation';
+type PutRecordWithSwapErrorKind =
+  | "auth"
+  | "conflict"
+  | "network"
+  | "validation";
 
 interface PutRecordWithSwapError {
   kind: PutRecordWithSwapErrorKind;
@@ -122,8 +126,12 @@ interface PutRecordConflictDetails {
 }
 
 type PutRecordWithSwapResult =
-  | { success: true;  uri: string; cid: string }
-  | { success: false; error: PutRecordWithSwapError; conflict?: PutRecordConflictDetails };
+  | { success: true; uri: string; cid: string }
+  | {
+      success: false;
+      error: PutRecordWithSwapError;
+      conflict?: PutRecordConflictDetails;
+    };
 ```
 
 ---
@@ -133,15 +141,15 @@ type PutRecordWithSwapResult =
 When a conflict occurs and you have all three versions of a record (original, current server, local edits), this utility classifies each top-level field:
 
 ```ts
-import { buildThreeWayMergeAdvisory } from '@src/shared/api/xrpc-client';
+import { buildThreeWayMergeAdvisory } from "@src/shared/api/xrpc-client";
 
 const advisory = buildThreeWayMergeAdvisory(base, current, attempted);
 
-advisory.hasConflicts;       // boolean — true if any field changed in both server and local
-advisory.clientChanges;      // fields changed only locally
-advisory.serverChanges;      // fields changed only on server
-advisory.sharedChanges;      // fields changed identically in both
-advisory.conflictingFields;  // fields changed differently in both — require user decision
+advisory.hasConflicts; // boolean — true if any field changed in both server and local
+advisory.clientChanges; // fields changed only locally
+advisory.serverChanges; // fields changed only on server
+advisory.sharedChanges; // fields changed identically in both
+advisory.conflictingFields; // fields changed differently in both — require user decision
 ```
 
 `PutRecordMergeAdvisory`:

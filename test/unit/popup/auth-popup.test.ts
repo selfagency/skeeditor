@@ -2,18 +2,25 @@ import '@src/popup/auth-popup';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { StoredSession } from '@src/shared/auth/session-store';
+import type { AuthListAccountsAccount } from '@src/shared/messages';
 
 const flushPromises = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
 
-const makeSession = (overrides: Partial<StoredSession> = {}): StoredSession => ({
-  accessToken: 'access-token',
-  refreshToken: 'refresh-token',
-  expiresAt: Date.now() + 60_000,
-  scope: 'atproto transition:generic',
+const makeAccount = (overrides: Partial<AuthListAccountsAccount> = {}): AuthListAccountsAccount => ({
   did: 'did:plc:testuser123',
+  expiresAt: Date.now() + 60_000,
+  isActive: true,
   ...overrides,
 });
+
+const mockSendMessage = (accounts: AuthListAccountsAccount[]): void => {
+  vi.mocked(browser.runtime.sendMessage).mockImplementation(async (msg: unknown) => {
+    if ((msg as { type: string })?.type === 'AUTH_LIST_ACCOUNTS') {
+      return { accounts };
+    }
+    return { ok: true };
+  });
+};
 
 const createElement = (): HTMLElement => document.createElement('auth-popup');
 
@@ -24,81 +31,144 @@ const attach = async (el: HTMLElement): Promise<void> => {
 
 describe('auth-popup Web Component', () => {
   beforeEach(() => {
-    vi.mocked(browser.runtime.sendMessage).mockResolvedValue({ ok: true });
+    mockSendMessage([]);
   });
 
   describe('loading state', () => {
-    it('renders a loading indicator before the session check resolves', () => {
-      // Make storage block indefinitely so the component stays loading
-      vi.mocked(browser.storage.local.get).mockImplementation(() => new Promise(() => {}));
+    it('renders a loading indicator before the account list resolves', () => {
+      vi.mocked(browser.runtime.sendMessage).mockImplementation(() => new Promise(() => {}));
 
       const el = createElement();
       document.body.appendChild(el);
 
-      const root = el.shadowRoot;
-      expect(root?.querySelector('.loading')).not.toBeNull();
+      expect(el.shadowRoot?.querySelector('.loading')).not.toBeNull();
     });
   });
 
   describe('unauthenticated state', () => {
-    it('shows a sign-in button when storage returns no session', async () => {
-      vi.mocked(browser.storage.local.get).mockResolvedValue({} as never);
+    it('shows a sign-in button when no accounts exist', async () => {
+      mockSendMessage([]);
 
       const el = createElement();
       await attach(el);
 
-      const root = el.shadowRoot;
-      expect(root?.querySelector('#sign-in')).not.toBeNull();
-      expect(root?.querySelector('#sign-out')).toBeNull();
+      expect(el.shadowRoot?.querySelector('#sign-in')).not.toBeNull();
+      expect(el.shadowRoot?.querySelector('.account-sign-out')).toBeNull();
     });
 
-    it('shows a sign-in button when the stored session is expired', async () => {
-      const expired = makeSession({ expiresAt: Date.now() - 1000 });
-      vi.mocked(browser.storage.local.get)
-        .mockResolvedValueOnce({ activeDid: expired.did } as never)
-        .mockResolvedValueOnce({ sessions: { [expired.did]: expired } } as never);
+    it('shows a PDS URL input in unauthenticated state', async () => {
+      mockSendMessage([]);
 
       const el = createElement();
       await attach(el);
 
-      const root = el.shadowRoot;
-      expect(root?.querySelector('#sign-in')).not.toBeNull();
+      expect(el.shadowRoot?.querySelector('#pds-url')).not.toBeNull();
     });
   });
 
-  describe('authenticated state', () => {
-    it('shows the DID when a valid session exists', async () => {
-      const session = makeSession();
-      vi.mocked(browser.storage.local.get)
-        .mockResolvedValueOnce({ activeDid: session.did } as never)
-        .mockResolvedValueOnce({ sessions: { [session.did]: session } } as never);
+  describe('authenticated state (single account)', () => {
+    it('shows the DID when a valid account exists', async () => {
+      mockSendMessage([makeAccount()]);
 
       const el = createElement();
       await attach(el);
 
-      const root = el.shadowRoot;
-      expect(root?.textContent).toContain('did:plc:testuser123');
+      expect(el.shadowRoot?.textContent).toContain('did:plc:testuser123');
     });
 
-    it('shows sign-out and reauthorize buttons when authenticated', async () => {
-      const session = makeSession();
-      vi.mocked(browser.storage.local.get)
-        .mockResolvedValueOnce({ activeDid: session.did } as never)
-        .mockResolvedValueOnce({ sessions: { [session.did]: session } } as never);
+    it('shows handle instead of DID when handle is available', async () => {
+      mockSendMessage([makeAccount({ handle: 'alice.bsky.social' })]);
 
       const el = createElement();
       await attach(el);
 
-      const root = el.shadowRoot;
-      expect(root?.querySelector('#sign-out')).not.toBeNull();
-      expect(root?.querySelector('#reauthorize')).not.toBeNull();
-      expect(root?.querySelector('#sign-in')).toBeNull();
+      expect(el.shadowRoot?.textContent).toContain('alice.bsky.social');
+    });
+
+    it('shows reauthorize and sign-out buttons for active account', async () => {
+      mockSendMessage([makeAccount({ isActive: true })]);
+
+      const el = createElement();
+      await attach(el);
+
+      expect(el.shadowRoot?.querySelector('#reauthorize')).not.toBeNull();
+      expect(el.shadowRoot?.querySelector('.account-sign-out')).not.toBeNull();
+      expect(el.shadowRoot?.querySelector('#sign-in')).toBeNull();
+    });
+
+    it('does not show a switch button for the sole active account', async () => {
+      mockSendMessage([makeAccount({ isActive: true })]);
+
+      const el = createElement();
+      await attach(el);
+
+      expect(el.shadowRoot?.querySelector('.account-switch')).toBeNull();
+    });
+
+    it('shows an add-account button', async () => {
+      mockSendMessage([makeAccount()]);
+
+      const el = createElement();
+      await attach(el);
+
+      expect(el.shadowRoot?.querySelector('#add-account')).not.toBeNull();
+    });
+
+    it('shows a PDS URL input in authenticated state for adding another account', async () => {
+      mockSendMessage([makeAccount()]);
+
+      const el = createElement();
+      await attach(el);
+
+      expect(el.shadowRoot?.querySelector('#add-pds-url')).not.toBeNull();
+    });
+  });
+
+  describe('authenticated state (multiple accounts)', () => {
+    it('renders a card for each account', async () => {
+      mockSendMessage([
+        makeAccount({ did: 'did:plc:user1', isActive: true }),
+        makeAccount({ did: 'did:plc:user2', isActive: false }),
+      ]);
+
+      const el = createElement();
+      await attach(el);
+
+      const cards = el.shadowRoot?.querySelectorAll('.account-card');
+      expect(cards?.length).toBe(2);
+    });
+
+    it('shows a switch button only for the non-active account', async () => {
+      mockSendMessage([
+        makeAccount({ did: 'did:plc:user1', isActive: true }),
+        makeAccount({ did: 'did:plc:user2', isActive: false }),
+      ]);
+
+      const el = createElement();
+      await attach(el);
+
+      const switchBtns = el.shadowRoot?.querySelectorAll<HTMLButtonElement>('.account-switch');
+      expect(switchBtns?.length).toBe(1);
+      expect(switchBtns?.[0]?.dataset['did']).toBe('did:plc:user2');
+    });
+
+    it('shows per-account sign-out buttons for all accounts', async () => {
+      mockSendMessage([
+        makeAccount({ did: 'did:plc:user1', isActive: true }),
+        makeAccount({ did: 'did:plc:user2', isActive: false }),
+      ]);
+
+      const el = createElement();
+      await attach(el);
+
+      const signOutBtns = el.shadowRoot?.querySelectorAll('.account-sign-out');
+      expect(signOutBtns?.length).toBe(2);
     });
   });
 
   describe('messages', () => {
     it('sends AUTH_SIGN_IN when sign-in button is clicked', async () => {
-      vi.mocked(browser.storage.local.get).mockResolvedValue({} as never);
+      mockSendMessage([]);
 
       const el = createElement();
       await attach(el);
@@ -111,42 +181,72 @@ describe('auth-popup Web Component', () => {
       });
     });
 
-    it('sends AUTH_SIGN_OUT when sign-out button is clicked', async () => {
-      const session = makeSession();
-      vi.mocked(browser.storage.local.get)
-        .mockResolvedValueOnce({ activeDid: session.did } as never)
-        .mockResolvedValueOnce({ sessions: { [session.did]: session } } as never);
+    it('sends AUTH_SIGN_IN when add-account button is clicked', async () => {
+      mockSendMessage([makeAccount()]);
 
       const el = createElement();
       await attach(el);
 
-      el.shadowRoot?.querySelector<HTMLButtonElement>('#sign-out')?.click();
-      await flushPromises();
+      el.shadowRoot?.querySelector<HTMLButtonElement>('#add-account')?.click();
 
-      expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({ type: 'AUTH_SIGN_OUT' });
+      expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({
+        type: 'AUTH_SIGN_IN',
+        pdsUrl: expect.any(String),
+      });
     });
 
-    it('transitions back to unauthenticated after sign-out', async () => {
-      const session = makeSession();
-      vi.mocked(browser.storage.local.get)
-        .mockResolvedValueOnce({ activeDid: session.did } as never)
-        .mockResolvedValueOnce({ sessions: { [session.did]: session } } as never);
+    it('sends AUTH_SIGN_OUT_ACCOUNT with the correct DID when per-account sign-out is clicked', async () => {
+      mockSendMessage([makeAccount({ did: 'did:plc:testuser123', isActive: true })]);
 
       const el = createElement();
       await attach(el);
 
-      el.shadowRoot?.querySelector<HTMLButtonElement>('#sign-out')?.click();
+      el.shadowRoot?.querySelector<HTMLButtonElement>('.account-sign-out')?.click();
+      await flushPromises();
+
+      expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({
+        type: 'AUTH_SIGN_OUT_ACCOUNT',
+        did: 'did:plc:testuser123',
+      });
+    });
+
+    it('transitions to unauthenticated after signing out the last account', async () => {
+      mockSendMessage([makeAccount({ did: 'did:plc:testuser123', isActive: true })]);
+
+      const el = createElement();
+      await attach(el);
+
+      // After sign-out, return empty accounts
+      mockSendMessage([]);
+
+      el.shadowRoot?.querySelector<HTMLButtonElement>('.account-sign-out')?.click();
+      await flushPromises();
       await flushPromises();
 
       expect(el.shadowRoot?.querySelector('#sign-in')).not.toBeNull();
-      expect(el.shadowRoot?.querySelector('#sign-out')).toBeNull();
+    });
+
+    it('sends AUTH_SWITCH_ACCOUNT with the correct DID when switch is clicked', async () => {
+      mockSendMessage([
+        makeAccount({ did: 'did:plc:user1', isActive: true }),
+        makeAccount({ did: 'did:plc:user2', isActive: false }),
+      ]);
+
+      const el = createElement();
+      await attach(el);
+
+      const switchBtn = el.shadowRoot?.querySelector<HTMLButtonElement>('.account-switch');
+      switchBtn?.click();
+      await flushPromises();
+
+      expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({
+        type: 'AUTH_SWITCH_ACCOUNT',
+        did: 'did:plc:user2',
+      });
     });
 
     it('sends AUTH_REAUTHORIZE when reauthorize button is clicked', async () => {
-      const session = makeSession();
-      vi.mocked(browser.storage.local.get)
-        .mockResolvedValueOnce({ activeDid: session.did } as never)
-        .mockResolvedValueOnce({ sessions: { [session.did]: session } } as never);
+      mockSendMessage([makeAccount({ isActive: true })]);
 
       const el = createElement();
       await attach(el);
@@ -155,7 +255,6 @@ describe('auth-popup Web Component', () => {
 
       expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({
         type: 'AUTH_REAUTHORIZE',
-        pdsUrl: expect.any(String),
       });
     });
   });

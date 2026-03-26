@@ -21,19 +21,19 @@ TypeScript enforces the request/response contract at compile time. You cannot ca
 ### Popup or Web Component
 
 ```ts
-import { sendMessage } from '@src/shared/messages';
+import { sendMessage } from "@src/shared/messages";
 
 // Check auth status
-const status = await sendMessage({ type: 'AUTH_GET_STATUS' });
+const status = await sendMessage({ type: "AUTH_GET_STATUS" });
 if (status.authenticated) {
-  console.log('Signed in as', status.did);
+  console.log("Signed in as", status.did);
 }
 
 // Trigger sign-in
-await sendMessage({ type: 'AUTH_SIGN_IN' });
+await sendMessage({ type: "AUTH_SIGN_IN" });
 
 // Sign out
-await sendMessage({ type: 'AUTH_SIGN_OUT' });
+await sendMessage({ type: "AUTH_SIGN_OUT" });
 ```
 
 ### Content script

@@ -4,7 +4,7 @@
 
 ### Chrome Web Store
 
-1. Visit the [Chrome Web Store listing](https://chrome.google.com/webstore) *(coming soon)*.
+1. Visit the [Chrome Web Store listing](https://chrome.google.com/webstore) _(coming soon)_.
 2. Click **Add to Chrome**.
 3. Click **Add extension** in the confirmation dialog.
 4. The skeeditor icon appears in your toolbar. Pin it for easy access.
@@ -24,7 +24,7 @@
 
 ### Firefox Add-ons (AMO)
 
-1. Visit the [Firefox Add-ons listing](https://addons.mozilla.org) *(coming soon)*.
+1. Visit the [Firefox Add-ons listing](https://addons.mozilla.org) _(coming soon)_.
 2. Click **Add to Firefox**.
 3. Click **Add** in the permissions dialog.
 
