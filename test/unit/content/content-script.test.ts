@@ -9,6 +9,12 @@ const setupDom = (): void => {
   `;
 };
 
+const flushMicrotasks = async (count = 2): Promise<void> => {
+  for (let i = 0; i < count; i += 1) {
+    await Promise.resolve();
+  }
+};
+
 describe('content-script', () => {
   beforeEach(() => {
     vi.resetModules();
@@ -16,6 +22,7 @@ describe('content-script', () => {
   });
 
   afterEach(async () => {
+    vi.useRealTimers();
     const { cleanupContentScript } = await import('@src/content/content-script');
     cleanupContentScript();
     vi.restoreAllMocks();
@@ -33,8 +40,7 @@ describe('content-script', () => {
     globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
 
     await import('@src/content/content-script');
-    await Promise.resolve();
-    await Promise.resolve();
+    await flushMicrotasks();
 
     expect(document.querySelector('[data-skeeditor-edit-button]')).toBeTruthy();
   });
@@ -51,8 +57,7 @@ describe('content-script', () => {
     globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
 
     await import('@src/content/content-script');
-    await Promise.resolve();
-    await Promise.resolve();
+    await flushMicrotasks();
 
     expect(document.querySelector('[data-skeeditor-edit-button]')).toBeNull();
   });
@@ -69,9 +74,169 @@ describe('content-script', () => {
     globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
 
     await import('@src/content/content-script');
-    await Promise.resolve();
-    await Promise.resolve();
+    await flushMicrotasks();
 
     expect(document.querySelector('[data-skeeditor-edit-button]')).toBeNull();
+  });
+
+  it('should inject edit button after session is set via storage change', async () => {
+    vi.useFakeTimers();
+    document.body.innerHTML = `
+      <article role="article">
+        <a href="https://bsky.app/profile/alice.bsky.social/post/3abc">
+          <p data-testid="post-text">Hello Bluesky</p>
+        </a>
+        <div data-testid="postButtonInline"></div>
+      </article>
+    `;
+
+    const sendMessage = vi.fn(async request => {
+      if (request.type === 'AUTH_GET_STATUS') {
+        return { authenticated: false };
+      }
+
+      return { ok: true };
+    });
+
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    await import('@src/content/content-script');
+    await flushMicrotasks();
+
+    expect(document.querySelector('[data-skeeditor-edit-button]')).toBeNull();
+
+    sendMessage.mockImplementation(async request => {
+      if (request.type === 'AUTH_GET_STATUS') {
+        return {
+          authenticated: true,
+          did: 'did:plc:alice123',
+          handle: 'alice.bsky.social',
+          expiresAt: Date.now() + 60_000,
+        };
+      }
+
+      return { ok: true };
+    });
+
+    const onChanged = globalThis.browser.storage.onChanged as unknown as {
+      _emit: (changes: Record<string, { newValue?: unknown; oldValue?: unknown }>) => void;
+    };
+    onChanged._emit({ session: { newValue: { did: 'did:plc:alice123' } } });
+
+    await flushMicrotasks(3);
+    await vi.advanceTimersByTimeAsync(120);
+    await flushMicrotasks(3);
+    vi.useRealTimers();
+
+    expect(document.querySelector('[data-skeeditor-edit-button]')).toBeTruthy();
+  });
+
+  it('should remove injected edit button when session is cleared via storage change', async () => {
+    const sendMessage = vi.fn(async request => {
+      if (request.type === 'AUTH_GET_STATUS') {
+        return {
+          authenticated: true,
+          did: 'did:plc:alice123',
+          expiresAt: Date.now() + 60_000,
+        };
+      }
+
+      return { ok: true };
+    });
+
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    await import('@src/content/content-script');
+    await flushMicrotasks();
+
+    expect(document.querySelector('[data-skeeditor-edit-button]')).toBeTruthy();
+
+    const onChanged = globalThis.browser.storage.onChanged as unknown as {
+      _emit: (changes: Record<string, { newValue?: unknown; oldValue?: unknown }>) => void;
+    };
+    onChanged._emit({ session: { newValue: null } });
+
+    expect(document.querySelector('[data-skeeditor-edit-button]')).toBeNull();
+  });
+
+  it('should inject into the live action row when postButtonInline is absent', async () => {
+    document.body.innerHTML = `
+      <article role="article">
+        <a href="https://bsky.app/profile/alice.bsky.social/post/3abc">
+          <p data-testid="post-text">Hello Bluesky</p>
+        </a>
+        <div class="action-row">
+          <button aria-label="Reply (0 replies)" type="button"></button>
+          <button aria-label="Open share menu" type="button"></button>
+          <button aria-label="Open post options menu" type="button"></button>
+        </div>
+      </article>
+    `;
+
+    const sendMessage = vi.fn(async request => {
+      if (request.type === 'AUTH_GET_STATUS') {
+        return {
+          authenticated: true,
+          did: 'did:plc:alice123',
+          handle: 'alice.bsky.social',
+          expiresAt: Date.now() + 60_000,
+        };
+      }
+
+      return { ok: true };
+    });
+
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    await import('@src/content/content-script');
+    await flushMicrotasks();
+
+    const actionRow = document.querySelector('.action-row');
+    const editButton = document.querySelector('[data-skeeditor-edit-button]');
+    const optionsButton = document.querySelector('button[aria-label="Open post options menu"]');
+
+    expect(editButton).toBeTruthy();
+    expect(actionRow?.contains(editButton)).toBe(true);
+    expect(editButton?.nextElementSibling).toBe(optionsButton);
+  });
+
+  it('should close and remove the edit modal when session is cleared via storage change', async () => {
+    const sendMessage = vi.fn(async request => {
+      if (request.type === 'AUTH_GET_STATUS') {
+        return {
+          authenticated: true,
+          did: 'did:plc:alice123',
+          expiresAt: Date.now() + 60_000,
+        };
+      }
+
+      if (request.type === 'GET_RECORD') {
+        return {
+          value: { $type: 'app.bsky.feed.post', text: 'Hello Bluesky', createdAt: '2026-03-26T00:00:00.000Z' },
+          cid: 'bafyreitest',
+        };
+      }
+
+      return { ok: true };
+    });
+
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    await import('@src/content/content-script');
+    await flushMicrotasks();
+
+    const editButton = document.querySelector<HTMLButtonElement>('[data-skeeditor-edit-button]');
+    expect(editButton).toBeTruthy();
+    editButton?.click();
+    await flushMicrotasks(3);
+
+    expect(document.querySelector('edit-modal')).toBeTruthy();
+
+    const onChanged = globalThis.browser.storage.onChanged as unknown as {
+      _emit: (changes: Record<string, { newValue?: unknown; oldValue?: unknown }>) => void;
+    };
+    onChanged._emit({ session: { newValue: null } });
+
+    expect(document.querySelector('edit-modal')).toBeNull();
   });
 });

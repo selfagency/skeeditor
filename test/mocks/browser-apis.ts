@@ -19,9 +19,20 @@ interface BrowserStorageAreaMock {
   set: (value: Record<string, unknown>) => Promise<void>;
 }
 
+interface BrowserStorageOnChangedMock {
+  addListener: (listener: (changes: Record<string, { newValue?: unknown; oldValue?: unknown }>) => void) => void;
+  removeListener: (listener: (changes: Record<string, { newValue?: unknown; oldValue?: unknown }>) => void) => void;
+  /**
+   * Test helper: fire the onChanged listeners with the given changes object.
+   * Not part of the real browser API — used to simulate storage changes in tests.
+   */
+  _emit: (changes: Record<string, { newValue?: unknown; oldValue?: unknown }>) => void;
+}
+
 interface BrowserStorageMock {
   local: BrowserStorageAreaMock;
   session: BrowserStorageAreaMock;
+  onChanged: BrowserStorageOnChangedMock;
 }
 
 interface BrowserApiMock {
@@ -68,6 +79,25 @@ const createBrowserApiMock = (): BrowserApiMock => {
         remove: vi.fn().mockResolvedValue(undefined),
         set: vi.fn().mockResolvedValue(undefined),
       },
+      onChanged: (() => {
+        const listeners: Array<(changes: Record<string, { newValue?: unknown; oldValue?: unknown }>) => void> = [];
+        return {
+          addListener: vi
+            .fn()
+            .mockImplementation((fn: (changes: Record<string, { newValue?: unknown; oldValue?: unknown }>) => void) => {
+              listeners.push(fn);
+            }),
+          removeListener: vi
+            .fn()
+            .mockImplementation((fn: (changes: Record<string, { newValue?: unknown; oldValue?: unknown }>) => void) => {
+              const i = listeners.indexOf(fn);
+              if (i !== -1) listeners.splice(i, 1);
+            }),
+          _emit: (changes: Record<string, { newValue?: unknown; oldValue?: unknown }>) => {
+            for (const fn of listeners) fn(changes);
+          },
+        };
+      })(),
     },
     tabs: {
       create: vi.fn().mockResolvedValue({ id: 1 }),

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { RouterDeps } from '@src/background/message-router';
 import { createDefaultDeps, handleMessage } from '@src/background/message-router';
@@ -9,6 +9,14 @@ import type { StoredSession } from '@src/shared/auth/session-store';
 vi.mock('@src/shared/auth/auth-client', () => ({
   buildAuthorizationRequest: vi.fn(),
   exchangeCodeForTokens: vi.fn(),
+}));
+
+vi.mock('@src/shared/auth/dpop', () => ({
+  createDpopProof: vi.fn().mockResolvedValue('test-dpop-proof'),
+  loadOrCreateDpopKeyPair: vi.fn().mockResolvedValue({
+    publicKey: {} as CryptoKey,
+    privateKey: {} as CryptoKey,
+  }),
 }));
 
 const makeSession = (overrides: Partial<StoredSession> = {}): StoredSession => ({
@@ -68,6 +76,10 @@ const makeDeps = (overrides: Partial<RouterDeps> = {}): RouterDeps => ({
   ...overrides,
 });
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe('handleMessage', () => {
   describe('unknown messages', () => {
     it('returns an error for unknown message type', async () => {
@@ -93,8 +105,8 @@ describe('handleMessage', () => {
   });
 
   describe('AUTH_GET_STATUS', () => {
-    it('returns authenticated status with DID when valid session exists', async () => {
-      const session = makeSession();
+    it('returns authenticated status with DID and handle when valid session exists', async () => {
+      const session = makeSession({ handle: 'alice.bsky.social' });
       const deps = makeDeps({ store: makeStoreMock(session) });
 
       const result = await handleMessage({ type: 'AUTH_GET_STATUS' }, deps);
@@ -102,8 +114,54 @@ describe('handleMessage', () => {
       expect(result).toEqual({
         authenticated: true,
         did: session.did,
+        handle: 'alice.bsky.social',
         expiresAt: session.expiresAt,
       });
+    });
+
+    it('lazily fetches and persists handle when session is missing handle', async () => {
+      const session = makeSession();
+      const store = makeStoreMock(session);
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        headers: {
+          get: vi.fn().mockReturnValue(null),
+        },
+        json: vi.fn().mockResolvedValue({ handle: 'alice.bsky.social' }),
+      } as unknown as Response);
+      const deps = makeDeps({ store });
+
+      const result = await handleMessage({ type: 'AUTH_GET_STATUS' }, deps);
+
+      expect(result).toEqual({
+        authenticated: true,
+        did: session.did,
+        handle: 'alice.bsky.social',
+        expiresAt: session.expiresAt,
+      });
+      expect(store.set).toHaveBeenCalledWith({ ...session, handle: 'alice.bsky.social' });
+    });
+
+    it('returns authenticated status without handle when lazy fetch fails', async () => {
+      const session = makeSession();
+      const store = makeStoreMock(session);
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: false,
+        headers: {
+          get: vi.fn().mockReturnValue(null),
+        },
+      } as unknown as Response);
+      const deps = makeDeps({ store });
+
+      const result = await handleMessage({ type: 'AUTH_GET_STATUS' }, deps);
+
+      expect(result).toEqual({
+        authenticated: true,
+        did: session.did,
+        handle: undefined,
+        expiresAt: session.expiresAt,
+      });
+      expect(store.set).not.toHaveBeenCalled();
     });
 
     it('returns unauthenticated when no session is stored', async () => {

@@ -1,3 +1,4 @@
+import browser from 'webextension-polyfill';
 import { APP_NAME } from '../shared/constants';
 import type { PutRecordConflictResponse, PutRecordResponse } from '../shared/messages';
 import { sendMessage } from '../shared/messages';
@@ -14,6 +15,7 @@ let mutationObserver: MutationObserver | null = null;
 let currentDid: string | null = null;
 let currentHandle: string | null = null;
 let domContentLoadedHandler: (() => void) | null = null;
+let storageChangeHandler: ((changes: Record<string, browser.Storage.StorageChange>) => void) | null = null;
 let scanScheduled = false;
 let scanTimer: ReturnType<typeof setTimeout> | null = null;
 let activeModal: EditModal | null = null;
@@ -156,8 +158,12 @@ const injectEditButton = (postElement: HTMLElement): void => {
   });
 
   const actionContainer = postElement.querySelector<HTMLElement>('[data-testid="postButtonInline"]');
+  const optionsButton = postElement.querySelector<HTMLElement>('button[aria-label="Open post options menu"]');
+  const liveActionContainer = optionsButton?.parentElement;
   if (actionContainer) {
     actionContainer.appendChild(button);
+  } else if (liveActionContainer) {
+    liveActionContainer.insertBefore(button, optionsButton);
   } else {
     postElement.appendChild(button);
   }
@@ -201,6 +207,48 @@ const findObserverTarget = (): Element => {
   return document.body;
 };
 
+/** Remove all edit buttons and processed markers injected by this content script. */
+const removeInjectedElements = (): void => {
+  document.querySelectorAll<HTMLElement>(`[${EDIT_BUTTON_ATTRIBUTE}]`).forEach(el => el.remove());
+  document.querySelectorAll<HTMLElement>(`[${POST_MARKER_ATTRIBUTE}]`).forEach(el => {
+    el.removeAttribute(POST_MARKER_ATTRIBUTE);
+  });
+};
+
+const dismissActiveModal = (): void => {
+  if (activeModal !== null) {
+    activeModal.close();
+    activeModal = null;
+  }
+};
+
+const ensureStorageListener = (): void => {
+  if (storageChangeHandler !== null) {
+    return;
+  }
+
+  storageChangeHandler = (changes: Record<string, browser.Storage.StorageChange>) => {
+    if (!('session' in changes)) {
+      return;
+    }
+    const { newValue } = changes['session'];
+    if (newValue == null) {
+      // Session cleared — signed out. Remove edit buttons immediately.
+      currentDid = null;
+      currentHandle = null;
+      dismissActiveModal();
+      removeInjectedElements();
+    } else {
+      // Session updated (new login or token refresh) — re-check auth and re-scan.
+      void refreshAuthState()
+        .then(() => scheduleScanForPosts())
+        .catch(err => console.error(`${APP_NAME}: storage refresh failed`, err));
+    }
+  };
+
+  browser.storage.onChanged.addListener(storageChangeHandler);
+};
+
 const ensureObserver = (): void => {
   if (mutationObserver) {
     return;
@@ -216,6 +264,7 @@ const ensureObserver = (): void => {
 
 const start = (): void => {
   ensureObserver();
+  ensureStorageListener();
 
   void refreshAuthState()
     .then(() => {
@@ -252,6 +301,13 @@ export const cleanupContentScript = (): void => {
     document.removeEventListener('DOMContentLoaded', domContentLoadedHandler);
     domContentLoadedHandler = null;
   }
+
+  if (storageChangeHandler !== null) {
+    browser.storage.onChanged.removeListener(storageChangeHandler);
+    storageChangeHandler = null;
+  }
+
+  dismissActiveModal();
 
   currentDid = null;
   currentHandle = null;
