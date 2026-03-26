@@ -84,11 +84,9 @@ export function buildUpdatedPostRecord(
   const existingTags = currentRecord.tags || [];
   nextRecord.tags = [...existingTags, `skeeditor-edit-${currentContentHash}`];
 
-  // Handle media embeds if media files are provided
+  // Override embed with new media if provided; otherwise preserve the existing embed from currentRecord
   if (mediaFiles && mediaFiles.length > 0) {
     nextRecord.embed = buildMediaEmbed(mediaFiles);
-  } else {
-    delete nextRecord.embed;
   }
 
   return nextRecord;
