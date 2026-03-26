@@ -1,7 +1,5 @@
-import browser from 'webextension-polyfill';
 import type { l } from '@atproto/lex';
-
-import { detectPlatform } from '../platform/detect';
+import browser from 'webextension-polyfill';
 
 import type {
   GetRecordResult,
@@ -472,19 +470,12 @@ export function registerMessageRouter(deps: RouterDeps = createDefaultDeps()): (
   // This is required because the redirect target is a web-hosted page (not a bundled extension page),
   // so `window.opener.postMessage` is not available from the service worker context.
   //
-  // The `urls` filter tells Chrome to wake the service worker specifically for navigations
-  // matching this pattern, avoiding the race where the SW is asleep when the redirect arrives.
-  // Firefox does not support this filter on tabs.onUpdated — pass undefined there instead,
-  // relying on the URL check inside the listener to filter events.
+  // The tabListener below does its own URL check, so no filter is passed to addListener.
+  // webextension-polyfill throws "This event does not support filters" on all browsers when
+  // a filter argument is provided, so we rely on manual filtering inside the callback instead.
   const callbackUrl = new URL(BSKY_OAUTH_REDIRECT_URI);
-  const callbackMatchPattern = `${callbackUrl.origin}${callbackUrl.pathname}*`;
-  const { isFirefox } = detectPlatform();
 
-  const tabListener = (
-    tabId: number,
-    changeInfo: { status?: string; url?: string },
-    tab: { url?: string },
-  ): void => {
+  const tabListener = (tabId: number, changeInfo: { status?: string; url?: string }, tab: { url?: string }): void => {
     // Prefer changeInfo.url (set exactly when the URL changes) over tab.url
     const urlString = changeInfo.url ?? (changeInfo.status === 'loading' ? tab.url : undefined);
     if (!urlString) return;
@@ -508,9 +499,8 @@ export function registerMessageRouter(deps: RouterDeps = createDefaultDeps()): (
     });
   };
 
-  const tabFilter = isFirefox ? undefined : { urls: [callbackMatchPattern] };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  browser.tabs.onUpdated.addListener(tabListener as any, tabFilter as any);
+  browser.tabs.onUpdated.addListener(tabListener as any);
 
   return () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
