@@ -10,7 +10,7 @@
   ],
   "redirect_uris": [
     "https://skeeditor.self.agency/callback.html",
-    "http://localhost:3000/callback.html"
+    "http://127.0.0.1:3000/callback.html"
   ],
   "response_types": [
     "code"
