@@ -13,8 +13,8 @@ Use browser inspection to determine why no edit affordance appears when logged i
 
 ## Todo
 
-- [ ] Inspect live bsky.app DOM and post actions with browser tools
-- [ ] Compare live DOM against `content-script.ts` and `post-detector.ts` assumptions
-- [ ] Implement fix if the selector/injection logic is wrong
-- [ ] Verify via tests and/or browser inspection
+- [x] Inspect live bsky.app DOM and post actions with browser tools
+- [x] Compare live DOM against `content-script.ts` and `post-detector.ts` assumptions
+- [x] Implement fix if the selector/injection logic is wrong
+- [x] Verify via tests and/or browser inspection
 - [ ] Commit and push PR updates

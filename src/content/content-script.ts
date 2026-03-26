@@ -158,8 +158,12 @@ const injectEditButton = (postElement: HTMLElement): void => {
   });
 
   const actionContainer = postElement.querySelector<HTMLElement>('[data-testid="postButtonInline"]');
+  const optionsButton = postElement.querySelector<HTMLElement>('button[aria-label="Open post options menu"]');
+  const liveActionContainer = optionsButton?.parentElement;
   if (actionContainer) {
     actionContainer.appendChild(button);
+  } else if (liveActionContainer) {
+    liveActionContainer.insertBefore(button, optionsButton);
   } else {
     postElement.appendChild(button);
   }

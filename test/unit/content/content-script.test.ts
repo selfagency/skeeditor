@@ -159,6 +159,47 @@ describe('content-script', () => {
     expect(document.querySelector('[data-skeeditor-edit-button]')).toBeNull();
   });
 
+  it('should inject into the live action row when postButtonInline is absent', async () => {
+    document.body.innerHTML = `
+      <article role="article">
+        <a href="https://bsky.app/profile/alice.bsky.social/post/3abc">
+          <p data-testid="post-text">Hello Bluesky</p>
+        </a>
+        <div class="action-row">
+          <button aria-label="Reply (0 replies)" type="button"></button>
+          <button aria-label="Open share menu" type="button"></button>
+          <button aria-label="Open post options menu" type="button"></button>
+        </div>
+      </article>
+    `;
+
+    const sendMessage = vi.fn(async request => {
+      if (request.type === 'AUTH_GET_STATUS') {
+        return {
+          authenticated: true,
+          did: 'did:plc:alice123',
+          handle: 'alice.bsky.social',
+          expiresAt: Date.now() + 60_000,
+        };
+      }
+
+      return { ok: true };
+    });
+
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    await import('@src/content/content-script');
+    await flushMicrotasks();
+
+    const actionRow = document.querySelector('.action-row');
+    const editButton = document.querySelector('[data-skeeditor-edit-button]');
+    const optionsButton = document.querySelector('button[aria-label="Open post options menu"]');
+
+    expect(editButton).toBeTruthy();
+    expect(actionRow?.contains(editButton)).toBe(true);
+    expect(editButton?.nextElementSibling).toBe(optionsButton);
+  });
+
   it('should close and remove the edit modal when session is cleared via storage change', async () => {
     const sendMessage = vi.fn(async request => {
       if (request.type === 'AUTH_GET_STATUS') {
