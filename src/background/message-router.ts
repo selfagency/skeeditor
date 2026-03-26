@@ -204,13 +204,19 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
         if (!isNonEmptyString(tokens.access_token)) {
           return { error: 'Invalid token response from authorization server: missing access token' };
         }
-        if (!isNonEmptyString(tokens.sub) || !tokens.sub.startsWith('did:')) {
+        if (!isNonEmptyString(tokens.sub) || !/^did:[a-z]+:.+$/u.test(tokens.sub)) {
           return { error: 'Invalid token response from authorization server: missing or invalid subject DID' };
         }
         if (!isNonEmptyString(tokens.refresh_token)) {
           return { error: 'Invalid token response from authorization server: missing refresh token' };
         }
-        if (tokens.expires_in !== undefined && (typeof tokens.expires_in !== 'number' || tokens.expires_in <= 0)) {
+        if (
+          tokens.expires_in !== undefined &&
+          (typeof tokens.expires_in !== 'number' ||
+            !Number.isFinite(tokens.expires_in) ||
+            tokens.expires_in <= 0 ||
+            tokens.expires_in > 86_400)
+        ) {
           return { error: 'Invalid token response from authorization server: invalid expiry' };
         }
         const session: StoredSession = {
@@ -223,6 +229,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
         await deps.store.set(session);
         return { ok: true };
       } catch (err) {
+        console.error('[AUTH_CALLBACK] token exchange failed:', err);
         return { error: 'Token exchange failed' };
       } finally {
         await deps.clearAuthState();
