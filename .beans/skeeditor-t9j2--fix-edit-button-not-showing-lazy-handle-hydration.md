@@ -1,11 +1,11 @@
 ---
 # skeeditor-t9j2
 title: fix edit button not showing lazy handle hydration
-status: in-progress
+status: completed
 type: fix
 priority: critical
 created_at: 2026-03-26T16:15:14Z
-updated_at: 2026-03-26T16:15:28Z
+updated_at: 2026-03-26T17:50:10Z
 ---
 
 Edit buttons do not appear on own posts for two compounding reasons:
@@ -33,4 +33,11 @@ branch: fix/t9j2-edit-button-lazy-handle-storage-listener
 - [x] Write unit test: storage.onChanged with session removed clears auth state
 - [x] `pnpm test` all pass
 - [x] `tsc --noEmit` clean
-- [ ] Commit + push
+- [x] Commit + push
+
+## Summary of Changes
+
+- Added lazy handle hydration in `AUTH_GET_STATUS` to backfill and persist missing `handle` values on valid sessions.
+- Added content-script `browser.storage.onChanged` handling for session updates to re-fetch auth state, re-scan posts, and remove injected elements on sign-out.
+- Added unit tests for lazy hydration success/failure and for storage-change-driven login/logout behavior.
+- Extended browser API test mocks with a controllable `storage.onChanged` emitter to test listener-driven behavior.
