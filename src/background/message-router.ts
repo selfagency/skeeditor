@@ -1,8 +1,8 @@
 import type {
-  GetRecordResult,
-  PutRecordResult,
-  PutRecordWithSwapResult,
-  XrpcClientConfig,
+    GetRecordResult,
+    PutRecordResult,
+    PutRecordWithSwapResult,
+    XrpcClientConfig,
 } from '../shared/api/xrpc-client';
 import { XrpcClient } from '../shared/api/xrpc-client';
 import type { AuthorizationRequest, TokenResponse } from '../shared/auth/auth-client';
@@ -10,17 +10,17 @@ import { buildAuthorizationRequest, exchangeCodeForTokens } from '../shared/auth
 import type { StoredSession } from '../shared/auth/session-store';
 import { sessionStore } from '../shared/auth/session-store';
 import {
-  BSKY_OAUTH_AUTHORIZE_URL,
-  BSKY_OAUTH_CLIENT_ID,
-  BSKY_OAUTH_SCOPE,
-  BSKY_OAUTH_TOKEN_URL,
-  BSKY_PDS_URL,
+    BSKY_OAUTH_AUTHORIZE_URL,
+    BSKY_OAUTH_CLIENT_ID,
+    BSKY_OAUTH_SCOPE,
+    BSKY_OAUTH_TOKEN_URL,
+    BSKY_PDS_URL,
 } from '../shared/constants';
 import type {
-  PutRecordConflictResponse,
-  PutRecordErrorResponse,
-  PutRecordResponse,
-  PutRecordSuccessResponse,
+    PutRecordConflictResponse,
+    PutRecordErrorResponse,
+    PutRecordResponse,
+    PutRecordSuccessResponse,
 } from '../shared/messages';
 
 // ── Dependency injection types ────────────────────────────────────────────────
@@ -261,7 +261,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
           collection: message['collection'],
           rkey: message['rkey'],
         });
-      } catch (_err) {
+      } catch {
         return { error: 'Failed to fetch record' };
       }
     }
@@ -320,7 +320,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
 
         const result = await client.putRecord(params);
         return { type: 'PUT_RECORD_SUCCESS', uri: result.uri, cid: result.cid } satisfies PutRecordSuccessResponse;
-      } catch (_err) {
+      } catch {
         return {
           type: 'PUT_RECORD_ERROR',
           message: 'Failed to update record',
