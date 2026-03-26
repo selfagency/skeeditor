@@ -105,7 +105,7 @@ interface XrpcInterface {
 }
 
 interface StoreInterface {
-  get: () => Promise<{ did: string; handle?: string; accessToken: string; expiresAt: number } | null>;
+  get: () => Promise<StoredSession | null>;
   set: (session: StoredSession) => Promise<void>;
   clear: () => Promise<void>;
   isAccessTokenValid: () => Promise<boolean>;
@@ -333,6 +333,16 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
       const stored = await deps.store.get();
       const valid = await deps.store.isAccessTokenValid();
       if (stored !== null && valid) {
+        // Lazily hydrate handle if it was missing (e.g. fetchHandle failed during AUTH_CALLBACK).
+        // This heals existing sessions without requiring the user to sign out and back in.
+        if (!stored.handle) {
+          const pdsUrl = await getCurrentPdsUrl();
+          const handle = await fetchHandle(pdsUrl, stored.accessToken);
+          if (handle !== null) {
+            await deps.store.set({ ...stored, handle });
+            return { authenticated: true, did: stored.did, handle, expiresAt: stored.expiresAt };
+          }
+        }
         return { authenticated: true, did: stored.did, handle: stored.handle, expiresAt: stored.expiresAt };
       }
       return { authenticated: false };
