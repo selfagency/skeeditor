@@ -25,6 +25,7 @@ import {
   isValidEditTimeLimit,
   setSettings,
   setCurrentPdsUrl,
+  setGlobalPdsUrl,
 } from '../shared/constants';
 import type {
   PutRecordConflictResponse,
@@ -35,15 +36,19 @@ import type {
 
 // ── DPoP key cache ────────────────────────────────────────────────────────────
 
-// Cache the key pair for the lifetime of the service worker so we don't hit
-// storage on every request. The cache is reset when the SW is terminated.
-let dpopKeyPairCache: CryptoKeyPair | null = null;
+// Cache key pairs per DID for the lifetime of the service worker.
+// All accounts currently share a single underlying key from storage, but
+// caching per-DID prepares for future per-account key support.
+// The cache is reset when the SW is terminated.
+const dpopKeyPairCache = new Map<string, CryptoKeyPair>();
 
-async function getDpopKeyPair(): Promise<CryptoKeyPair> {
-  if (dpopKeyPairCache === null) {
-    dpopKeyPairCache = await loadOrCreateDpopKeyPair();
-  }
-  return dpopKeyPairCache;
+async function getDpopKeyPair(did?: string): Promise<CryptoKeyPair> {
+  const cacheKey = did ?? '__default__';
+  const cached = dpopKeyPairCache.get(cacheKey);
+  if (cached !== undefined) return cached;
+  const keyPair = await loadOrCreateDpopKeyPair();
+  dpopKeyPairCache.set(cacheKey, keyPair);
+  return keyPair;
 }
 
 /**
@@ -120,8 +125,9 @@ export interface RouterDeps {
   openTab: (url: string) => Promise<void>;
   buildAuthReq: (params: Parameters<typeof buildAuthorizationRequest>[0]) => Promise<AuthorizationRequest>;
   createXrpc: (config: XrpcClientConfig) => XrpcInterface;
-  storeAuthState: (state: string, codeVerifier: string) => Promise<void>;
-  getAuthState: () => Promise<{ state: string; codeVerifier: string } | null>;
+  /** Store PKCE parameters and, optionally, the PDS URL chosen at sign-in time. */
+  storeAuthState: (state: string, codeVerifier: string, pdsUrl?: string) => Promise<void>;
+  getAuthState: () => Promise<{ state: string; codeVerifier: string; pdsUrl?: string } | null>;
   clearAuthState: () => Promise<void>;
   exchangeCode: (
     tokenEndpoint: string,
@@ -249,7 +255,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
   switch (message['type']) {
     case 'AUTH_SIGN_IN':
     case 'AUTH_REAUTHORIZE': {
-      // Use PDS URL from message or default
+      // Use PDS URL from message payload, or fall back to the active account's URL
       const pdsUrl =
         message['pdsUrl'] && typeof message['pdsUrl'] === 'string' ? message['pdsUrl'] : await getCurrentPdsUrl();
 
@@ -259,13 +265,10 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
         scope: BSKY_OAUTH_SCOPE,
         authorizationEndpoint: getOAuthAuthorizeUrl(pdsUrl),
       });
-      await deps.storeAuthState(authReq.state, authReq.codeVerifier);
+      // Store PKCE state together with the chosen PDS URL so AUTH_CALLBACK
+      // can associate the URL with the DID once it is known.
+      await deps.storeAuthState(authReq.state, authReq.codeVerifier, pdsUrl);
       await deps.openTab(authReq.url);
-
-      // Also store the PDS URL for future use
-      if (pdsUrl !== (await getCurrentPdsUrl())) {
-        await setCurrentPdsUrl(pdsUrl);
-      }
 
       return { ok: true };
     }
@@ -294,8 +297,9 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
       }
 
       try {
-        // Get the current PDS URL for token exchange
-        const pdsUrl = await getCurrentPdsUrl();
+        // Retrieve the PDS URL that was stored when the sign-in was initiated;
+        // fall back to getCurrentPdsUrl() for backward compatibility.
+        const pdsUrl = pending.pdsUrl ?? (await getCurrentPdsUrl());
         const tokens = await deps.exchangeCode(
           getOAuthTokenUrl(pdsUrl),
           code,
@@ -331,6 +335,9 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
         };
         await deps.store.set(session);
 
+        // Persist the PDS URL for this DID now that we know who authenticated
+        await setCurrentPdsUrl(session.did, pdsUrl);
+
         // Fetch the handle (best-effort; non-fatal if it fails)
         const handle = await fetchHandle(pdsUrl, tokens.access_token);
         if (handle !== null) {
@@ -353,7 +360,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
         // Lazily hydrate handle if it was missing (e.g. fetchHandle failed during AUTH_CALLBACK).
         // This heals existing sessions without requiring the user to sign out and back in.
         if (!stored.handle) {
-          const pdsUrl = await getCurrentPdsUrl();
+          const pdsUrl = await getCurrentPdsUrl(stored.did);
           const handle = await fetchHandle(pdsUrl, stored.accessToken);
           if (handle !== null) {
             await deps.store.set({ ...stored, handle });
@@ -396,7 +403,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
         return { error: 'Not authenticated' };
       }
       try {
-        const pdsUrl = await getCurrentPdsUrl();
+        const pdsUrl = await getCurrentPdsUrl(stored.did);
         const client = deps.createXrpc({ service: pdsUrl, did: stored.did, accessJwt: stored.accessToken });
         return await client.getRecord({
           repo: message['repo'],
@@ -418,7 +425,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
         return { type: 'PUT_RECORD_ERROR', message: 'Not authenticated' } satisfies PutRecordErrorResponse;
       }
       try {
-        const pdsUrl = await getCurrentPdsUrl();
+        const pdsUrl = await getCurrentPdsUrl(stored.did);
         const client = deps.createXrpc({ service: pdsUrl, did: stored.did, accessJwt: stored.accessToken });
         const record = message['record'];
         const params: Parameters<XrpcInterface['putRecord']>[0] = {
@@ -483,7 +490,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
       }
 
       try {
-        const pdsUrl = await getCurrentPdsUrl();
+        const pdsUrl = await getCurrentPdsUrl(stored.did);
         const client = deps.createXrpc({ service: pdsUrl, did: stored.did, accessJwt: stored.accessToken });
         const result = await client.uploadBlob({
           data: message.data,
@@ -502,7 +509,14 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
       }
 
       try {
-        await setCurrentPdsUrl(message['url']);
+        const stored = await deps.store.get();
+        if (stored !== null) {
+          // Associate the URL with the authenticated account's DID
+          await setCurrentPdsUrl(stored.did, message['url']);
+        } else {
+          // No active session — store as a global pre-auth fallback
+          await setGlobalPdsUrl(message['url']);
+        }
         return { ok: true };
       } catch (error) {
         return { error: error instanceof Error ? error.message : 'Failed to set PDS URL' };
@@ -533,12 +547,13 @@ export function createDefaultDeps(): RouterDeps {
       await browser.tabs.create({ url });
     },
     buildAuthReq: buildAuthorizationRequest,
-    createXrpc: (config: XrpcClientConfig) => new XrpcClient({ ...config, dpopKeyPairLoader: getDpopKeyPair }),
-    storeAuthState: async (state: string, codeVerifier: string): Promise<void> => {
+    createXrpc: (config: XrpcClientConfig) =>
+      new XrpcClient({ ...config, dpopKeyPairLoader: () => getDpopKeyPair(config.did) }),
+    storeAuthState: async (state: string, codeVerifier: string, pdsUrl?: string): Promise<void> => {
       const storage = browser.storage.session ?? browser.storage.local;
-      await storage.set({ pendingAuth: { state, codeVerifier } });
+      await storage.set({ pendingAuth: { state, codeVerifier, pdsUrl } });
     },
-    getAuthState: async (): Promise<{ state: string; codeVerifier: string } | null> => {
+    getAuthState: async (): Promise<{ state: string; codeVerifier: string; pdsUrl?: string } | null> => {
       const storage = browser.storage.session ?? browser.storage.local;
       const result = await storage.get('pendingAuth');
       const raw: unknown = (result as Record<string, unknown>)['pendingAuth'];
@@ -550,7 +565,13 @@ export function createDefaultDeps(): RouterDeps {
         'codeVerifier' in raw &&
         typeof (raw as Record<string, unknown>)['codeVerifier'] === 'string'
       ) {
-        return raw as { state: string; codeVerifier: string };
+        const obj = raw as Record<string, unknown>;
+        const result: { state: string; codeVerifier: string; pdsUrl?: string } = {
+          state: obj['state'] as string,
+          codeVerifier: obj['codeVerifier'] as string,
+        };
+        if (typeof obj['pdsUrl'] === 'string') result.pdsUrl = obj['pdsUrl'];
+        return result;
       }
       return null;
     },

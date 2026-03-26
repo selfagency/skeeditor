@@ -54,7 +54,9 @@ describe('auth-popup Web Component', () => {
 
     it('shows a sign-in button when the stored session is expired', async () => {
       const expired = makeSession({ expiresAt: Date.now() - 1000 });
-      vi.mocked(browser.storage.local.get).mockResolvedValue({ session: expired } as never);
+      vi.mocked(browser.storage.local.get)
+        .mockResolvedValueOnce({ activeDid: expired.did } as never)
+        .mockResolvedValueOnce({ sessions: { [expired.did]: expired } } as never);
 
       const el = createElement();
       await attach(el);
@@ -67,7 +69,9 @@ describe('auth-popup Web Component', () => {
   describe('authenticated state', () => {
     it('shows the DID when a valid session exists', async () => {
       const session = makeSession();
-      vi.mocked(browser.storage.local.get).mockResolvedValue({ session } as never);
+      vi.mocked(browser.storage.local.get)
+        .mockResolvedValueOnce({ activeDid: session.did } as never)
+        .mockResolvedValueOnce({ sessions: { [session.did]: session } } as never);
 
       const el = createElement();
       await attach(el);
@@ -78,7 +82,9 @@ describe('auth-popup Web Component', () => {
 
     it('shows sign-out and reauthorize buttons when authenticated', async () => {
       const session = makeSession();
-      vi.mocked(browser.storage.local.get).mockResolvedValue({ session } as never);
+      vi.mocked(browser.storage.local.get)
+        .mockResolvedValueOnce({ activeDid: session.did } as never)
+        .mockResolvedValueOnce({ sessions: { [session.did]: session } } as never);
 
       const el = createElement();
       await attach(el);
@@ -107,7 +113,9 @@ describe('auth-popup Web Component', () => {
 
     it('sends AUTH_SIGN_OUT when sign-out button is clicked', async () => {
       const session = makeSession();
-      vi.mocked(browser.storage.local.get).mockResolvedValue({ session } as never);
+      vi.mocked(browser.storage.local.get)
+        .mockResolvedValueOnce({ activeDid: session.did } as never)
+        .mockResolvedValueOnce({ sessions: { [session.did]: session } } as never);
 
       const el = createElement();
       await attach(el);
@@ -120,7 +128,9 @@ describe('auth-popup Web Component', () => {
 
     it('transitions back to unauthenticated after sign-out', async () => {
       const session = makeSession();
-      vi.mocked(browser.storage.local.get).mockResolvedValue({ session } as never);
+      vi.mocked(browser.storage.local.get)
+        .mockResolvedValueOnce({ activeDid: session.did } as never)
+        .mockResolvedValueOnce({ sessions: { [session.did]: session } } as never);
 
       const el = createElement();
       await attach(el);
@@ -134,7 +144,9 @@ describe('auth-popup Web Component', () => {
 
     it('sends AUTH_REAUTHORIZE when reauthorize button is clicked', async () => {
       const session = makeSession();
-      vi.mocked(browser.storage.local.get).mockResolvedValue({ session } as never);
+      vi.mocked(browser.storage.local.get)
+        .mockResolvedValueOnce({ activeDid: session.did } as never)
+        .mockResolvedValueOnce({ sessions: { [session.did]: session } } as never);
 
       const el = createElement();
       await attach(el);

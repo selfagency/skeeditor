@@ -94,18 +94,21 @@ export const test = chromiumBase.extend<BskyRouteFixtures>({
       const popupPage = await context.newPage();
       await popupPage.goto(`chrome-extension://${extensionId}/popup/popup.html`);
       await popupPage.waitForLoadState('domcontentloaded');
-      // chrome.storage.local is available on extension pages; 'session' is the key
-      // used by src/shared/auth/session-store.ts (STORAGE_KEY = 'session').
+      // chrome.storage.local is available on extension pages.
+      // session-store.ts now uses a DID-keyed sessions map + activeDid key.
       await popupPage.evaluate(
-        async session => {
-          await chrome.storage.local.set({ session });
+        async ({ did, session }) => {
+          await chrome.storage.local.set({ sessions: { [did]: session }, activeDid: did });
         },
         {
           did,
-          accessToken: 'mock-access-token',
-          refreshToken: 'mock-refresh-token',
-          expiresAt: Date.now() + 3_600_000,
-          scope: 'atproto transition:generic',
+          session: {
+            did,
+            accessToken: 'mock-access-token',
+            refreshToken: 'mock-refresh-token',
+            expiresAt: Date.now() + 3_600_000,
+            scope: 'atproto transition:generic',
+          },
         },
       );
       await popupPage.close();

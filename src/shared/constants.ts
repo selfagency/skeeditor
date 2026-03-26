@@ -40,15 +40,53 @@ const isExtensionSettings = (value: unknown): value is ExtensionSettings => {
   );
 };
 
-// Get the current PDS URL from storage or use default
-export async function getCurrentPdsUrl(): Promise<string> {
+// Get the current PDS URL from storage or use default.
+// When `did` is provided, returns the URL stored for that specific DID.
+// When omitted, reads the active DID from storage and returns its URL,
+// falling back to the legacy `pdsUrl` key and finally the default.
+export async function getCurrentPdsUrl(did?: string): Promise<string> {
   const storage = getStorage();
-  const result = await storage.get('pdsUrl');
-  return (result as { pdsUrl?: string }).pdsUrl ?? DEFAULT_PDS_URL;
+
+  if (did !== undefined) {
+    const result = await storage.get('pdsUrls');
+    const stored = (result as Record<string, unknown>)['pdsUrls'];
+    const pdsUrls: Record<string, string> =
+      stored !== null && typeof stored === 'object' && !Array.isArray(stored) ? (stored as Record<string, string>) : {};
+    const url = pdsUrls[did];
+    return typeof url === 'string' && url.length > 0 ? url : DEFAULT_PDS_URL;
+  }
+
+  const result = await storage.get(['pdsUrls', 'pdsUrl', 'activeDid']);
+  const activeDid = (result as Record<string, unknown>)['activeDid'];
+  const storedPdsUrls = (result as Record<string, unknown>)['pdsUrls'];
+  const pdsUrls: Record<string, string> =
+    storedPdsUrls !== null && typeof storedPdsUrls === 'object' && !Array.isArray(storedPdsUrls)
+      ? (storedPdsUrls as Record<string, string>)
+      : {};
+
+  if (typeof activeDid === 'string' && activeDid.length > 0 && pdsUrls[activeDid]) {
+    return pdsUrls[activeDid];
+  }
+
+  // Fall back to legacy global pdsUrl key (pre-auth or pre-migration)
+  const legacyUrl = (result as Record<string, unknown>)['pdsUrl'];
+  return typeof legacyUrl === 'string' && legacyUrl.length > 0 ? legacyUrl : DEFAULT_PDS_URL;
 }
 
-// Set the current PDS URL
-export async function setCurrentPdsUrl(url: string): Promise<void> {
+// Store the PDS URL for a specific DID in the `pdsUrls` map.
+export async function setCurrentPdsUrl(did: string, url: string): Promise<void> {
+  const storage = getStorage();
+  const result = await storage.get('pdsUrls');
+  const stored = (result as Record<string, unknown>)['pdsUrls'];
+  const pdsUrls: Record<string, string> =
+    stored !== null && typeof stored === 'object' && !Array.isArray(stored) ? (stored as Record<string, string>) : {};
+  pdsUrls[did] = url;
+  await storage.set({ pdsUrls });
+}
+
+// Store a PDS URL globally (pre-auth, before a DID is known).
+// Used during the OAuth sign-in flow when the DID is not yet available.
+export async function setGlobalPdsUrl(url: string): Promise<void> {
   const storage = getStorage();
   await storage.set({ pdsUrl: url });
 }

@@ -2,40 +2,42 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { sessionStore } from '@src/shared/auth/session-store';
 
+const makeSession = (did = 'did:plc:abc123') => ({
+  accessToken: 'at_token',
+  refreshToken: 'rt_token',
+  expiresAt: Date.now() + 3600 * 1000,
+  scope: 'atproto transition:generic',
+  did,
+});
+
 describe('sessionStore.set', () => {
-  it('should call browser.storage.local.set with the session data keyed under "session"', async () => {
-    const session = {
-      accessToken: 'at_token',
-      refreshToken: 'rt_token',
-      expiresAt: Date.now() + 3600 * 1000,
-      scope: 'atproto transition:generic',
-      did: 'did:plc:abc123',
-    };
+  it('should store the session under sessions[did] and set activeDid', async () => {
+    const session = makeSession();
 
     await sessionStore.set(session);
 
-    expect(browser.storage.local.set).toHaveBeenCalledWith({ session });
+    expect(browser.storage.local.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessions: { [session.did]: session },
+        activeDid: session.did,
+      }),
+    );
   });
 });
 
 describe('sessionStore.get', () => {
-  it('should return the stored session when one exists', async () => {
-    const stored = {
-      accessToken: 'at_token',
-      refreshToken: 'rt_token',
-      expiresAt: Date.now() + 3600 * 1000,
-      scope: 'atproto transition:generic',
-      did: 'did:plc:abc123',
-    };
-
-    vi.mocked(browser.storage.local.get).mockResolvedValueOnce({ session: stored } as never);
+  it('should return the session for the active DID', async () => {
+    const session = makeSession();
+    vi.mocked(browser.storage.local.get)
+      .mockResolvedValueOnce({ activeDid: session.did } as never) // getActiveDid
+      .mockResolvedValueOnce({ sessions: { [session.did]: session } } as never); // get sessions
 
     const result = await sessionStore.get();
 
-    expect(result).toEqual(stored);
+    expect(result).toEqual(session);
   });
 
-  it('should return null when no session is stored', async () => {
+  it('should return null when no active DID is set', async () => {
     vi.mocked(browser.storage.local.get).mockResolvedValueOnce({} as never);
 
     const result = await sessionStore.get();
@@ -43,56 +45,189 @@ describe('sessionStore.get', () => {
     expect(result).toBeNull();
   });
 
+  it('should return null when the active DID has no stored session', async () => {
+    vi.mocked(browser.storage.local.get)
+      .mockResolvedValueOnce({ activeDid: 'did:plc:abc123' } as never)
+      .mockResolvedValueOnce({ sessions: {} } as never);
+
+    const result = await sessionStore.get();
+
+    expect(result).toBeNull();
+  });
+
   it('should return null when stored data is missing required fields', async () => {
-    vi.mocked(browser.storage.local.get).mockResolvedValueOnce({
-      session: { accessToken: 'at_token', refreshToken: 'rt_token' },
-    } as never);
+    const session = makeSession();
+    vi.mocked(browser.storage.local.get)
+      .mockResolvedValueOnce({ activeDid: session.did } as never)
+      .mockResolvedValueOnce({
+        sessions: { [session.did]: { accessToken: 'at', refreshToken: 'rt' } },
+      } as never);
 
     const result = await sessionStore.get();
 
     expect(result).toBeNull();
   });
+});
 
-  it('should return null when stored data has wrong types', async () => {
+describe('sessionStore.getByDid', () => {
+  it('should return the session for the given DID', async () => {
+    const session = makeSession();
     vi.mocked(browser.storage.local.get).mockResolvedValueOnce({
-      session: { accessToken: 123, refreshToken: 'rt', expiresAt: 'not-a-number', scope: 'x', did: 'did:plc:a' },
+      sessions: { [session.did]: session },
     } as never);
 
-    const result = await sessionStore.get();
+    const result = await sessionStore.getByDid(session.did);
 
-    expect(result).toBeNull();
+    expect(result).toEqual(session);
   });
 
-  it('should return null when stored data is a string instead of an object', async () => {
-    vi.mocked(browser.storage.local.get).mockResolvedValueOnce({
-      session: 'corrupted-string',
-    } as never);
+  it('should return null when the DID has no stored session', async () => {
+    vi.mocked(browser.storage.local.get).mockResolvedValueOnce({ sessions: {} } as never);
 
-    const result = await sessionStore.get();
+    const result = await sessionStore.getByDid('did:plc:unknown');
 
     expect(result).toBeNull();
   });
 });
 
 describe('sessionStore.clear', () => {
-  it('should call browser.storage.local.remove with "session"', async () => {
+  it('should remove both "sessions" and "activeDid" keys', async () => {
     await sessionStore.clear();
 
+    expect(browser.storage.local.remove).toHaveBeenCalledWith(['sessions', 'activeDid']);
+  });
+});
+
+describe('sessionStore.clearForDid', () => {
+  it('should delete the session for the given DID from the sessions map', async () => {
+    const alice = makeSession('did:plc:alice');
+    const bob = makeSession('did:plc:bob');
+    vi.mocked(browser.storage.local.get).mockResolvedValueOnce({
+      sessions: { [alice.did]: alice, [bob.did]: bob },
+      activeDid: bob.did,
+    } as never);
+
+    await sessionStore.clearForDid(alice.did);
+
+    expect(browser.storage.local.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessions: { [bob.did]: bob },
+      }),
+    );
+  });
+
+  it('should switch active DID when the cleared DID was active', async () => {
+    const alice = makeSession('did:plc:alice');
+    const bob = makeSession('did:plc:bob');
+    vi.mocked(browser.storage.local.get).mockResolvedValueOnce({
+      sessions: { [alice.did]: alice, [bob.did]: bob },
+      activeDid: alice.did,
+    } as never);
+
+    await sessionStore.clearForDid(alice.did);
+
+    expect(browser.storage.local.set).toHaveBeenCalledWith(expect.objectContaining({ activeDid: bob.did }));
+  });
+});
+
+describe('sessionStore.getActiveDid', () => {
+  it('should return the stored active DID', async () => {
+    vi.mocked(browser.storage.local.get).mockResolvedValueOnce({ activeDid: 'did:plc:alice' } as never);
+
+    const result = await sessionStore.getActiveDid();
+
+    expect(result).toBe('did:plc:alice');
+  });
+
+  it('should return null when no active DID is set', async () => {
+    vi.mocked(browser.storage.local.get).mockResolvedValueOnce({} as never);
+
+    const result = await sessionStore.getActiveDid();
+
+    expect(result).toBeNull();
+  });
+});
+
+describe('sessionStore.setActiveDid', () => {
+  it('should store the active DID', async () => {
+    await sessionStore.setActiveDid('did:plc:alice');
+
+    expect(browser.storage.local.set).toHaveBeenCalledWith({ activeDid: 'did:plc:alice' });
+  });
+});
+
+describe('sessionStore.listDids', () => {
+  it('should return all DIDs with stored sessions', async () => {
+    const alice = makeSession('did:plc:alice');
+    const bob = makeSession('did:plc:bob');
+    vi.mocked(browser.storage.local.get).mockResolvedValueOnce({
+      sessions: { [alice.did]: alice, [bob.did]: bob },
+    } as never);
+
+    const result = await sessionStore.listDids();
+
+    expect(result).toEqual(expect.arrayContaining([alice.did, bob.did]));
+  });
+
+  it('should return an empty array when no sessions are stored', async () => {
+    vi.mocked(browser.storage.local.get).mockResolvedValueOnce({} as never);
+
+    const result = await sessionStore.listDids();
+
+    expect(result).toEqual([]);
+  });
+});
+
+describe('sessionStore.migrateFromLegacy', () => {
+  it('should migrate a legacy session into the sessions map and remove old keys', async () => {
+    const legacySession = makeSession();
+    vi.mocked(browser.storage.local.get)
+      .mockResolvedValueOnce({
+        session: legacySession,
+        pdsUrl: 'https://bsky.social',
+        // sessions not present -> triggers migration
+      } as never)
+      .mockResolvedValueOnce({ sessions: {} } as never) // called inside set() -> get sessions
+      .mockResolvedValueOnce({ pdsUrls: {} } as never); // called for pdsUrls
+
+    await sessionStore.migrateFromLegacy();
+
+    expect(browser.storage.local.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessions: expect.objectContaining({ [legacySession.did]: legacySession }),
+        activeDid: legacySession.did,
+      }),
+    );
     expect(browser.storage.local.remove).toHaveBeenCalledWith('session');
+  });
+
+  it('should skip migration when the new sessions key already exists', async () => {
+    const legacySession = makeSession();
+    vi.mocked(browser.storage.local.get).mockResolvedValueOnce({
+      sessions: { [legacySession.did]: legacySession },
+      session: legacySession,
+    } as never);
+
+    await sessionStore.migrateFromLegacy();
+
+    expect(browser.storage.local.set).not.toHaveBeenCalled();
+  });
+
+  it('should skip migration when there is no legacy session', async () => {
+    vi.mocked(browser.storage.local.get).mockResolvedValueOnce({} as never);
+
+    await sessionStore.migrateFromLegacy();
+
+    expect(browser.storage.local.set).not.toHaveBeenCalled();
   });
 });
 
 describe('sessionStore.isAccessTokenValid', () => {
-  it('should return true when the access token exists and has not expired', async () => {
-    const stored = {
-      accessToken: 'at_token',
-      refreshToken: 'rt_token',
-      expiresAt: Date.now() + 3600 * 1000,
-      scope: 'atproto transition:generic',
-      did: 'did:plc:abc123',
-    };
-
-    vi.mocked(browser.storage.local.get).mockResolvedValueOnce({ session: stored } as never);
+  it('should return true when the access token has not expired', async () => {
+    const session = makeSession();
+    vi.mocked(browser.storage.local.get)
+      .mockResolvedValueOnce({ activeDid: session.did } as never)
+      .mockResolvedValueOnce({ sessions: { [session.did]: session } } as never);
 
     const result = await sessionStore.isAccessTokenValid();
 
@@ -100,15 +235,10 @@ describe('sessionStore.isAccessTokenValid', () => {
   });
 
   it('should return false when the access token is expired', async () => {
-    const stored = {
-      accessToken: 'at_expired',
-      refreshToken: 'rt_token',
-      expiresAt: Date.now() - 1000, // expired
-      scope: 'atproto transition:generic',
-      did: 'did:plc:abc123',
-    };
-
-    vi.mocked(browser.storage.local.get).mockResolvedValueOnce({ session: stored } as never);
+    const session = { ...makeSession(), expiresAt: Date.now() - 1000 };
+    vi.mocked(browser.storage.local.get)
+      .mockResolvedValueOnce({ activeDid: session.did } as never)
+      .mockResolvedValueOnce({ sessions: { [session.did]: session } } as never);
 
     const result = await sessionStore.isAccessTokenValid();
 
@@ -126,31 +256,21 @@ describe('sessionStore.isAccessTokenValid', () => {
 
 describe('sessionStore.getAuthStatus', () => {
   it('should return did and expiresAt when a session exists', async () => {
-    const stored = {
-      accessToken: 'at_token',
-      refreshToken: 'rt_token',
-      expiresAt: Date.now() + 3600 * 1000,
-      scope: 'atproto transition:generic',
-      did: 'did:plc:abc123',
-    };
-
-    vi.mocked(browser.storage.local.get).mockResolvedValueOnce({ session: stored } as never);
+    const session = makeSession();
+    vi.mocked(browser.storage.local.get)
+      .mockResolvedValueOnce({ activeDid: session.did } as never)
+      .mockResolvedValueOnce({ sessions: { [session.did]: session } } as never);
 
     const result = await sessionStore.getAuthStatus();
 
-    expect(result).toEqual({ did: 'did:plc:abc123', expiresAt: stored.expiresAt });
+    expect(result).toEqual({ did: session.did, expiresAt: session.expiresAt });
   });
 
   it('should not expose accessToken or refreshToken in the result', async () => {
-    const stored = {
-      accessToken: 'at_secret',
-      refreshToken: 'rt_secret',
-      expiresAt: Date.now() + 3600 * 1000,
-      scope: 'atproto transition:generic',
-      did: 'did:plc:abc123',
-    };
-
-    vi.mocked(browser.storage.local.get).mockResolvedValueOnce({ session: stored } as never);
+    const session = makeSession();
+    vi.mocked(browser.storage.local.get)
+      .mockResolvedValueOnce({ activeDid: session.did } as never)
+      .mockResolvedValueOnce({ sessions: { [session.did]: session } } as never);
 
     const result = await sessionStore.getAuthStatus();
 

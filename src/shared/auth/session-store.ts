@@ -24,7 +24,8 @@ export interface AuthStatus {
   expiresAt: number;
 }
 
-const STORAGE_KEY = 'session';
+const SESSIONS_KEY = 'sessions';
+const ACTIVE_DID_KEY = 'activeDid';
 
 function isStoredSession(value: unknown): value is StoredSession {
   if (value === null || typeof value !== 'object') return false;
@@ -42,40 +43,153 @@ function isStoredSession(value: unknown): value is StoredSession {
 }
 
 /**
- * Persist a session to `browser.storage.local`.
+ * Persist a session to `browser.storage.local` under the sessions map keyed
+ * by the session's DID, and mark that DID as the active account.
  *
  * Must be called only from the background service worker — never from content
  * scripts or the page context.
  */
 async function set(session: StoredSession): Promise<void> {
-  await browser.storage.local.set({ [STORAGE_KEY]: session });
+  const result = await browser.storage.local.get(SESSIONS_KEY);
+  const stored = (result as Record<string, unknown>)[SESSIONS_KEY];
+  const sessions: Record<string, unknown> =
+    stored !== null && typeof stored === 'object' && !Array.isArray(stored) ? (stored as Record<string, unknown>) : {};
+  sessions[session.did] = session;
+  await browser.storage.local.set({ [SESSIONS_KEY]: sessions, [ACTIVE_DID_KEY]: session.did });
 }
 
 /**
- * Read the current session from `browser.storage.local`.
+ * Read the session for the currently active DID from `browser.storage.local`.
  *
- * Returns `null` if no session has been stored yet.
+ * Returns `null` if no active DID is set or no valid session exists for it.
  */
 async function get(): Promise<StoredSession | null> {
-  const result = await browser.storage.local.get(STORAGE_KEY);
-  const raw: unknown = (result as Record<string, unknown>)[STORAGE_KEY];
+  const activeDid = await getActiveDid();
+  if (activeDid === null) return null;
 
-  if (raw === undefined || raw === null) return null;
+  const result = await browser.storage.local.get(SESSIONS_KEY);
+  const sessions = (result as Record<string, unknown>)[SESSIONS_KEY];
+  if (sessions === null || typeof sessions !== 'object') return null;
 
+  const raw = (sessions as Record<string, unknown>)[activeDid];
   return isStoredSession(raw) ? raw : null;
 }
 
 /**
- * Remove the stored session from `browser.storage.local`.
+ * Read the session for a specific DID from `browser.storage.local`.
  *
- * Call this on logout or when tokens are determined to be unrecoverable.
+ * Returns `null` when no valid session exists for the given DID.
  */
-async function clear(): Promise<void> {
-  await browser.storage.local.remove(STORAGE_KEY);
+async function getByDid(did: string): Promise<StoredSession | null> {
+  const result = await browser.storage.local.get(SESSIONS_KEY);
+  const sessions = (result as Record<string, unknown>)[SESSIONS_KEY];
+  if (sessions === null || typeof sessions !== 'object') return null;
+  const raw = (sessions as Record<string, unknown>)[did];
+  return isStoredSession(raw) ? raw : null;
 }
 
 /**
- * Returns `true` if a non-expired access token exists in storage.
+ * Remove ALL stored sessions and clear the active DID.
+ *
+ * Call this on sign-out or when tokens are determined to be unrecoverable.
+ * To remove a single account's session, use `clearForDid()`.
+ */
+async function clear(): Promise<void> {
+  await browser.storage.local.remove([SESSIONS_KEY, ACTIVE_DID_KEY]);
+}
+
+/**
+ * Remove the stored session for a specific DID. If that DID was the active
+ * account, the active DID is switched to the first remaining account (or
+ * cleared if no accounts remain).
+ */
+async function clearForDid(did: string): Promise<void> {
+  const result = await browser.storage.local.get([SESSIONS_KEY, ACTIVE_DID_KEY]);
+  const storedSessions = (result as Record<string, unknown>)[SESSIONS_KEY];
+  const sessions: Record<string, StoredSession> =
+    storedSessions !== null && typeof storedSessions === 'object' && !Array.isArray(storedSessions)
+      ? { ...(storedSessions as Record<string, StoredSession>) }
+      : {};
+  delete sessions[did];
+
+  const activeDid = (result as Record<string, unknown>)[ACTIVE_DID_KEY];
+  const updates: Record<string, unknown> = { [SESSIONS_KEY]: sessions };
+  if (activeDid === did) {
+    const remaining = Object.keys(sessions);
+    updates[ACTIVE_DID_KEY] = remaining.length > 0 ? remaining[0] : null;
+  }
+  await browser.storage.local.set(updates);
+}
+
+/**
+ * Return the DID of the currently active account, or `null` if none is set.
+ */
+async function getActiveDid(): Promise<string | null> {
+  const result = await browser.storage.local.get(ACTIVE_DID_KEY);
+  const did = (result as Record<string, unknown>)[ACTIVE_DID_KEY];
+  return typeof did === 'string' && did.length > 0 ? did : null;
+}
+
+/**
+ * Mark a DID as the currently active account.
+ * The DID must already have a stored session.
+ */
+async function setActiveDid(did: string): Promise<void> {
+  await browser.storage.local.set({ [ACTIVE_DID_KEY]: did });
+}
+
+/**
+ * Return all DIDs that have a stored session.
+ */
+async function listDids(): Promise<string[]> {
+  const result = await browser.storage.local.get(SESSIONS_KEY);
+  const sessions = (result as Record<string, unknown>)[SESSIONS_KEY];
+  if (sessions === null || typeof sessions !== 'object') return [];
+  return Object.keys(sessions as object);
+}
+
+/**
+ * One-time migration from the legacy single-slot storage format.
+ *
+ * Reads the old `session` key and writes it into the new `sessions` map.
+ * Also migrates a legacy `pdsUrl` string into `pdsUrls[did]`.
+ * Safe to call on every start-up — it exits immediately if the new format
+ * already exists or if there is no legacy session to migrate.
+ */
+async function migrateFromLegacy(): Promise<void> {
+  const result = await browser.storage.local.get([SESSIONS_KEY, 'session', 'pdsUrl']);
+  const sessions = (result as Record<string, unknown>)[SESSIONS_KEY];
+  const hasValidSessions = sessions !== null && typeof sessions === 'object' && !Array.isArray(sessions);
+  const legacySession = (result as Record<string, unknown>)['session'];
+
+  // Skip if already using new format or nothing to migrate
+  if (hasValidSessions || !isStoredSession(legacySession)) return;
+
+  // Migrate session into new map format
+  await set(legacySession);
+
+  // Migrate legacy pdsUrl into pdsUrls map for this DID
+  const legacyPdsUrl = (result as Record<string, unknown>)['pdsUrl'];
+  if (typeof legacyPdsUrl === 'string' && legacyPdsUrl.length > 0) {
+    const pdsUrlsResult = await browser.storage.local.get('pdsUrls');
+    const storedPdsUrls = (pdsUrlsResult as Record<string, unknown>)['pdsUrls'];
+    const pdsUrls: Record<string, string> =
+      storedPdsUrls !== null && typeof storedPdsUrls === 'object' && !Array.isArray(storedPdsUrls)
+        ? (storedPdsUrls as Record<string, string>)
+        : {};
+    if (!pdsUrls[legacySession.did]) {
+      pdsUrls[legacySession.did] = legacyPdsUrl;
+      await browser.storage.local.set({ pdsUrls });
+    }
+    await browser.storage.local.remove('pdsUrl');
+  }
+
+  await browser.storage.local.remove('session');
+}
+
+/**
+ * Returns `true` if a non-expired access token exists in storage for the
+ * active account.
  *
  * A 30-second buffer is applied so callers can refresh slightly before actual
  * expiry rather than right at the boundary.
@@ -103,4 +217,16 @@ async function getAuthStatus(): Promise<AuthStatus | null> {
   return { did: session.did, expiresAt: session.expiresAt };
 }
 
-export const sessionStore = { set, get, clear, isAccessTokenValid, getAuthStatus };
+export const sessionStore = {
+  set,
+  get,
+  getByDid,
+  getActiveDid,
+  setActiveDid,
+  listDids,
+  clear,
+  clearForDid,
+  isAccessTokenValid,
+  getAuthStatus,
+  migrateFromLegacy,
+};
