@@ -18,8 +18,17 @@ const getStorage = (): typeof browser.storage.local | typeof browser.storage.syn
   return browser.storage.local ?? browser.storage.sync;
 };
 
-const isValidEditTimeLimit = (value: unknown): value is number | null => {
-  return value === null || (typeof value === 'number' && Number.isFinite(value) && value >= 0.5 && value <= 5);
+export const EDIT_TIME_LIMIT_MIN = 0.5;
+export const EDIT_TIME_LIMIT_MAX = 5;
+
+export const isValidEditTimeLimit = (value: unknown): value is number | null => {
+  return (
+    value === null ||
+    (typeof value === 'number' &&
+      Number.isFinite(value) &&
+      value >= EDIT_TIME_LIMIT_MIN &&
+      value <= EDIT_TIME_LIMIT_MAX)
+  );
 };
 
 const isExtensionSettings = (value: unknown): value is ExtensionSettings => {

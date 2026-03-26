@@ -1,4 +1,5 @@
 import { sendMessage } from '../shared/messages';
+import { EDIT_TIME_LIMIT_MIN, EDIT_TIME_LIMIT_MAX } from '../shared/constants';
 
 const status = document.querySelector<HTMLParagraphElement>('#status');
 const pdsUrlInput = document.querySelector<HTMLInputElement>('#pds-url');
@@ -63,9 +64,9 @@ async function saveSettings(): Promise<void> {
 
   const editTimeLimit = rawEditTimeLimit.length === 0 ? null : Number.parseFloat(rawEditTimeLimit);
 
-  if (editTimeLimit !== null && (!Number.isFinite(editTimeLimit) || editTimeLimit < 0.5 || editTimeLimit > 5)) {
+  if (editTimeLimit !== null && (!Number.isFinite(editTimeLimit) || editTimeLimit < EDIT_TIME_LIMIT_MIN || editTimeLimit > EDIT_TIME_LIMIT_MAX)) {
     if (status) {
-      status.textContent = 'Edit time limit must be between 0.5 and 5 minutes, or left blank to disable.';
+      status.textContent = `Edit time limit must be between ${EDIT_TIME_LIMIT_MIN} and ${EDIT_TIME_LIMIT_MAX} minutes, or left blank to disable.`;
       status.className = 'mb-6 text-sm text-red-400';
     }
     return;
@@ -75,10 +76,7 @@ async function saveSettings(): Promise<void> {
   saveButton.textContent = 'Saving...';
 
   try {
-    const [pdsResponse, settingsResponse] = await Promise.all([
-      sendMessage({ type: 'SET_PDS_URL', url: newUrl }),
-      sendMessage({ type: 'SET_SETTINGS', settings: { editTimeLimit } }),
-    ]);
+    const pdsResponse = await sendMessage({ type: 'SET_PDS_URL', url: newUrl });
     if (!('ok' in pdsResponse && pdsResponse.ok)) {
       if (status) {
         status.textContent = ('error' in pdsResponse ? pdsResponse.error : null) ?? 'Failed to update PDS URL';
@@ -87,6 +85,7 @@ async function saveSettings(): Promise<void> {
       return;
     }
 
+    const settingsResponse = await sendMessage({ type: 'SET_SETTINGS', settings: { editTimeLimit } });
     if (!('ok' in settingsResponse && settingsResponse.ok)) {
       if (status) {
         status.textContent =
@@ -118,8 +117,8 @@ async function saveSettings(): Promise<void> {
 // Initialize the options page
 if (pdsUrlInput && editTimeLimitInput && saveButton) {
   pdsUrlInput.placeholder = 'https://bsky.social';
-  editTimeLimitInput.min = '0.5';
-  editTimeLimitInput.max = '5';
+  editTimeLimitInput.min = String(EDIT_TIME_LIMIT_MIN);
+  editTimeLimitInput.max = String(EDIT_TIME_LIMIT_MAX);
   editTimeLimitInput.step = '0.5';
   saveButton.addEventListener('click', saveSettings);
 

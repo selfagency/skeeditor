@@ -22,6 +22,7 @@ import {
   getSettings,
   getOAuthAuthorizeUrl,
   getOAuthTokenUrl,
+  isValidEditTimeLimit,
   setSettings,
   setCurrentPdsUrl,
 } from '../shared/constants';
@@ -226,10 +227,7 @@ function isValidSettingsPayload(
   }
 
   const editTimeLimit = (settings as Record<string, unknown>)['editTimeLimit'];
-  return (
-    editTimeLimit === null ||
-    (typeof editTimeLimit === 'number' && Number.isFinite(editTimeLimit) && editTimeLimit >= 0.5 && editTimeLimit <= 5)
-  );
+  return isValidEditTimeLimit(editTimeLimit);
 }
 
 // ── Handler ──────────────────────────────────────────────────────────────────
