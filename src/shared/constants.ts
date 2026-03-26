@@ -1,3 +1,5 @@
+import browser from 'webextension-polyfill';
+
 export const APP_NAME = 'skeeditor';
 export const BSKY_APP_ORIGIN = 'https://bsky.app';
 export const DEFAULT_PDS_URL = 'https://bsky.social';
