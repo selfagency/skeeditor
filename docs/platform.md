@@ -72,7 +72,7 @@ The `webextension-polyfill` is loaded differently depending on the context:
 
 - **Background service worker** (`service-worker.ts`): polyfill is imported as the first statement, ensuring `globalThis.browser` is available before any extension code runs.
 - **Content script**: polyfill is loaded as a separate script via the manifest's `content_scripts.js` array (`browser-polyfill.js` before `content-script.js`). The content script is built as an IIFE that references the global `browser` object set by the polyfill.
-- **Popup and options pages**: these are HTML pages that load their scripts as ES modules; the polyfill is not explicitly imported since they use `browser.runtime.sendMessage` via the `sendMessage` wrapper.
+- **Popup and options pages**: these are HTML pages that load their scripts as ES modules; their entry scripts (`src/popup/popup.ts` and `src/options/options.ts`) explicitly import `webextension-polyfill` as the first statement so that `browser` is available before any other extension code runs.
 
 In test environments (Vitest), `webextension-polyfill` is aliased to a no-op
 stub (`test/mocks/webextension-polyfill.ts`). The `browser` global is provided

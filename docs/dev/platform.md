@@ -22,7 +22,7 @@ skeeditor targets Chrome, Firefox, and Safari using a shared `src/` codebase. Br
 
 - **Background service worker** — imported as the first statement in `src/background/service-worker.ts` (`import 'webextension-polyfill'`).
 - **Content script** — loaded as a separate script via the manifest's `content_scripts.js` array (`browser-polyfill.js` before `content-script.js`). The content script is built as an IIFE that references the global `browser` object.
-- **Popup and options pages** — use `browser.runtime.sendMessage` via the typed `sendMessage` wrapper; the polyfill is available from the extension runtime context.
+- **Popup and options pages** — the TypeScript entry points (`src/popup/popup.ts`, `src/options/options.ts`) import `webextension-polyfill` as the first statement, and the bundled scripts use `browser.runtime.sendMessage` via the typed `sendMessage` wrapper. `browser` is not provided as a global here unless the polyfill is imported/bundled into the page script.
 
 In unit/integration tests, `webextension-polyfill` is stubbed — the `browser.*` global is provided by `test/mocks/browser-apis.ts` via `test/setup/unit.ts` instead.
 
@@ -55,7 +55,7 @@ if (platform.isFirefox) {
 | Browser | Manifest key            | Notes                                           |
 | ------- | ----------------------- | ----------------------------------------------- |
 | Chrome  | `"service_worker": "…"` | Non-persistent, wakes on events                 |
-| Firefox | `"scripts": ["…"]`      | Non-persistent background script (Firefox 125+) |
+| Firefox | `"scripts": ["…"]`      | Non-persistent background script                |
 | Safari  | `"service_worker": "…"` | Non-persistent, mirrors Chrome                  |
 
 **Never store in-memory state between background wake cycles.** Use `browser.storage.local` for any data that must survive the background being unloaded.
@@ -135,5 +135,5 @@ To allow unsigned extensions during development: Safari → Settings → Advance
 | Browser | Minimum version      | Key requirement                       |
 | ------- | -------------------- | ------------------------------------- |
 | Chrome  | 120                  | MV3 service worker stability          |
-| Firefox | 121                  | MV3 non-persistent background support |
+| Firefox | 125                  | MV3 + `Intl.Segmenter` support        |
 | Safari  | 17 (macOS 14/Sonoma) | Baseline WebExtensions MV3            |
