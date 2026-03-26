@@ -7,6 +7,7 @@ interface BrowserRuntimeMock {
   };
   sendMessage: (message: unknown) => Promise<{ ok: true }>;
   getURL: (path: string) => string;
+  openOptionsPage: () => Promise<void>;
 }
 
 interface BrowserTabsMock {
@@ -59,6 +60,7 @@ const createBrowserApiMock = (): BrowserApiMock => {
       },
       sendMessage: vi.fn().mockResolvedValue({ ok: true }),
       getURL: vi.fn().mockImplementation((path: string) => `chrome-extension://test/${path}`),
+      openOptionsPage: vi.fn().mockResolvedValue(undefined),
     },
     storage: {
       local: {

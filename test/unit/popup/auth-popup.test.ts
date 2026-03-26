@@ -257,5 +257,17 @@ describe('auth-popup Web Component', () => {
         type: 'AUTH_REAUTHORIZE',
       });
     });
+
+    it('opens options page when the settings button is clicked', async () => {
+      mockSendMessage([makeAccount({ isActive: true })]);
+      vi.mocked(browser.runtime.openOptionsPage).mockResolvedValue(undefined);
+
+      const el = createElement();
+      await attach(el);
+
+      el.shadowRoot?.querySelector<HTMLButtonElement>('#open-settings')?.click();
+
+      expect(vi.mocked(browser.runtime.openOptionsPage)).toHaveBeenCalled();
+    });
   });
 });
