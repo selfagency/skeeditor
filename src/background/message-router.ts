@@ -1,8 +1,8 @@
 import type {
-    GetRecordResult,
-    PutRecordResult,
-    PutRecordWithSwapResult,
-    XrpcClientConfig,
+  GetRecordResult,
+  PutRecordResult,
+  PutRecordWithSwapResult,
+  XrpcClientConfig,
 } from '../shared/api/xrpc-client';
 import { XrpcClient } from '../shared/api/xrpc-client';
 import type { AuthorizationRequest, TokenResponse } from '../shared/auth/auth-client';
@@ -10,17 +10,17 @@ import { buildAuthorizationRequest, exchangeCodeForTokens } from '../shared/auth
 import type { StoredSession } from '../shared/auth/session-store';
 import { sessionStore } from '../shared/auth/session-store';
 import {
-    BSKY_OAUTH_AUTHORIZE_URL,
-    BSKY_OAUTH_CLIENT_ID,
-    BSKY_OAUTH_SCOPE,
-    BSKY_OAUTH_TOKEN_URL,
-    BSKY_PDS_URL,
+  BSKY_OAUTH_AUTHORIZE_URL,
+  BSKY_OAUTH_CLIENT_ID,
+  BSKY_OAUTH_SCOPE,
+  BSKY_OAUTH_TOKEN_URL,
+  BSKY_PDS_URL,
 } from '../shared/constants';
 import type {
-    PutRecordConflictResponse,
-    PutRecordErrorResponse,
-    PutRecordResponse,
-    PutRecordSuccessResponse,
+  PutRecordConflictResponse,
+  PutRecordErrorResponse,
+  PutRecordResponse,
+  PutRecordSuccessResponse,
 } from '../shared/messages';
 
 // ── Dependency injection types ────────────────────────────────────────────────
