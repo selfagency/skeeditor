@@ -16,9 +16,8 @@
   "content_scripts": [
     {
       "matches": ["https://bsky.app/*"],
-      "js": ["content/content-script.js"],
-      "run_at": "document_idle",
-      "type": "module"
+      "js": ["content/browser-polyfill.js", "content/content-script.js"],
+      "run_at": "document_idle"
     }
   ]
 }

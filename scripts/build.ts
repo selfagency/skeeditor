@@ -1,3 +1,4 @@
+import { copyFile, mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { build } from 'vite';
 
@@ -56,6 +57,7 @@ const main = async (): Promise<void> => {
         modulePreload: { polyfill: false },
         rollupOptions: {
           input: resolve(sourceRoot, 'content/content-script.ts'),
+          external: ['webextension-polyfill'],
           output: {
             format: 'iife',
             name: '_skeeditorContent',
@@ -64,11 +66,19 @@ const main = async (): Promise<void> => {
             globals: {
               'webextension-polyfill': 'browser',
             },
-            intro: 'var browser = typeof browser !== "undefined" ? browser : {};',
           },
         },
       },
     });
+
+    // Copy the webextension-polyfill to the content script directory so the
+    // manifest can load it as a separate script before the IIFE content script.
+    // The polyfill sets globalThis.browser, which the IIFE references via the
+    // `globals` mapping above.
+    const polyfillSrc = resolve(projectRoot, 'node_modules/webextension-polyfill/dist/browser-polyfill.min.js');
+    const polyfillDest = resolve(outDir, 'content/browser-polyfill.js');
+    await mkdir(resolve(outDir, 'content'), { recursive: true });
+    await copyFile(polyfillSrc, polyfillDest);
   }
 
   await writeMergedManifest(browser, `dist/${browser}/manifest.json`, projectRoot);
