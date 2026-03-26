@@ -5,12 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>skeeditor settings</title>
     <link rel="stylesheet" href="./options.css" />
+    <link rel="stylesheet" href="/global.css" />
   </head>
 
   <body>
     <main class="shell">
       <h1>skeeditor settings</h1>
       <p id="status" class="status">Options scaffold ready for wiring.</p>
+
+      <section class="pds-settings">
+        <h2>PDS Configuration</h2>
+        <div class="form-group">
+          <label for="pds-url">PDS URL:</label>
+          <input type="url" id="pds-url" class="pds-url-input" placeholder="https://bsky.social" />
+          <button id="save-pds-url" class="save-button">Save PDS URL</button>
+        </div>
+        <p class="pds-info">Change the PDS (Personal Data Server) URL to connect to different Bluesky instances.</p>
+      </section>
     </main>
     <script type="module" src="./options.ts"></script>
   </body>

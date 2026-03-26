@@ -51,6 +51,10 @@ class AuthPopup extends HTMLElement {
         return `
           <div class="auth-panel">
             <p>Sign in with your Bluesky account to edit posts.</p>
+            <div class="pds-url-input">
+              <label for="pds-url">PDS URL:</label>
+              <input type="url" id="pds-url" value="https://bsky.social" placeholder="https://bsky.social">
+            </div>
             <button id="sign-in" class="btn-primary">Sign in with Bluesky</button>
           </div>`;
 
@@ -66,7 +70,9 @@ class AuthPopup extends HTMLElement {
 
   private attachHandlers(): void {
     this.shadow.getElementById('sign-in')?.addEventListener('click', () => {
-      void sendMessage({ type: 'AUTH_SIGN_IN' });
+      const pdsUrlInput = this.shadow.getElementById('pds-url') as HTMLInputElement | null;
+      const pdsUrl = pdsUrlInput?.value?.trim() || 'https://bsky.social';
+      void sendMessage({ type: 'AUTH_SIGN_IN', pdsUrl });
     });
 
     this.shadow.getElementById('sign-out')?.addEventListener('click', () => {
@@ -77,7 +83,9 @@ class AuthPopup extends HTMLElement {
     });
 
     this.shadow.getElementById('reauthorize')?.addEventListener('click', () => {
-      void sendMessage({ type: 'AUTH_REAUTHORIZE' });
+      const pdsUrlInput = this.shadow.getElementById('pds-url') as HTMLInputElement | null;
+      const pdsUrl = pdsUrlInput?.value?.trim() || 'https://bsky.social';
+      void sendMessage({ type: 'AUTH_REAUTHORIZE', pdsUrl });
     });
   }
 
