@@ -13,12 +13,15 @@ interface BrowserTabsMock {
   create: (options: { url: string }) => Promise<{ id: number }>;
 }
 
+interface BrowserStorageAreaMock {
+  get: (key: string) => Promise<Record<string, unknown>>;
+  remove: (key: string) => Promise<void>;
+  set: (value: Record<string, unknown>) => Promise<void>;
+}
+
 interface BrowserStorageMock {
-  local: {
-    get: (key: string) => Promise<Record<string, unknown>>;
-    remove: (key: string) => Promise<void>;
-    set: (value: Record<string, unknown>) => Promise<void>;
-  };
+  local: BrowserStorageAreaMock;
+  session: BrowserStorageAreaMock;
 }
 
 interface BrowserApiMock {
@@ -34,26 +37,43 @@ declare global {
   var chrome: BrowserApiMock;
 }
 
-const createBrowserApiMock = (): BrowserApiMock => ({
-  runtime: {
-    onMessage: {
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
+const createBrowserApiMock = (): BrowserApiMock => {
+  const store: Record<string, unknown> = {};
+
+  return {
+    runtime: {
+      onMessage: {
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+      },
+      sendMessage: vi.fn().mockResolvedValue({ ok: true }),
+      getURL: vi.fn().mockImplementation((path: string) => `chrome-extension://test/${path}`),
     },
-    sendMessage: vi.fn().mockResolvedValue({ ok: true }),
-    getURL: vi.fn().mockImplementation((path: string) => `chrome-extension://test/${path}`),
-  },
-  storage: {
-    local: {
-      get: vi.fn().mockResolvedValue({}),
-      remove: vi.fn().mockResolvedValue(undefined),
-      set: vi.fn().mockResolvedValue(undefined),
+    storage: {
+      local: {
+        get: vi
+          .fn()
+          .mockImplementation((key: string) => Promise.resolve(store[key] !== undefined ? { [key]: store[key] } : {})),
+        remove: vi.fn().mockImplementation((key: string) => {
+          delete store[key];
+          return Promise.resolve();
+        }),
+        set: vi.fn().mockImplementation((value: Record<string, unknown>) => {
+          Object.assign(store, value);
+          return Promise.resolve();
+        }),
+      },
+      session: {
+        get: vi.fn().mockResolvedValue({}),
+        remove: vi.fn().mockResolvedValue(undefined),
+        set: vi.fn().mockResolvedValue(undefined),
+      },
     },
-  },
-  tabs: {
-    create: vi.fn().mockResolvedValue({ id: 1 }),
-  },
-});
+    tabs: {
+      create: vi.fn().mockResolvedValue({ id: 1 }),
+    },
+  };
+};
 
 const assignMocks = (): void => {
   const mock = createBrowserApiMock();

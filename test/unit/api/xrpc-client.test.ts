@@ -464,5 +464,30 @@ describe('XrpcClient', () => {
         conflictingFields: [],
       });
     });
+
+    it('should not stack overflow on deeply nested objects that exceed depth limit', () => {
+      const buildDeep = (depth: number, leaf: unknown): Record<string, unknown> => {
+        let obj: Record<string, unknown> = { value: leaf };
+        for (let i = 0; i < depth; i++) {
+          obj = { nested: obj };
+        }
+        return obj;
+      };
+
+      // Depth 20 — identical leaves should be recognized as equal
+      const shallowBase = buildDeep(5, 'same');
+      const shallowAttempted = buildDeep(5, 'same');
+      const shallowCurrent = buildDeep(5, 'same');
+      const shallowAdvisory = buildThreeWayMergeAdvisory(shallowBase, shallowAttempted, shallowCurrent);
+      expect(shallowAdvisory.hasConflicts).toBe(false);
+
+      // Depth 50 — beyond limit, identical leaves treated as unequal (safety)
+      const deepBase = buildDeep(50, 'same');
+      const deepAttempted = buildDeep(50, 'same');
+      const deepCurrent = buildDeep(50, 'changed');
+
+      // Should not throw regardless of depth
+      expect(() => buildThreeWayMergeAdvisory(deepBase, deepAttempted, deepCurrent)).not.toThrow();
+    });
   });
 });

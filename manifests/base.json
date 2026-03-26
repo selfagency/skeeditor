@@ -3,6 +3,7 @@
   "name": "skeeditor",
   "version": "0.1.0",
   "description": "Edit your own Bluesky posts directly on bsky.app.",
+  "incognito": "not_allowed",
   "permissions": ["storage", "activeTab"],
   "host_permissions": ["https://bsky.app/*", "https://*.bsky.network/*"],
   "action": {

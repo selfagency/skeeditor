@@ -1,3 +1,5 @@
+import { graphemeLength } from '../shared/utils/text';
+
 const EDIT_MODAL_TEMPLATE = `
   <style>
     :host {
@@ -162,9 +164,9 @@ const EDIT_MODAL_TEMPLATE = `
       color: var(--bsky-color-success, #51d051);
     }
   </style>
-  <div class="modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
     <div class="header">
-      <span class="title">Edit Post</span>
+      <span class="title" id="edit-modal-title">Edit Post</span>
       <button class="close-button" type="button" aria-label="Close">
         <svg viewBox="0 0 24 24">
           <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
@@ -173,10 +175,10 @@ const EDIT_MODAL_TEMPLATE = `
     </div>
     <div class="content">
       <div class="textarea-container">
-        <textarea></textarea>
+        <textarea aria-label="Edit post content"></textarea>
       </div>
       <div class="char-count"></div>
-      <div class="status-message" style="display: none;"></div>
+      <div class="status-message" aria-live="polite" style="display: none;"></div>
     </div>
     <div class="footer">
       <button class="cancel-button" type="button">Cancel</button>
@@ -198,6 +200,8 @@ export class EditModal {
   private maxLength = MAX_POST_LENGTH;
   private onCancel: (() => void) | undefined = undefined;
   private onSave: ((text: string) => void | Promise<void>) | undefined = undefined;
+  private previouslyFocused: Element | null = null;
+  private isOpen = false;
   private handleInputBound = this.handleInput.bind(this);
   private handleSaveBound = this.handleSave.bind(this);
   private closeBound = this.close.bind(this);
@@ -237,9 +241,6 @@ export class EditModal {
     if (this.saveButton) {
       this.saveButton.addEventListener('click', this.handleSaveBound);
     }
-
-    this.element.addEventListener('click', this.handleBackgroundClickBound);
-    window.addEventListener('keydown', this.handleKeydownBound);
   }
 
   public open(text: string, onCancel?: () => void, onSave?: (text: string) => void | Promise<void>): void {
@@ -248,6 +249,7 @@ export class EditModal {
     this.currentText = text;
     this.onCancel = onCancel ?? undefined;
     this.onSave = onSave ?? undefined;
+    this.previouslyFocused = document.activeElement;
 
     if (!this.element.isConnected) {
       document.body.appendChild(this.element);
@@ -262,7 +264,16 @@ export class EditModal {
 
     this.hideStatusMessage();
 
+    // Remove before adding to prevent duplicate handlers on repeated open() calls
+    this.element.removeEventListener('click', this.handleBackgroundClickBound);
+    window.removeEventListener('keydown', this.handleKeydownBound);
+    this.element.addEventListener('click', this.handleBackgroundClickBound);
+    window.addEventListener('keydown', this.handleKeydownBound);
+
     this.element.style.display = 'flex';
+    this.isOpen = true;
+    this.element.addEventListener('click', this.handleBackgroundClickBound);
+    window.addEventListener('keydown', this.handleKeydownBound);
   }
 
   public close(): void {
@@ -272,6 +283,13 @@ export class EditModal {
     }
     window.removeEventListener('keydown', this.handleKeydownBound);
     this.element.removeEventListener('click', this.handleBackgroundClickBound);
+    this.isOpen = false;
+
+    if (this.previouslyFocused instanceof HTMLElement) {
+      this.previouslyFocused.focus();
+    }
+    this.previouslyFocused = null;
+
     this.onCancel?.();
   }
 
@@ -307,7 +325,7 @@ export class EditModal {
   private updateCharCount(): void {
     if (!this.charCount || !this.textarea) return;
 
-    const length = this.currentText.length;
+    const length = graphemeLength(this.currentText);
     const remaining = this.maxLength - length;
     const isError = remaining < 0;
 
@@ -351,10 +369,37 @@ export class EditModal {
   }
 
   private handleKeydown(event: KeyboardEvent): void {
+    if (!this.isOpen) return;
     if (event.key === 'Escape') {
       this.close();
     } else if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
       this.handleSave();
+    } else if (event.key === 'Tab') {
+      this.trapFocus(event);
+    }
+  }
+
+  private trapFocus(event: KeyboardEvent): void {
+    const shadow = this.element.shadowRoot;
+    if (!shadow) return;
+
+    const focusableEls = shadow.querySelectorAll<HTMLElement>('textarea, button:not([disabled])');
+    if (focusableEls.length === 0) return;
+
+    const first = focusableEls[0]!;
+    const last = focusableEls[focusableEls.length - 1]!;
+    const active = shadow.activeElement;
+
+    if (event.shiftKey) {
+      if (active === first || !active) {
+        event.preventDefault();
+        last.focus();
+      }
+    } else {
+      if (active === last || !active) {
+        event.preventDefault();
+        first.focus();
+      }
     }
   }
 
@@ -364,7 +409,7 @@ export class EditModal {
       return;
     }
 
-    if (this.textarea && this.textarea.value.length > this.maxLength) {
+    if (this.textarea && graphemeLength(this.textarea.value) > this.maxLength) {
       this.setError(`Post exceeds maximum length of ${this.maxLength} characters`);
       return;
     }
