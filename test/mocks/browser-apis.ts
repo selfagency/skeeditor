@@ -1,13 +1,36 @@
 import { vi } from 'vitest';
 
+interface BrowserPortMock {
+  name: string;
+  onDisconnect: {
+    addListener: (fn: () => void) => void;
+  };
+  onMessage: {
+    addListener: (fn: (msg: unknown) => void) => void;
+  };
+  postMessage: (msg: unknown) => void;
+}
+
 interface BrowserRuntimeMock {
   onMessage: {
     addListener: (listener: (message: unknown) => unknown) => void;
     removeListener: (listener: (message: unknown) => unknown) => void;
   };
+  onConnect: {
+    addListener: (listener: (port: BrowserPortMock) => void) => void;
+    removeListener: (listener: (port: BrowserPortMock) => void) => void;
+  };
+  connect: (options: { name: string }) => BrowserPortMock;
   sendMessage: (message: unknown) => Promise<unknown>;
   getURL: (path: string) => string;
   openOptionsPage: () => Promise<void>;
+}
+
+interface BrowserAlarmsMock {
+  create: (name: string, alarmInfo: { periodInMinutes?: number }) => void;
+  onAlarm: {
+    addListener: (listener: (alarm: { name: string }) => void) => void;
+  };
 }
 
 interface BrowserTabsMock {
@@ -40,6 +63,7 @@ interface BrowserApiMock {
   runtime: BrowserRuntimeMock;
   storage: BrowserStorageMock;
   tabs: BrowserTabsMock;
+  alarms: BrowserAlarmsMock;
 }
 
 declare global {
@@ -60,9 +84,31 @@ const createBrowserApiMock = (): BrowserApiMock => {
         addListener: vi.fn(),
         removeListener: vi.fn(),
       },
+      onConnect: {
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+      },
+      connect: vi.fn().mockImplementation(() => ({
+        name: 'keepalive',
+        onDisconnect: { addListener: vi.fn() },
+        onMessage: {
+          addListener: vi.fn().mockImplementation((fn: (msg: unknown) => void) => {
+            // Simulate the SW immediately posting SW_READY once the port connects,
+            // resolving waitForSwReady() synchronously so tests don't need extra ticks.
+            fn({ type: 'SW_READY' });
+          }),
+        },
+        postMessage: vi.fn(),
+      })),
       sendMessage: vi.fn().mockResolvedValue({ ok: true }),
       getURL: vi.fn().mockImplementation((path: string) => `chrome-extension://test/${path}`),
       openOptionsPage: vi.fn().mockResolvedValue(undefined),
+    },
+    alarms: {
+      create: vi.fn(),
+      onAlarm: {
+        addListener: vi.fn(),
+      },
     },
     storage: {
       local: {

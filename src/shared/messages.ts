@@ -139,7 +139,20 @@ export interface UploadBlobErrorResponse {
 
 export type UploadBlobResponse = UploadBlobSuccessResponse | UploadBlobErrorResponse;
 
-// ── Discriminated union of all inbound requests ───────────────────────────────
+// ── Labeler subscription messages ──────────────────────────────────────────────
+
+/**
+ * Sent after a successful AUTH_CALLBACK to check whether the user has already
+ * subscribed to the skeeditor labeler. If not, triggers the consent prompt in
+ * the popup. Fails silently — a network error must never block sign-in.
+ */
+export interface CheckLabelerSubscriptionRequest {
+  type: 'CHECK_LABELER_SUBSCRIPTION';
+}
+
+export type CheckLabelerSubscriptionResponse = OkResponse | { error: string };
+
+// ── Discriminated union of all inbound requests ─────────────────────────────────
 
 export type MessageRequest =
   | AuthSignInRequest
@@ -156,7 +169,8 @@ export type MessageRequest =
   | PutRecordRequest
   | UploadBlobRequest
   | SetPdsUrlRequest
-  | GetPdsUrlRequest;
+  | GetPdsUrlRequest
+  | CheckLabelerSubscriptionRequest;
 
 // ── PDS URL messages ─────────────────────────────────────────────────────────
 
@@ -201,7 +215,9 @@ export type ResponseFor<T extends MessageRequest> = T extends AuthGetStatusReque
                     ? SetPdsUrlResponse
                     : T extends GetPdsUrlRequest
                       ? GetPdsUrlResponse
-                      : never;
+                      : T extends CheckLabelerSubscriptionRequest
+                        ? CheckLabelerSubscriptionResponse
+                        : never;
 
 /**
  * Type-safe wrapper around `browser.runtime.sendMessage`.
@@ -213,6 +229,30 @@ export type ResponseFor<T extends MessageRequest> = T extends AuthGetStatusReque
  * Must only be called from contexts that have access to the extension runtime
  * (popup, content scripts, options page — NOT from page-level JavaScript).
  */
-export function sendMessage<T extends MessageRequest>(request: T): Promise<ResponseFor<T>> {
-  return browser.runtime.sendMessage(request) as Promise<ResponseFor<T>>;
+export async function sendMessage<T extends MessageRequest>(
+  request: T,
+  { maxAttempts = 8, retryDelayMs = 300 }: { maxAttempts?: number; retryDelayMs?: number } = {},
+): Promise<ResponseFor<T>> {
+  // In MV3 the service worker may be starting up when the content script first
+  // sends a message, causing chrome.runtime.sendMessage to resolve to undefined
+  // instead of waiting for the listener.  Retry with backoff so the SW has time
+  // to register its onMessage handler.
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    let response: unknown;
+    try {
+      response = await browser.runtime.sendMessage(request);
+    } catch (err) {
+      // "Extension context invalidated" means the extension was reloaded while
+      // this content script was still running in the tab.  There is no recovery
+      // path — propagate so the caller can handle it gracefully.
+      throw err;
+    }
+    if (response !== undefined) {
+      return response as ResponseFor<T>;
+    }
+    if (attempt < maxAttempts) {
+      await new Promise<void>(resolve => setTimeout(resolve, retryDelayMs * attempt));
+    }
+  }
+  throw new Error('No response from background service worker — it may have crashed or not yet started.');
 }
