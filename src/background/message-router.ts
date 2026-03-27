@@ -19,13 +19,13 @@ import {
   BSKY_OAUTH_REDIRECT_URI,
   BSKY_OAUTH_SCOPE,
   getCurrentPdsUrl,
-  getSettings,
   getOAuthAuthorizeUrl,
   getOAuthTokenUrl,
+  getSettings,
   isValidEditTimeLimit,
-  setSettings,
   setCurrentPdsUrl,
   setGlobalPdsUrl,
+  setSettings,
 } from '../shared/constants';
 import type {
   PutRecordConflictResponse,

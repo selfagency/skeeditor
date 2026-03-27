@@ -14,7 +14,7 @@ const DEFAULT_SETTINGS: ExtensionSettings = {
   editTimeLimit: null,
 };
 
-const getStorage = (): typeof browser.storage.local | typeof browser.storage.sync => {
+const getStorage = (): typeof browser.storage.local => {
   return browser.storage.local ?? browser.storage.sync;
 };
 
