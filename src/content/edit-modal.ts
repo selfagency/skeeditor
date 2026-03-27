@@ -13,30 +13,30 @@ const EDIT_MODAL_TEMPLATE = `
     }
     ${globalStyles}
   </style>
-  <div class="relative m-auto flex w-full max-w-xl flex-col rounded-lg bg-white shadow-xl dark:bg-gray-800 dark:outline dark:-outline-offset-1 dark:outline-white/10" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
-    <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-white/10">
-      <span class="text-base font-semibold text-gray-900 dark:text-white" id="edit-modal-title">Edit Post</span>
-      <button class="close-button rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500 focus:outline-2 focus:outline-offset-2 focus:outline-indigo-600 dark:hover:bg-white/10 dark:hover:text-white dark:focus:outline-indigo-500" type="button" aria-label="Close">
+  <div class="edit-modal-container" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
+    <div class="edit-modal-header">
+      <span class="edit-modal-title" id="edit-modal-title">Edit Post</span>
+      <button class="edit-modal-close close-button" type="button" aria-label="Close">
         <svg viewBox="0 0 24 24" class="size-5 fill-current" aria-hidden="true">
           <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
         </svg>
       </button>
     </div>
-    <div class="flex flex-col gap-3 overflow-y-auto p-5" style="max-height:60vh">
+    <div class="edit-modal-body">
       <div>
-        <textarea aria-label="Edit post content" class="block min-h-36 w-full resize-y rounded-md bg-white px-3 py-2 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus:outline-indigo-500"></textarea>
+        <textarea aria-label="Edit post content" class="edit-modal-textarea"></textarea>
       </div>
-      <div class="char-count flex justify-end text-xs text-gray-500 dark:text-gray-400"></div>
-      <div class="media-upload flex flex-col gap-2">
+      <div class="edit-modal-char-count char-count"></div>
+      <div class="media-upload" style="display:flex;flex-direction:column;gap:0.5rem;">
         <input type="file" accept="image/*,video/mp4" multiple class="hidden">
-        <button class="upload-button rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20" type="button">Add Media</button>
-        <div class="media-preview flex flex-wrap gap-2"></div>
+        <button class="upload-button" style="border-radius:0.375rem;background:white;padding:0.375rem 0.625rem;font-size:0.875rem;font-weight:600;color:#111827;border:1px solid #d1d5db;cursor:pointer;" type="button">Add Media</button>
+        <div class="media-preview" style="display:flex;flex-wrap:wrap;gap:0.5rem;"></div>
       </div>
-      <div class="status-message hidden rounded-md px-3 py-2 text-sm" aria-live="polite"></div>
+      <div class="status-message hidden" style="border-radius:0.375rem;padding:0.5rem 0.75rem;font-size:0.875rem;" aria-live="polite"></div>
     </div>
-    <div class="flex justify-end gap-3 border-t border-gray-200 px-5 py-4 dark:border-white/10">
-      <button class="cancel-button rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20" type="button">Cancel</button>
-      <button class="save-button rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500 dark:bg-indigo-500 dark:shadow-none dark:hover:bg-indigo-400 dark:focus-visible:outline-indigo-500 dark:disabled:bg-white/10 dark:disabled:text-white/30" type="button" disabled>Save</button>
+    <div class="edit-modal-footer">
+      <button class="edit-modal-btn edit-modal-btn-cancel cancel-button" type="button">Cancel</button>
+      <button class="edit-modal-btn edit-modal-btn-save save-button" type="button" disabled>Save</button>
     </div>
   </div>
 `;
