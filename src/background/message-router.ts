@@ -1,8 +1,9 @@
 import type { l } from '@atproto/lex';
-import browser from 'webextension-polyfill';
+import { browser } from 'wxt/browser';
 
 import { createDpopProof, loadOrCreateDpopKeyPair } from '../shared/auth/dpop';
 
+import { getHandleForDid, getPdsUrlForDid } from '../shared/api/resolve-did';
 import type {
   GetRecordResult,
   PutRecordResult,
@@ -14,7 +15,6 @@ import type { AuthorizationRequest, TokenResponse } from '../shared/auth/auth-cl
 import { buildAuthorizationRequest, exchangeCodeForTokens } from '../shared/auth/auth-client';
 import type { StoredSession } from '../shared/auth/session-store';
 import { sessionStore } from '../shared/auth/session-store';
-import { getPdsUrlForDid, getHandleForDid } from '../shared/api/resolve-did';
 import {
   BSKY_OAUTH_CLIENT_ID,
   BSKY_OAUTH_REDIRECT_URI,
@@ -24,6 +24,7 @@ import {
   getOAuthTokenUrl,
   getSettings,
   isValidEditTimeLimit,
+  LABELER_DID,
   setCurrentPdsUrl,
   setGlobalPdsUrl,
   setSettings,
@@ -53,6 +54,45 @@ async function getDpopKeyPair(did?: string): Promise<CryptoKeyPair> {
 }
 
 /**
+ * Check whether the user already subscribes to the skeeditor labeler.
+ * If not, mark storage so the popup can show a consent prompt.
+ * All errors are swallowed — this must never block sign-in.
+ */
+async function checkAndScheduleLabelerPrompt(pdsUrl: string, accessToken: string): Promise<void> {
+  const prefsUrl = `${pdsUrl}/xrpc/app.bsky.actor.getPreferences`;
+
+  const makeRequest = async (nonce?: string): Promise<Response> => {
+    const keyPair = await getDpopKeyPair();
+    const proof = await createDpopProof(keyPair, 'GET', prefsUrl, accessToken, nonce);
+    return fetch(prefsUrl, {
+      headers: { Authorization: `DPoP ${accessToken}`, DPoP: proof },
+    });
+  };
+
+  try {
+    let response = await makeRequest();
+    if (response.status === 400 || response.status === 401) {
+      const nonce = response.headers.get('DPoP-Nonce');
+      if (nonce !== null) response = await makeRequest(nonce);
+    }
+    if (!response.ok) return;
+
+    const body = (await response.json()) as {
+      preferences?: Array<{ $type: string; labelers?: Array<{ did: string }> }>;
+    };
+    const prefs = body.preferences ?? [];
+    const labelerPref = prefs.find(p => p['$type'] === 'app.bsky.actor.defs#labelersPref');
+    const subscribed = labelerPref?.labelers?.some(l => l.did === LABELER_DID) ?? false;
+
+    if (!subscribed) {
+      await browser.storage.local.set({ pendingLabelerPrompt: true });
+    }
+  } catch {
+    // silent fail — labeler subscription is optional
+  }
+}
+
+/**
  * Fetch the account handle from the PDS using com.atproto.server.getSession.
  * Returns the handle string, or null if unavailable (non-fatal).
  *
@@ -61,14 +101,11 @@ async function getDpopKeyPair(did?: string): Promise<CryptoKeyPair> {
  * authorization server (entryway).
  */
 async function fetchHandle(pdsUrl: string, accessToken: string, did: string): Promise<string | null> {
-  // First, try to get the correct PDS URL from the DID document
-  // OAuth tokens are scoped to a specific PDS and cannot be used with the authorization server
+  // Resolve the actual PDS URL from the DID document.
+  // OAuth tokens are scoped to the PDS, not the authorization server (entryway).
   const resolvedPdsUrl = await getPdsUrlForDid(did);
   const actualPdsUrl = resolvedPdsUrl ?? pdsUrl;
 
-  console.log('[fetchHandle] PDS URL - stored:', pdsUrl, 'resolved:', resolvedPdsUrl, 'using:', actualPdsUrl);
-
-  // If we have the correct PDS URL, try getSession
   if (actualPdsUrl) {
     const handleFromSession = await fetchHandleFromSession(actualPdsUrl, accessToken);
     if (handleFromSession !== null) {
@@ -76,11 +113,8 @@ async function fetchHandle(pdsUrl: string, accessToken: string, did: string): Pr
     }
   }
 
-  // Fallback: Try to get handle directly from DID document
-  console.log('[fetchHandle] Session failed, trying DID document resolution');
-  const handleFromDid = await getHandleForDid(did);
-  console.log('[fetchHandle] Handle from DID document:', handleFromDid);
-  return handleFromDid;
+  // Fallback: resolve handle from the DID document directly.
+  return getHandleForDid(did);
 }
 
 /**
@@ -88,13 +122,10 @@ async function fetchHandle(pdsUrl: string, accessToken: string, did: string): Pr
  */
 async function fetchHandleFromSession(pdsUrl: string, accessToken: string): Promise<string | null> {
   const url = `${pdsUrl}/xrpc/com.atproto.server.getSession`;
-  console.log('[fetchHandleFromSession] Fetching handle from:', url);
 
   const makeRequest = async (nonce?: string): Promise<Response> => {
     const keyPair = await getDpopKeyPair();
-    console.log('[fetchHandleFromSession] DPoP key pair created');
     const dpopProof = await createDpopProof(keyPair, 'GET', url, accessToken, nonce);
-    console.log('[fetchHandleFromSession] DPoP proof created, length:', dpopProof?.length);
     return fetch(url, {
       headers: {
         Authorization: `DPoP ${accessToken}`,
@@ -105,32 +136,21 @@ async function fetchHandleFromSession(pdsUrl: string, accessToken: string): Prom
 
   try {
     let response = await makeRequest();
-    console.log('[fetchHandleFromSession] Initial response status:', response.status, response.statusText);
 
     // Server may require a nonce on the first attempt
     if (!response.ok) {
       const serverNonce = response.headers.get('DPoP-Nonce');
-      console.log('[fetchHandleFromSession] Server nonce:', serverNonce);
       if (serverNonce !== null) {
-        console.log('[fetchHandleFromSession] Retrying with nonce...');
         response = await makeRequest(serverNonce);
-        console.log('[fetchHandleFromSession] Retry response status:', response.status, response.statusText);
       }
     }
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[fetchHandleFromSession] Response not OK:', response.status, response.statusText, errorText);
-      return null;
-    }
+    if (!response.ok) return null;
 
     const data = (await response.json()) as Record<string, unknown>;
-    console.log('[fetchHandleFromSession] Response data:', JSON.stringify(data, null, 2));
     const handle = data['handle'];
-    console.log('[fetchHandleFromSession] Extracted handle:', handle);
     return typeof handle === 'string' && handle.length > 0 ? handle : null;
-  } catch (error) {
-    console.error('[fetchHandleFromSession] Error fetching handle:', error);
+  } catch {
     return null;
   }
 }
@@ -207,6 +227,7 @@ const KNOWN_TYPES = new Set([
   'UPLOAD_BLOB',
   'SET_PDS_URL',
   'GET_PDS_URL',
+  'CHECK_LABELER_SUBSCRIPTION',
 ]);
 
 type IncomingMessage = Record<string, unknown> & { type: string };
@@ -410,6 +431,10 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
 
         await deps.store.set(session);
 
+        // Fire-and-forget: check labeler subscription after successful sign-in.
+        // Silent fail — must never block the AUTH_CALLBACK response.
+        void checkAndScheduleLabelerPrompt(actualPdsUrl, session.accessToken);
+
         return { ok: true };
       } catch (err) {
         console.error('[AUTH_CALLBACK] token exchange failed:', err);
@@ -420,29 +445,27 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
     }
 
     case 'AUTH_GET_STATUS': {
-      console.log('[AUTH_GET_STATUS] checking auth state...');
       const stored = await deps.store.get();
-      console.log('[AUTH_GET_STATUS] stored session:', stored ? 'found' : 'none');
       const valid = await deps.store.isAccessTokenValid();
-      console.log('[AUTH_GET_STATUS] token valid:', valid);
       if (stored !== null && valid) {
-        console.log('[AUTH_GET_STATUS] returning authenticated status for DID:', stored.did);
         // Lazily hydrate handle if it was missing (e.g. fetchHandle failed during AUTH_CALLBACK).
         // This heals existing sessions without requiring the user to sign out and back in.
+        // Wrapped in try-catch: network errors must not reject the handler (Chrome converts
+        // a rejected listener Promise to `undefined` on the sender side).
         if (!stored.handle) {
-          const pdsUrl = await getCurrentPdsUrl(stored.did);
-          console.log('[AUTH_GET_STATUS] fetching handle from PDS...');
-          const handle = await fetchHandle(pdsUrl, stored.accessToken, stored.did);
-          console.log('[AUTH_GET_STATUS] fetched handle:', handle);
-          if (handle !== null) {
-            await deps.store.set({ ...stored, handle });
-            return { authenticated: true, did: stored.did, handle, expiresAt: stored.expiresAt };
+          try {
+            const pdsUrl = await getCurrentPdsUrl(stored.did);
+            const handle = await fetchHandle(pdsUrl, stored.accessToken, stored.did);
+            if (handle !== null) {
+              await deps.store.set({ ...stored, handle });
+              return { authenticated: true, did: stored.did, handle, expiresAt: stored.expiresAt };
+            }
+          } catch (err) {
+            console.warn('[AUTH_GET_STATUS] lazy handle hydration failed:', err);
           }
         }
-        console.log('[AUTH_GET_STATUS] returning handle:', stored.handle);
         return { authenticated: true, did: stored.did, handle: stored.handle, expiresAt: stored.expiresAt };
       }
-      console.log('[AUTH_GET_STATUS] returning not authenticated');
       return { authenticated: false };
     }
 
@@ -585,11 +608,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
           errorMessage.toLowerCase().includes('forbidden') ||
           (err instanceof Error && 'status' in err && (err.status === 401 || err.status === 403));
 
-        console.log('[PUT_RECORD] Error detected:', { errorMessage, isAuthError, err });
-
         if (isAuthError) {
-          // Clear the invalid session to force re-authentication
-          console.log('[PUT_RECORD] Clearing session due to auth error');
           await deps.store.clear();
           return {
             type: 'PUT_RECORD_ERROR',
@@ -659,6 +678,19 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
       }
     }
 
+    case 'CHECK_LABELER_SUBSCRIPTION': {
+      try {
+        const stored = await deps.store.get();
+        const valid = await deps.store.isAccessTokenValid();
+        if (stored === null || !valid) return { ok: true };
+        const pdsUrl = await getCurrentPdsUrl(stored.did);
+        await checkAndScheduleLabelerPrompt(pdsUrl, stored.accessToken);
+      } catch {
+        // silent fail
+      }
+      return { ok: true };
+    }
+
     default:
       return { error: 'Unknown message type' };
   }
@@ -725,9 +757,41 @@ export function createDefaultDeps(): RouterDeps {
  * function removes the listener and is useful in tests.
  */
 export function registerMessageRouter(deps: RouterDeps = createDefaultDeps()): () => void {
-  const listener = (message: unknown): Promise<unknown> => handleMessage(message, deps);
+  // Use return-true + sendResponse pattern for maximum compatibility.
+  // Returning a Promise from an onMessage listener only works natively in Chrome 146+
+  // (with the ExtensionBrowserNamespaceAndPolyfillSupport flag, still a gradual rollout
+  // as of early 2026). The webextension-polyfill becomes a noop once Chrome natively
+  // defines `browser`, so it cannot bridge the gap for Chrome 120–145. The
+  // sendResponse + return-true pattern works on ALL Chrome versions (and Firefox/Safari).
+  // Reference: https://groups.google.com/a/chromium.org/g/chromium-extensions/c/4txWvDW55hU
+  const listener = (message: unknown, _sender: unknown, sendResponse: (res: unknown) => void): true => {
+    handleMessage(message, deps)
+      .catch((err: unknown) => {
+        console.error('[background] unhandled error in message handler:', err);
+        return { error: err instanceof Error ? err.message : String(err) };
+      })
+      .then(sendResponse);
+    return true; // keep the message channel open for the async response
+  };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   browser.runtime.onMessage.addListener(listener as any);
+
+  // Port keepalive: as long as a content script holds an open 'keepalive' port,
+  // Chrome will not terminate the service worker. Content scripts reconnect if
+  // the SW is killed and restarted.
+  const keepalivePorts = new Set<ReturnType<typeof browser.runtime.connect>>();
+  const connectListener = (port: ReturnType<typeof browser.runtime.connect>): void => {
+    if (port.name !== 'keepalive') return;
+    keepalivePorts.add(port);
+    // Signal to the content script that the SW is fully initialized and ready to
+    // handle messages. The content script awaits this before sending AUTH_GET_STATUS
+    // etc., eliminating the race between cold-start initialization and sendMessage.
+    port.postMessage({ type: 'SW_READY' });
+    port.onDisconnect.addListener(() => {
+      keepalivePorts.delete(port);
+    });
+  };
+  browser.runtime.onConnect.addListener(connectListener);
 
   // Intercept the OAuth callback by watching for tab navigations to the registered redirect URI.
   // This is required because the redirect target is a web-hosted page (not a bundled extension page),
@@ -778,6 +842,7 @@ export function registerMessageRouter(deps: RouterDeps = createDefaultDeps()): (
   return () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     browser.runtime.onMessage.removeListener(listener as any);
+    browser.runtime.onConnect.removeListener(connectListener);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     browser.tabs.onUpdated.removeListener(tabListener as any);
   };

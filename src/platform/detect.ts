@@ -1,4 +1,4 @@
-import browser from 'webextension-polyfill';
+import { browser } from 'wxt/browser';
 
 import type { BrowserName, PlatformCapabilities } from './types';
 

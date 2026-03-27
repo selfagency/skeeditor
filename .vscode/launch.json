@@ -11,11 +11,12 @@
       "type": "chrome",
       "request": "launch",
       "url": "https://bsky.app",
+      "runtimeExecutable": "/Applications/Chromium.app/Contents/MacOS/Chromium",
       "runtimeArgs": [
         "--load-extension=${workspaceFolder}/dist/chrome",
         "--disable-extensions-except=${workspaceFolder}/dist/chrome",
         // Keeps a stable profile across sessions so you stay logged in.
-        "--user-data-dir=${workspaceFolder}/.chrome-debug-profile"
+        "--user-data-dir=${workspaceFolder}/.chromium-debug-profile"
       ],
       "preLaunchTask": "Build Chrome (watch)",
       "sourceMaps": true,
@@ -41,14 +42,14 @@
       }
     },
     // ─────────────────────────────────────────────────────────────────────────
-    // 2. Attach to an already-running Chrome instance that was launched with
+    // 2. Attach to an already-running Chromium instance that was launched with
     //    --remote-debugging-port=9222. Useful when you want to keep your own
-    //    Chrome session / cookies.
+    //    Chromium session / cookies.
     //
-    //    Launch Chrome manually first:
-    //    open -na "Google Chrome" --args \
+    //    Launch Chromium manually first:
+    //    open -na "Chromium" --args \
     //      --remote-debugging-port=9222 \
-    //      --user-data-dir=/tmp/chrome-debug \
+    //      --user-data-dir=/tmp/chromium-debug \
     //      --load-extension=<absolute-path>/dist/chrome
     // ─────────────────────────────────────────────────────────────────────────
     {
@@ -80,7 +81,7 @@
     // 3. Debug the service worker (background script).
     //    Attaches to the extension's service-worker target specifically.
     //    The service worker URL pattern:
-    //      chrome-extension://<extension-id>/background/service-worker.js
+    //      chrome-extension://<extension-id>/background.js
     //    Replace <EXTENSION_ID> below with the value from chrome://extensions
     //    after loading the unpacked extension, or use the wildcard pattern.
     // ─────────────────────────────────────────────────────────────────────────
@@ -93,10 +94,11 @@
       "sourceMaps": true,
       "webRoot": "${workspaceFolder}/src",
       "outFiles": [
-        "${workspaceFolder}/dist/chrome/background/*.js"
+        "${workspaceFolder}/dist/chrome/background.js",
+        "${workspaceFolder}/dist/chrome/chunks/*.js"
       ],
       "resolveSourceMapLocations": [
-        "${workspaceFolder}/dist/chrome/background/**",
+        "${workspaceFolder}/dist/chrome/**",
         "!**/node_modules/**"
       ],
       "skipFiles": [
@@ -118,7 +120,7 @@
       "type": "chrome",
       "request": "attach",
       "port": 9222,
-      "url": "chrome-extension://*/popup/popup.html",
+      "url": "chrome-extension://*/popup.html",
       "sourceMaps": true,
       "webRoot": "${workspaceFolder}/src",
       "outFiles": [
@@ -149,10 +151,10 @@
       "sourceMaps": true,
       "webRoot": "${workspaceFolder}/src",
       "outFiles": [
-        "${workspaceFolder}/dist/chrome/content/*.js"
+        "${workspaceFolder}/dist/chrome/content-scripts/*.js"
       ],
       "resolveSourceMapLocations": [
-        "${workspaceFolder}/dist/chrome/content/**",
+        "${workspaceFolder}/dist/chrome/content-scripts/**",
         "!**/node_modules/**"
       ],
       "pathMapping": {

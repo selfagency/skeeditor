@@ -4,4 +4,6 @@ allowBuilds:
   core-js: true
   esbuild: true
   msw: true
+  sharp: true
   spawn-sync: true
+  workerd: true

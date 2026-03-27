@@ -8,7 +8,8 @@ describe('service-worker', () => {
   it('should call registerMessageRouter on import', async () => {
     const { registerMessageRouter } = await import('@src/background/message-router');
 
-    await import('@src/background/service-worker');
+    const entrypoint = await import('@src/entrypoints/background');
+    entrypoint.default.main();
 
     expect(vi.mocked(registerMessageRouter)).toHaveBeenCalledOnce();
   });

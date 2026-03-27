@@ -1,4 +1,4 @@
-import browser from 'webextension-polyfill';
+import { browser } from 'wxt/browser';
 
 /** Token session data persisted in browser.storage.local */
 export interface StoredSession {

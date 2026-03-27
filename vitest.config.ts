@@ -4,14 +4,13 @@ import { defineConfig } from 'vitest/config';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const srcAlias = { '@src': resolve(__dirname, 'src') };
-const polyfillStub = resolve(__dirname, 'test/mocks/webextension-polyfill.ts');
 
-// In test environments, redirect webextension-polyfill to a no-op stub.
-// The real polyfill throws when loaded outside a browser extension context.
-// Tests provide globalThis.browser via test/mocks/browser-apis.ts instead.
+// In test environments, redirect wxt/browser to the fakeBrowser stub.
+// The fakeBrowser (from wxt/testing) provides a controllable browser API.
+// Tests configure globalThis.browser via test/mocks/browser-apis.ts instead.
 const testAlias = {
   ...srcAlias,
-  'webextension-polyfill': polyfillStub,
+  'wxt/browser': resolve(__dirname, 'test/mocks/wxt-browser.ts'),
 };
 
 export default defineConfig({

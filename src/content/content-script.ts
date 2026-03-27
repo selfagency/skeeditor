@@ -1,15 +1,12 @@
-import browser from 'webextension-polyfill';
+import { browser, type Browser } from 'wxt/browser';
 import { APP_NAME } from '../shared/constants';
 import type { AuthListAccountsAccount, PutRecordConflictResponse, PutRecordResponse } from '../shared/messages';
 import { sendMessage } from '../shared/messages';
 import { EditModal } from './edit-modal';
 import { markPostAsEdited } from './post-badges';
-import { extractPostInfo, extractPostText, findPosts } from './post-detector';
+import { extractPostInfo, extractPostText, findPosts, updatePostText } from './post-detector';
 import { buildUpdatedPostRecord, type EditablePostRecord } from './post-editor';
 import './styles.css';
-
-// Debug: Log when content script loads
-console.log(`${APP_NAME}: content script loaded on ${document.location.href}`);
 
 const POST_MARKER_ATTRIBUTE = 'data-skeeditor-processed';
 const EDIT_BUTTON_ATTRIBUTE = 'data-skeeditor-edit-button';
@@ -27,7 +24,7 @@ let mutationObserver: MutationObserver | null = null;
 let currentDid: string | null = null;
 let currentHandle: string | null = null;
 let domContentLoadedHandler: (() => void) | null = null;
-let storageChangeHandler: ((changes: Record<string, browser.Storage.StorageChange>) => void) | null = null;
+let storageChangeHandler: ((changes: Record<string, Browser.storage.StorageChange>) => void) | null = null;
 let scanScheduled = false;
 let scanTimer: ReturnType<typeof setTimeout> | null = null;
 let activeModal: EditModal | null = null;
@@ -61,12 +58,18 @@ const isPutRecordConflictResponse = (response: PutRecordResponse): response is P
 };
 
 const refreshAuthState = async (): Promise<void> => {
-  console.log(`${APP_NAME}: querying background for auth status...`);
-  const status = await sendMessage({ type: 'AUTH_GET_STATUS' });
-  console.log(`${APP_NAME}: received auth status response:`, status);
-  currentDid = status.authenticated ? status.did : null;
-  currentHandle = status.authenticated ? (status.handle ?? null) : null;
-  console.log(`${APP_NAME}: currentDid=${currentDid}, currentHandle=${currentHandle}`);
+  try {
+    console.log(`${APP_NAME}: querying background for auth status...`);
+    const status = await sendMessage({ type: 'AUTH_GET_STATUS' });
+    console.log(`${APP_NAME}: received auth status response:`, status);
+    currentDid = status.authenticated ? status.did : null;
+    currentHandle = status.authenticated ? (status.handle ?? null) : null;
+    console.log(`${APP_NAME}: currentDid=${currentDid}, currentHandle=${currentHandle}`);
+  } catch (err) {
+    console.error(`${APP_NAME}: failed to load auth state`, err);
+    currentDid = null;
+    currentHandle = null;
+  }
 
   // Trigger a scan for posts after updating auth state
   scanForPosts();
@@ -279,6 +282,7 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
     }
 
     modal.markSaved(text);
+    updatePostText(postElement, text);
     markPostAsEdited(postElement);
     modal.setSuccess('Edit saved.');
     console.info(`${APP_NAME}: edit saved`, { atUri: info.atUri, uri: writeResponse.uri, cid: writeResponse.cid });
@@ -334,16 +338,18 @@ const placeEditButton = (postElement: HTMLElement, button: HTMLButtonElement): v
   const optionsContainer = optionsButton?.parentElement;
 
   if (optionsContainer && optionsButton) {
-    // Get the CSS class from the options button's container (dynamic class like "css-g5y9jx")
-    const containerClass = optionsContainer.className;
-
-    // Create our own wrapper div with the same class to match Bluesky's styling
-    const editWrapper = document.createElement('div');
-    editWrapper.className = containerClass;
-    editWrapper.appendChild(button);
-
-    // Insert our wrapper immediately before the options container's parent
-    optionsContainer.parentElement?.insertBefore(editWrapper, optionsContainer);
+    if (optionsContainer.querySelectorAll('button').length > 1) {
+      // Options button is a direct child of the action row — insert button directly
+      // before the options button so it appears as an adjacent sibling.
+      optionsContainer.insertBefore(button, optionsButton);
+    } else {
+      // Options button lives in its own wrapper div (real Bluesky structure like
+      // "css-g5y9jx"). Create a matching wrapper and insert it before that wrapper.
+      const editWrapper = document.createElement('div');
+      editWrapper.className = optionsContainer.className;
+      editWrapper.appendChild(button);
+      optionsContainer.parentElement?.insertBefore(editWrapper, optionsContainer);
+    }
   } else {
     // Fallback: find the action container with like/reply/repost buttons
     const actionContainer = postElement.querySelector<HTMLElement>('[data-testid="postButtonInline"]');
@@ -447,7 +453,7 @@ const ensureStorageListener = (): void => {
     return;
   }
 
-  storageChangeHandler = (changes: Record<string, browser.Storage.StorageChange>) => {
+  storageChangeHandler = (changes: Record<string, Browser.storage.StorageChange>) => {
     if (!('sessions' in changes) && !('activeDid' in changes)) {
       return;
     }
@@ -486,12 +492,83 @@ const ensureObserver = (): void => {
   mutationObserver.observe(target, { childList: true, subtree: true });
 };
 
-const start = (): void => {
+let hasStarted = false;
+
+export const start = (): void => {
+  if (hasStarted) return;
+  hasStarted = true;
+
   ensureObserver();
   ensureStorageListener();
   ensureNavigationListeners();
 
-  void Promise.all([refreshAuthState(), loadKnownAccounts()])
+  // Connect a persistent port to keep the background SW alive (Chrome MV3 terminates
+  // idle SWs after ~30 s; an open port prevents that while the page is active).
+  // The SW posts SW_READY on the port once its onMessage handler is registered —
+  // we await that signal before sending auth messages to eliminate the cold-start race.
+  const waitForSwReady = (): Promise<void> =>
+    new Promise(resolve => {
+      let settled = false;
+      const done = (): void => {
+        if (!settled) {
+          settled = true;
+          resolve();
+        }
+      };
+      // Fallback: if SW_READY never arrives within 8 s, proceed anyway and let
+      // the retry-with-backoff in sendMessage handle any remaining startup lag.
+      // 8 s gives Chrome's MV3 SW enough time to cold-start even on a slower
+      // machine parsing the ~280 kB background bundle.
+      const fallback = setTimeout(done, 8000);
+
+      const isContextInvalidated = (): boolean => {
+        try {
+          // Accessing browser.runtime.id throws when context is invalidated.
+          return !browser.runtime.id;
+        } catch {
+          return true;
+        }
+      };
+
+      const connect = (): void => {
+        if (settled || isContextInvalidated()) {
+          clearTimeout(fallback);
+          done();
+          return;
+        }
+        let port: ReturnType<typeof browser.runtime.connect>;
+        try {
+          port = browser.runtime.connect({ name: 'keepalive' });
+        } catch {
+          // Context was invalidated between the check and the connect call.
+          clearTimeout(fallback);
+          done();
+          return;
+        }
+        port.onMessage.addListener((msg: unknown) => {
+          if ((msg as { type?: string })?.type === 'SW_READY') {
+            clearTimeout(fallback);
+            done();
+          }
+        });
+        port.onDisconnect.addListener(() => {
+          // SW was terminated; reconnect and wait for the next SW_READY.
+          // 300 ms is fast enough to catch a restarting SW without hammering it.
+          // Stop reconnecting if the extension context was invalidated (tab still
+          // open after the extension was reloaded from chrome://extensions).
+          if (!settled && !isContextInvalidated()) {
+            setTimeout(connect, 300);
+          } else {
+            clearTimeout(fallback);
+            done();
+          }
+        });
+      };
+      connect();
+    });
+
+  void waitForSwReady()
+    .then(() => Promise.all([refreshAuthState(), loadKnownAccounts()]))
     .then(() => {
       scanForPosts();
       document.documentElement.setAttribute('data-skeeditor-initialized', 'true');
@@ -504,13 +581,6 @@ const start = (): void => {
       console.info(`${APP_NAME}: content script loaded with anonymous state`);
     });
 };
-
-if (document.readyState === 'loading') {
-  domContentLoadedHandler = start;
-  document.addEventListener('DOMContentLoaded', domContentLoadedHandler, { once: true });
-} else {
-  start();
-}
 
 export const cleanupContentScript = (): void => {
   if (scanTimer) {
@@ -551,4 +621,14 @@ export const cleanupContentScript = (): void => {
   currentDid = null;
   currentHandle = null;
   knownAccounts = [];
+  hasStarted = false;
 };
+
+// Auto-execute when the module is loaded directly (tests and non-WXT environments).
+// The WXT entrypoint calls start() explicitly via main(); the hasStarted guard
+// prevents double-initialisation.
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', start);
+} else {
+  start();
+}

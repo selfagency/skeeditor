@@ -1,4 +1,4 @@
-import browser from 'webextension-polyfill';
+import { browser } from 'wxt/browser';
 
 export const APP_NAME = 'skeeditor';
 export const BSKY_APP_ORIGIN = 'https://bsky.app';
@@ -120,3 +120,6 @@ export const BSKY_OAUTH_SCOPE = 'atproto transition:generic';
 export const BSKY_OAUTH_CLIENT_ID = 'https://skeeditor.self.agency/oauth/client-metadata.json';
 /** OAuth redirect URI - must match exactly what's registered in the client metadata */
 export const BSKY_OAUTH_REDIRECT_URI = 'https://skeeditor.self.agency/callback.html';
+
+/** DID of the skeeditor labeler account (@skeeditor.bsky.social) */
+export const LABELER_DID = 'did:plc:m6h36r2hzbnozuhxj4obhkyb';
