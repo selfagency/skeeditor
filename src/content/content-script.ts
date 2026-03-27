@@ -334,16 +334,18 @@ const placeEditButton = (postElement: HTMLElement, button: HTMLButtonElement): v
   const optionsContainer = optionsButton?.parentElement;
 
   if (optionsContainer && optionsButton) {
-    // Get the CSS class from the options button's container (dynamic class like "css-g5y9jx")
-    const containerClass = optionsContainer.className;
-
-    // Create our own wrapper div with the same class to match Bluesky's styling
-    const editWrapper = document.createElement('div');
-    editWrapper.className = containerClass;
-    editWrapper.appendChild(button);
-
-    // Insert our wrapper immediately before the options container's parent
-    optionsContainer.parentElement?.insertBefore(editWrapper, optionsContainer);
+    if (optionsContainer.querySelectorAll('button').length > 1) {
+      // Options button is a direct child of the action row — insert button directly
+      // before the options button so it appears as an adjacent sibling.
+      optionsContainer.insertBefore(button, optionsButton);
+    } else {
+      // Options button lives in its own wrapper div (real Bluesky structure like
+      // "css-g5y9jx"). Create a matching wrapper and insert it before that wrapper.
+      const editWrapper = document.createElement('div');
+      editWrapper.className = optionsContainer.className;
+      editWrapper.appendChild(button);
+      optionsContainer.parentElement?.insertBefore(editWrapper, optionsContainer);
+    }
   } else {
     // Fallback: find the action container with like/reply/repost buttons
     const actionContainer = postElement.querySelector<HTMLElement>('[data-testid="postButtonInline"]');

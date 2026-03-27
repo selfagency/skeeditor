@@ -1,12 +1,13 @@
 import tailwindcss from '@tailwindcss/vite';
+import '@wxt-dev/auto-icons';
 import { resolve } from 'node:path';
 import { defineConfig } from 'wxt';
-import '@wxt-dev/auto-icons';
 
 export default defineConfig({
   srcDir: 'src',
   entrypointsDir: 'entrypoints',
   outDir: 'dist',
+  outDirTemplate: '{{browser}}',
   imports: false,
   modules: ['@wxt-dev/auto-icons'],
   autoIcons: {

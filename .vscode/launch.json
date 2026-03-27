@@ -11,23 +11,24 @@
       "type": "chrome",
       "request": "launch",
       "url": "https://bsky.app",
+      "runtimeExecutable": "/Applications/Chromium.app/Contents/MacOS/Chromium",
       "runtimeArgs": [
-        "--load-extension=${workspaceFolder}/dist/chrome-mv3",
-        "--disable-extensions-except=${workspaceFolder}/dist/chrome-mv3",
+        "--load-extension=${workspaceFolder}/dist/chrome",
+        "--disable-extensions-except=${workspaceFolder}/dist/chrome",
         // Keeps a stable profile across sessions so you stay logged in.
-        "--user-data-dir=${workspaceFolder}/.chrome-debug-profile"
+        "--user-data-dir=${workspaceFolder}/.chromium-debug-profile"
       ],
       "preLaunchTask": "Build Chrome (watch)",
       "sourceMaps": true,
       "webRoot": "${workspaceFolder}/src",
       "outFiles": [
-        "${workspaceFolder}/dist/chrome-mv3/**/*.js"
+        "${workspaceFolder}/dist/chrome/**/*.js"
       ],
       // Only resolve source maps from the extension's own output — suppresses
       // noisy "Could not read source map" warnings from hls.js and other
       // third-party scripts served by bsky.app.
       "resolveSourceMapLocations": [
-        "${workspaceFolder}/dist/chrome-mv3/**",
+        "${workspaceFolder}/dist/chrome/**",
         "!**/node_modules/**"
       ],
       "skipFiles": [
@@ -41,14 +42,14 @@
       }
     },
     // ─────────────────────────────────────────────────────────────────────────
-    // 2. Attach to an already-running Chrome instance that was launched with
+    // 2. Attach to an already-running Chromium instance that was launched with
     //    --remote-debugging-port=9222. Useful when you want to keep your own
-    //    Chrome session / cookies.
+    //    Chromium session / cookies.
     //
-    //    Launch Chrome manually first:
-    //    open -na "Google Chrome" --args \
+    //    Launch Chromium manually first:
+    //    open -na "Chromium" --args \
     //      --remote-debugging-port=9222 \
-    //      --user-data-dir=/tmp/chrome-debug \
+    //      --user-data-dir=/tmp/chromium-debug \
     //      --load-extension=<absolute-path>/dist/chrome
     // ─────────────────────────────────────────────────────────────────────────
     {
@@ -60,10 +61,10 @@
       "sourceMaps": true,
       "webRoot": "${workspaceFolder}/src",
       "outFiles": [
-        "${workspaceFolder}/dist/chrome-mv3/**/*.js"
+        "${workspaceFolder}/dist/chrome/**/*.js"
       ],
       "resolveSourceMapLocations": [
-        "${workspaceFolder}/dist/chrome-mv3/**",
+        "${workspaceFolder}/dist/chrome/**",
         "!**/node_modules/**"
       ],
       "skipFiles": [
@@ -93,11 +94,11 @@
       "sourceMaps": true,
       "webRoot": "${workspaceFolder}/src",
       "outFiles": [
-        "${workspaceFolder}/dist/chrome-mv3/background.js",
-        "${workspaceFolder}/dist/chrome-mv3/chunks/*.js"
+        "${workspaceFolder}/dist/chrome/background.js",
+        "${workspaceFolder}/dist/chrome/chunks/*.js"
       ],
       "resolveSourceMapLocations": [
-        "${workspaceFolder}/dist/chrome-mv3/**",
+        "${workspaceFolder}/dist/chrome/**",
         "!**/node_modules/**"
       ],
       "skipFiles": [
@@ -123,10 +124,10 @@
       "sourceMaps": true,
       "webRoot": "${workspaceFolder}/src",
       "outFiles": [
-        "${workspaceFolder}/dist/chrome-mv3/**/*.js"
+        "${workspaceFolder}/dist/chrome/**/*.js"
       ],
       "resolveSourceMapLocations": [
-        "${workspaceFolder}/dist/chrome-mv3/**",
+        "${workspaceFolder}/dist/chrome/**",
         "!**/node_modules/**"
       ],
       "presentation": {
@@ -150,10 +151,10 @@
       "sourceMaps": true,
       "webRoot": "${workspaceFolder}/src",
       "outFiles": [
-        "${workspaceFolder}/dist/chrome-mv3/content-scripts/*.js"
+        "${workspaceFolder}/dist/chrome/content-scripts/*.js"
       ],
       "resolveSourceMapLocations": [
-        "${workspaceFolder}/dist/chrome-mv3/content-scripts/**",
+        "${workspaceFolder}/dist/chrome/content-scripts/**",
         "!**/node_modules/**"
       ],
       "pathMapping": {
