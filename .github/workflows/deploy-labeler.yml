@@ -1,12 +1,12 @@
 name: Deploy labeler
 
+# Auto-deploy is intentionally disabled until:
+# 1. packages/labeler/src/ worker source is committed to the repo
+# 2. CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID secrets are set
+# 3. KV namespace IDs are filled in wrangler.jsonc
+# 4. LABELER_SIGNING_KEY secret is set via `wrangler secret put LABELER_SIGNING_KEY`
+# Enable the push trigger (and remove workflow_dispatch-only) once all of the above are done.
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "packages/labeler/**"
-      - ".github/workflows/deploy-labeler.yml"
   workflow_dispatch:
 
 permissions:
