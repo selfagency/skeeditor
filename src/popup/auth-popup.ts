@@ -1,4 +1,4 @@
-import browser from 'webextension-polyfill';
+import { browser } from 'wxt/browser';
 
 import globalStyles from '../shadow-styles.css?inline';
 import type { AuthListAccountsAccount } from '../shared/messages';

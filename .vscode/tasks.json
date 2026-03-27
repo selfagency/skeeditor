@@ -71,7 +71,7 @@
     {
       "label": "Open Chrome (remote debug on 9222)",
       "type": "shell",
-      "command": "'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' --remote-debugging-port=9222 --user-data-dir='${workspaceFolder}/.chrome-debug-profile' --load-extension='${workspaceFolder}/dist/chrome' --disable-extensions-except='${workspaceFolder}/dist/chrome' 'https://bsky.app' &",
+      "command": "'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' --remote-debugging-port=9222 --user-data-dir='${workspaceFolder}/.chrome-debug-profile' --load-extension='${workspaceFolder}/dist/chrome-mv3' --disable-extensions-except='${workspaceFolder}/dist/chrome-mv3' 'https://bsky.app' &",
       "dependsOn": [
         "Build Chrome (once)"
       ],

@@ -1,4 +1,4 @@
-import browser from 'webextension-polyfill';
+import { browser } from 'wxt/browser';
 
 export const APP_NAME = 'skeeditor';
 export const BSKY_APP_ORIGIN = 'https://bsky.app';

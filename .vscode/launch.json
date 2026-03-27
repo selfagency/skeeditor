@@ -12,8 +12,8 @@
       "request": "launch",
       "url": "https://bsky.app",
       "runtimeArgs": [
-        "--load-extension=${workspaceFolder}/dist/chrome",
-        "--disable-extensions-except=${workspaceFolder}/dist/chrome",
+        "--load-extension=${workspaceFolder}/dist/chrome-mv3",
+        "--disable-extensions-except=${workspaceFolder}/dist/chrome-mv3",
         // Keeps a stable profile across sessions so you stay logged in.
         "--user-data-dir=${workspaceFolder}/.chrome-debug-profile"
       ],
@@ -21,13 +21,13 @@
       "sourceMaps": true,
       "webRoot": "${workspaceFolder}/src",
       "outFiles": [
-        "${workspaceFolder}/dist/chrome/**/*.js"
+        "${workspaceFolder}/dist/chrome-mv3/**/*.js"
       ],
       // Only resolve source maps from the extension's own output — suppresses
       // noisy "Could not read source map" warnings from hls.js and other
       // third-party scripts served by bsky.app.
       "resolveSourceMapLocations": [
-        "${workspaceFolder}/dist/chrome/**",
+        "${workspaceFolder}/dist/chrome-mv3/**",
         "!**/node_modules/**"
       ],
       "skipFiles": [
@@ -60,10 +60,10 @@
       "sourceMaps": true,
       "webRoot": "${workspaceFolder}/src",
       "outFiles": [
-        "${workspaceFolder}/dist/chrome/**/*.js"
+        "${workspaceFolder}/dist/chrome-mv3/**/*.js"
       ],
       "resolveSourceMapLocations": [
-        "${workspaceFolder}/dist/chrome/**",
+        "${workspaceFolder}/dist/chrome-mv3/**",
         "!**/node_modules/**"
       ],
       "skipFiles": [
@@ -80,7 +80,7 @@
     // 3. Debug the service worker (background script).
     //    Attaches to the extension's service-worker target specifically.
     //    The service worker URL pattern:
-    //      chrome-extension://<extension-id>/background/service-worker.js
+    //      chrome-extension://<extension-id>/background.js
     //    Replace <EXTENSION_ID> below with the value from chrome://extensions
     //    after loading the unpacked extension, or use the wildcard pattern.
     // ─────────────────────────────────────────────────────────────────────────
@@ -93,10 +93,11 @@
       "sourceMaps": true,
       "webRoot": "${workspaceFolder}/src",
       "outFiles": [
-        "${workspaceFolder}/dist/chrome/background/*.js"
+        "${workspaceFolder}/dist/chrome-mv3/background.js",
+        "${workspaceFolder}/dist/chrome-mv3/chunks/*.js"
       ],
       "resolveSourceMapLocations": [
-        "${workspaceFolder}/dist/chrome/background/**",
+        "${workspaceFolder}/dist/chrome-mv3/**",
         "!**/node_modules/**"
       ],
       "skipFiles": [
@@ -118,14 +119,14 @@
       "type": "chrome",
       "request": "attach",
       "port": 9222,
-      "url": "chrome-extension://*/popup/popup.html",
+      "url": "chrome-extension://*/popup.html",
       "sourceMaps": true,
       "webRoot": "${workspaceFolder}/src",
       "outFiles": [
-        "${workspaceFolder}/dist/chrome/**/*.js"
+        "${workspaceFolder}/dist/chrome-mv3/**/*.js"
       ],
       "resolveSourceMapLocations": [
-        "${workspaceFolder}/dist/chrome/**",
+        "${workspaceFolder}/dist/chrome-mv3/**",
         "!**/node_modules/**"
       ],
       "presentation": {
@@ -149,10 +150,10 @@
       "sourceMaps": true,
       "webRoot": "${workspaceFolder}/src",
       "outFiles": [
-        "${workspaceFolder}/dist/chrome/content/*.js"
+        "${workspaceFolder}/dist/chrome-mv3/content-scripts/*.js"
       ],
       "resolveSourceMapLocations": [
-        "${workspaceFolder}/dist/chrome/content/**",
+        "${workspaceFolder}/dist/chrome-mv3/content-scripts/**",
         "!**/node_modules/**"
       ],
       "pathMapping": {

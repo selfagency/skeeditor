@@ -1,4 +1,4 @@
-import browser from 'webextension-polyfill';
+import { browser, type Browser } from 'wxt/browser';
 import { APP_NAME } from '../shared/constants';
 import type { AuthListAccountsAccount, PutRecordConflictResponse, PutRecordResponse } from '../shared/messages';
 import { sendMessage } from '../shared/messages';
@@ -27,7 +27,7 @@ let mutationObserver: MutationObserver | null = null;
 let currentDid: string | null = null;
 let currentHandle: string | null = null;
 let domContentLoadedHandler: (() => void) | null = null;
-let storageChangeHandler: ((changes: Record<string, browser.Storage.StorageChange>) => void) | null = null;
+let storageChangeHandler: ((changes: Record<string, Browser.storage.StorageChange>) => void) | null = null;
 let scanScheduled = false;
 let scanTimer: ReturnType<typeof setTimeout> | null = null;
 let activeModal: EditModal | null = null;
@@ -447,7 +447,7 @@ const ensureStorageListener = (): void => {
     return;
   }
 
-  storageChangeHandler = (changes: Record<string, browser.Storage.StorageChange>) => {
+  storageChangeHandler = (changes: Record<string, Browser.storage.StorageChange>) => {
     if (!('sessions' in changes) && !('activeDid' in changes)) {
       return;
     }
@@ -486,7 +486,12 @@ const ensureObserver = (): void => {
   mutationObserver.observe(target, { childList: true, subtree: true });
 };
 
-const start = (): void => {
+let hasStarted = false;
+
+export const start = (): void => {
+  if (hasStarted) return;
+  hasStarted = true;
+
   ensureObserver();
   ensureStorageListener();
   ensureNavigationListeners();
@@ -504,13 +509,6 @@ const start = (): void => {
       console.info(`${APP_NAME}: content script loaded with anonymous state`);
     });
 };
-
-if (document.readyState === 'loading') {
-  domContentLoadedHandler = start;
-  document.addEventListener('DOMContentLoaded', domContentLoadedHandler, { once: true });
-} else {
-  start();
-}
 
 export const cleanupContentScript = (): void => {
   if (scanTimer) {
@@ -551,4 +549,14 @@ export const cleanupContentScript = (): void => {
   currentDid = null;
   currentHandle = null;
   knownAccounts = [];
+  hasStarted = false;
 };
+
+// Auto-execute when the module is loaded directly (tests and non-WXT environments).
+// The WXT entrypoint calls start() explicitly via main(); the hasStarted guard
+// prevents double-initialisation.
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', start);
+} else {
+  start();
+}

@@ -1,4 +1,4 @@
-import browser from 'webextension-polyfill';
+import { browser } from 'wxt/browser';
 
 const DPOP_KEY_STORAGE = 'dpopKey';
 

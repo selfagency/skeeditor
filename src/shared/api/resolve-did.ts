@@ -80,8 +80,6 @@ async function resolveDidPlc(did: string): Promise<DidDocument> {
   // PLC directory URL format: https://plc.directory/did:plc:{identifier}
   const url = `https://plc.directory/${did}`;
 
-  console.log('[resolveDidPlc] Fetching DID document from:', url);
-
   const response = await fetch(url, {
     headers: {
       Accept: 'application/json',
@@ -89,13 +87,10 @@ async function resolveDidPlc(did: string): Promise<DidDocument> {
   });
 
   if (!response.ok) {
-    console.error('[resolveDidPlc] Failed to resolve DID:', response.status, response.statusText);
     throw new DidResolutionError(`Failed to resolve did:plc: ${response.status} ${response.statusText}`, did);
   }
 
-  const doc = await response.json();
-  console.log('[resolveDidPlc] Resolved DID document:', JSON.stringify(doc, null, 2));
-  return doc;
+  return response.json();
 }
 
 /**
@@ -125,21 +120,14 @@ async function resolveDidWeb(did: string): Promise<DidDocument> {
  * Supports did:plc and did:web methods.
  */
 export async function resolveDid(did: string): Promise<DidDocument> {
-  console.log('[resolveDid] Resolving DID:', did);
-
   if (did.startsWith('did:plc:')) {
-    const result = await resolveDidPlc(did);
-    console.log('[resolveDid] Resolved did:plc result:', result);
-    return result;
+    return resolveDidPlc(did);
   }
 
   if (did.startsWith('did:web:')) {
-    const result = await resolveDidWeb(did);
-    console.log('[resolveDid] Resolved did:web result:', result);
-    return result;
+    return resolveDidWeb(did);
   }
 
-  console.error('[resolveDid] Unsupported DID method:', did);
   throw new DidResolutionError(`Unsupported DID method: ${did}`, did);
 }
 
@@ -166,23 +154,17 @@ export async function getHandleForDid(did: string): Promise<string | null> {
   try {
     const doc = await resolveDid(did);
     const handle = getHandleFromDidDocument(doc);
-    if (handle) {
-      console.log('[getHandleForDid] Got handle from DID document:', handle);
-      return handle;
-    }
-  } catch (error) {
-    console.log('[getHandleForDid] DID document resolution failed:', error);
+    if (handle) return handle;
+  } catch {
+    // DID document resolution failed, try fallback
   }
 
   // Fallback: Use Bluesky public API to get profile
   try {
     const handle = await getHandleFromBlskyApi(did);
-    if (handle) {
-      console.log('[getHandleForDid] Got handle from Bluesky API:', handle);
-      return handle;
-    }
-  } catch (error) {
-    console.log('[getHandleForDid] Bluesky API fallback failed:', error);
+    if (handle) return handle;
+  } catch {
+    // API fallback failed
   }
 
   return null;
@@ -201,25 +183,21 @@ async function getHandleFromBlskyApi(did: string): Promise<string | null> {
 
   for (const url of endpoints) {
     try {
-      console.log('[getHandleFromBlskyApi] Trying endpoint:', url);
       const response = await fetch(url, {
         headers: {
           Accept: 'application/json',
         },
       });
 
-      if (!response.ok) {
-        console.log('[getHandleFromBlskyApi] Endpoint returned:', response.status);
-        continue;
-      }
+      if (!response.ok) continue;
 
       const data = await response.json();
       const handle = data?.handle;
       if (typeof handle === 'string' && handle.length > 0) {
         return handle;
       }
-    } catch (error) {
-      console.log('[getHandleFromBlskyApi] Endpoint failed:', error);
+    } catch {
+      // Try next endpoint
     }
   }
 

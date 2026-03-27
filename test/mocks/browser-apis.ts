@@ -5,7 +5,7 @@ interface BrowserRuntimeMock {
     addListener: (listener: (message: unknown) => unknown) => void;
     removeListener: (listener: (message: unknown) => unknown) => void;
   };
-  sendMessage: (message: unknown) => Promise<{ ok: true }>;
+  sendMessage: (message: unknown) => Promise<unknown>;
   getURL: (path: string) => string;
   openOptionsPage: () => Promise<void>;
 }
@@ -43,10 +43,12 @@ interface BrowserApiMock {
 }
 
 declare global {
-  // chrome is Chrome-namespace alias used in a single content-layer test; browser
-  // global typing comes from src/browser.d.ts (webextension-polyfill types).
+  // chrome is a Chrome-namespace alias used in a single content-layer test.
   // eslint-disable-next-line no-var
   var chrome: BrowserApiMock;
+  // browser is the WebExtension API global — mocked in all test environments.
+  // eslint-disable-next-line no-var
+  var browser: BrowserApiMock;
 }
 
 const createBrowserApiMock = (): BrowserApiMock => {
