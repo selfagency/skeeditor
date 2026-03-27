@@ -256,6 +256,15 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
         await refreshAuthState();
         return;
       }
+      // If re-authentication is required, show a more helpful message
+      if (writeResponse.requiresReauth) {
+        modal.setError(
+          'Your session has expired or lacks permission. Please click the extension icon to sign in again.',
+        );
+        // Refresh auth state in case the user signs in again
+        await refreshAuthState();
+        return;
+      }
       modal.setError(writeResponse.message);
       return;
     }
