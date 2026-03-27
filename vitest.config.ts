@@ -8,9 +8,12 @@ const srcAlias = { '@src': resolve(__dirname, 'src') };
 // In test environments, redirect wxt/browser to the fakeBrowser stub.
 // The fakeBrowser (from wxt/testing) provides a controllable browser API.
 // Tests configure globalThis.browser via test/mocks/browser-apis.ts instead.
+// wxt/utils/* are only resolvable inside WXT's build pipeline; redirect to stubs.
 const testAlias = {
   ...srcAlias,
   'wxt/browser': resolve(__dirname, 'test/mocks/wxt-browser.ts'),
+  'wxt/utils/define-background': resolve(__dirname, 'test/mocks/wxt-utils.ts'),
+  'wxt/utils/define-content-script': resolve(__dirname, 'test/mocks/wxt-utils.ts'),
 };
 
 export default defineConfig({
