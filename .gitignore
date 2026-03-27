@@ -255,3 +255,4 @@ SafariExtension/
 xcode/
 package-lock.json
 .chrome-debug-profile/
+.wxt/

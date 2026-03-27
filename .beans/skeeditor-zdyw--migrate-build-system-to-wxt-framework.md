@@ -1,11 +1,11 @@
 ---
 # skeeditor-zdyw
 title: Migrate build system to WXT framework
-status: in-progress
+status: completed
 type: chore
 priority: high
 created_at: 2026-03-27T14:57:07Z
-updated_at: 2026-03-27T14:57:32Z
+updated_at: 2026-03-27T15:31:38Z
 ---
 
 Replace custom Vite + scripts/build.ts build stack (including the IIFE polyfill workarounds) with WXT framework.
@@ -45,3 +45,22 @@ branch: chore/zdyw-migrate-wxt
   - [ ] Verify playwright paths still work
   - [ ] Run full test suite
 - [ ] Verification: build + load in Chrome, run all tests
+
+
+
+## Summary of Changes
+
+- Replaced custom Vite + tsx build scripts with WXT 0.20.20
+- Removed: `scripts/build.ts`, `scripts/merge-manifest.ts`, `scripts/clean.ts`, `vite.config.ts`, `manifests/` directory, `src/background/service-worker.ts`, `src/browser.d.ts`, `webextension-polyfill`, `@types/webextension-polyfill`
+- Added: `wxt.config.ts` (manifest, tailwind, auto-icons, @src alias), WXT file-based entrypoints in `src/entrypoints/`, `src/assets/icon.svg` for @wxt-dev/auto-icons, `.wxt/` generated files
+- Migrated all `browser.*` imports from `webextension-polyfill` to `wxt/browser`
+- Added `hasStarted` guard to `content-script.ts` `start()` to prevent double-init; restored auto-execution block for test compatibility
+- Updated vitest config with `wxt/browser` mock alias, added global `browser` type to test mocks
+- Updated `.vscode/launch.json` and `tasks.json` to `dist/chrome-mv3/` paths
+- Fixed `tsconfig.json` to extend `.wxt/tsconfig.json` and include `.wxt/wxt.d.ts` for CSS module type support
+- Build output: `dist/chrome-mv3/`, `background.js`, `content-scripts/content.js`, `popup.html`
+- All integration tests (33) pass; 350/351 unit tests pass (1 pre-existing failure unrelated to migration)
+- Zero TypeScript errors
+
+Branch: chore/zdyw-migrate-wxt
+Commit: 29163ad
