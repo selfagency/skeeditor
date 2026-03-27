@@ -5,11 +5,5 @@
     "incremental": true,
     "tsBuildInfoFile": "./node_modules/.cache/tsconfig.build.tsbuildinfo"
   },
-  "include": [
-    "src/**/*.ts",
-    "test/**/*.ts",
-    "scripts/**/*.ts",
-    "*.config.ts",
-    ".wxt/wxt.d.ts"
-  ]
+  "include": ["src/**/*.ts", "test/**/*.ts", "scripts/**/*.ts", "*.config.ts", ".wxt/wxt.d.ts"]
 }
