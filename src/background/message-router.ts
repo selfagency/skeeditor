@@ -392,22 +392,23 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
           did: tokens.sub,
         };
 
+        // Resolve the user's actual PDS from their DID document.
+        // `pdsUrl` here is the authorization server (entryway, e.g. bsky.social).
+        // OAuth tokens are bound to the PDS, not the entryway, so XRPC calls must
+        // go to the PDS host (e.g. *.bsky.network).
+        const resolvedPdsUrl = await getPdsUrlForDid(session.did);
+        const actualPdsUrl = resolvedPdsUrl ?? pdsUrl;
+
+        // Persist the actual PDS URL for this DID now that we know who authenticated
+        await setCurrentPdsUrl(session.did, actualPdsUrl);
+
         // Fetch and store the handle immediately after setting the session
-        const userHandle = await fetchHandle(pdsUrl, session.accessToken, session.did);
+        const userHandle = await fetchHandle(actualPdsUrl, session.accessToken, session.did);
         if (userHandle !== null) {
           session.handle = userHandle;
         }
 
         await deps.store.set(session);
-
-        // Persist the PDS URL for this DID now that we know who authenticated
-        await setCurrentPdsUrl(session.did, pdsUrl);
-
-        // Fetch the handle (best-effort; non-fatal if it fails)
-        const handle = await fetchHandle(pdsUrl, tokens.access_token, tokens.sub!);
-        if (handle !== null) {
-          await deps.store.set({ ...session, handle });
-        }
 
         return { ok: true };
       } catch (err) {
