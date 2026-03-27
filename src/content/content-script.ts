@@ -20,9 +20,6 @@ const ACTION_AREA_SELECTORS = [
   'button[data-testid="postDropdownBtn"]',
 ];
 
-// Debug: Log when content script loads
-console.log(`${APP_NAME}: content script loaded on ${document.location.href}`);
-
 let mutationObserver: MutationObserver | null = null;
 let currentDid: string | null = null;
 let currentHandle: string | null = null;
@@ -343,6 +340,62 @@ const placeEditButton = (postElement: HTMLElement, button: HTMLButtonElement): v
     } else {
       postElement.appendChild(button);
     }
+  }
+};
+
+const hasActionArea = (postElement: HTMLElement): boolean =>
+  ACTION_AREA_SELECTORS.some(selector => postElement.querySelector<HTMLElement>(selector) !== null);
+
+const waitForActionArea = (postElement: HTMLElement): Promise<void> => {
+  if (hasActionArea(postElement)) {
+    return Promise.resolve();
+  }
+
+  return new Promise(resolve => {
+    const observer = new MutationObserver(() => {
+      if (hasActionArea(postElement)) {
+        cleanup();
+        resolve();
+      }
+    });
+
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const cleanup = () => {
+      observer.disconnect();
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId);
+      }
+    };
+
+    timeoutId = setTimeout(() => {
+      cleanup();
+      resolve();
+    }, ACTION_AREA_WAIT_TIMEOUT);
+
+    observer.observe(postElement, { childList: true, subtree: true });
+  });
+};
+
+const createEditButton = (): HTMLButtonElement => {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.textContent = 'Edit';
+  button.setAttribute(EDIT_BUTTON_ATTRIBUTE, 'true');
+  button.className = 'skeeditor-edit-button';
+  return button;
+};
+
+const placeEditButton = (postElement: HTMLElement, button: HTMLButtonElement): void => {
+  const actionContainer = postElement.querySelector<HTMLElement>('[data-testid="postButtonInline"]');
+  const optionsButton = postElement.querySelector<HTMLElement>('button[aria-label="Open post options menu"]');
+  const liveActionContainer = optionsButton?.parentElement;
+
+  if (actionContainer) {
+    actionContainer.appendChild(button);
+  } else if (liveActionContainer && optionsButton) {
+    liveActionContainer.insertBefore(button, optionsButton);
+  } else {
+    postElement.appendChild(button);
   }
 };
 
