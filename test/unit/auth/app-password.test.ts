@@ -44,8 +44,24 @@ describe('validateAppPassword', () => {
     expect(validateAppPassword('abcde123')).toBe(true);
   });
 
-  it('should accept exactly 128 characters when valid', () => {
-    expect(validateAppPassword('a'.repeat(64) + '1'.repeat(64))).toBe(true);
+  it('should accept a standard Bluesky app password with all-letter segments', () => {
+    expect(validateAppPassword('aaaa-bbbb-cccc-dddd')).toBe(true);
+  });
+
+  it('should accept a standard Bluesky app password with all-digit segments', () => {
+    expect(validateAppPassword('1234-5678-9012-3456')).toBe(true);
+  });
+
+  it('should accept a standard Bluesky app password with mixed alphanumeric segments', () => {
+    expect(validateAppPassword('ab12-cd34-ef56-gh78')).toBe(true);
+  });
+
+  it('should reject a Bluesky-format password with segments shorter than 4 chars', () => {
+    expect(validateAppPassword('abc-defg-hijk-lmno')).toBe(false);
+  });
+
+  it('should reject a Bluesky-format password with segments longer than 4 chars', () => {
+    expect(validateAppPassword('abcde-fghij-klmno-pqrst')).toBe(false);
   });
 });
 

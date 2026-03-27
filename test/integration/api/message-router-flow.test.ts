@@ -106,7 +106,7 @@ describe('message router integration: GET_RECORD', () => {
       makeRealDeps(),
     );
 
-    expect(result).toEqual({ error: 'Failed to fetch record' });
+    expect(result).toEqual({ error: 'getRecord: Record not found' });
   });
 
   it('returns Not authenticated when no session exists', async () => {

@@ -95,12 +95,16 @@ export class TokenRefreshManager {
   ): Promise<StoredSession> {
     const tokens = await refresh(this.config.tokenEndpoint, current.refreshToken, this.config.clientId);
 
+    if (tokens.sub !== undefined && tokens.sub !== current.did) {
+      throw new Error(`Token refresh returned a different subject: expected ${current.did}, got ${tokens.sub}`);
+    }
+
     const updated: StoredSession = {
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token ?? current.refreshToken,
       expiresAt: tokens.expires_in !== undefined ? Date.now() + tokens.expires_in * 1000 : current.expiresAt,
       scope: tokens.scope ?? current.scope,
-      did: tokens.sub ?? current.did,
+      did: current.did,
     };
 
     await store.set(updated);

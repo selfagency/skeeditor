@@ -1,6 +1,7 @@
 import { EDIT_TIME_LIMIT_MAX, EDIT_TIME_LIMIT_MIN } from '../shared/constants';
 import type { AuthListAccountsAccount } from '../shared/messages';
 import { sendMessage } from '../shared/messages';
+import { escapeHTML } from '../shared/utils/escape-html';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 
@@ -19,15 +20,6 @@ function setStatus(message: string, type: 'info' | 'success' | 'error' = 'info')
   status.className = `text-sm min-h-5 ${
     type === 'success' ? 'text-green-400' : type === 'error' ? 'text-red-400' : 'text-blue-400'
   }`;
-}
-
-function escapeHTML(unsafe: string): string {
-  return unsafe
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
 }
 
 // ── Accounts ───────────────────────────────────────────────────────────────────

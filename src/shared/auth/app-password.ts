@@ -110,13 +110,19 @@ export async function authenticateWithAppPassword(
  * special characters. This is a basic validation, not a security measure.
  */
 export function validateAppPassword(password: string): boolean {
+  // Accept the standard Bluesky app-password format: xxxx-xxxx-xxxx-xxxx
+  // Segments are random alphanumeric, so they may be all-letter or all-digit.
+  if (/^[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}$/u.test(password)) {
+    return true;
+  }
+
   if (password.length < 8 || password.length > 128) {
     return false;
   }
 
-  // Must contain at least one letter and one number
-  const hasLetter = /[a-zA-Z]/.test(password);
-  const hasNumber = /[0-9]/.test(password);
+  // Fallback for non-standard formats: require at least one letter and one number.
+  const hasLetter = /[a-zA-Z]/u.test(password);
+  const hasNumber = /[0-9]/u.test(password);
 
   return hasLetter && hasNumber;
 }

@@ -89,6 +89,52 @@ describe('TokenRefreshManager.refreshAndStore', () => {
 
     expect(result.refreshToken).toBe('rt_keep_me');
   });
+
+  it('should always use the current DID regardless of sub in the token response', async () => {
+    const session = makeSession({ did: 'did:plc:abc123' });
+    const newTokens = {
+      access_token: 'at_new',
+      token_type: 'DPoP',
+      sub: 'did:plc:abc123',
+    };
+
+    const mockRefresh = vi.fn().mockResolvedValue(newTokens);
+    const mockStore = {
+      get: vi.fn().mockResolvedValue(session),
+      set: vi.fn().mockResolvedValue(undefined),
+      clear: vi.fn(),
+      isAccessTokenValid: vi.fn(),
+    };
+
+    const manager = new TokenRefreshManager({ tokenEndpoint: TOKEN_ENDPOINT, clientId: CLIENT_ID });
+    const result = await manager.refreshAndStore(session, mockRefresh, mockStore);
+
+    expect(result.did).toBe('did:plc:abc123');
+  });
+
+  it('should throw when the server returns a sub that does not match the current DID', async () => {
+    const session = makeSession({ did: 'did:plc:abc123' });
+    const newTokens = {
+      access_token: 'at_new',
+      token_type: 'DPoP',
+      sub: 'did:plc:attacker999',
+    };
+
+    const mockRefresh = vi.fn().mockResolvedValue(newTokens);
+    const mockStore = {
+      get: vi.fn().mockResolvedValue(session),
+      set: vi.fn().mockResolvedValue(undefined),
+      clear: vi.fn(),
+      isAccessTokenValid: vi.fn(),
+    };
+
+    const manager = new TokenRefreshManager({ tokenEndpoint: TOKEN_ENDPOINT, clientId: CLIENT_ID });
+
+    await expect(manager.refreshAndStore(session, mockRefresh, mockStore)).rejects.toThrow(
+      'Token refresh returned a different subject',
+    );
+    expect(mockStore.set).not.toHaveBeenCalled();
+  });
 });
 
 describe('TokenRefreshManager queuing', () => {

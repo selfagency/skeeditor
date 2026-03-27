@@ -88,6 +88,7 @@ const checkProfileSwitch = async (url: string): Promise<void> => {
   if (!account) return;
 
   try {
+    if (token !== navigationToken) return; // Already superseded before sending.
     await sendMessage({ type: 'AUTH_SWITCH_ACCOUNT', did: account.did });
     if (token !== navigationToken) return; // A newer navigation superseded this one.
     // Reload account list so isActive flags are up to date.
@@ -341,8 +342,11 @@ const ensureStorageListener = (): void => {
       return;
     }
 
-    // Active DID explicitly cleared → signed out of all accounts.
-    if ('activeDid' in changes && changes['activeDid'].newValue == null) {
+    // Detect sign-out: active DID cleared or all sessions wiped.
+    const activeDidCleared = 'activeDid' in changes && changes['activeDid']?.newValue == null;
+    const sessionsCleared = 'sessions' in changes && changes['sessions']?.newValue == null;
+
+    if (activeDidCleared || sessionsCleared) {
       currentDid = null;
       currentHandle = null;
       dismissActiveModal();
