@@ -13,7 +13,7 @@ function simpleHash(text: string): string {
     hash = (hash << 5) - hash + char;
     hash = hash & hash; // Convert to 32bit integer
   }
-  return `edit-${Math.abs(hash).toString(16).substring(0, 8)}`;
+  return Math.abs(hash).toString(16).substring(0, 8);
 }
 
 import type { Main as ExternalEmbed } from '../lexicons/app/bsky/embed/external.defs';

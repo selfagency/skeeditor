@@ -4,12 +4,9 @@ import type { AuthListAccountsAccount, PutRecordConflictResponse, PutRecordRespo
 import { sendMessage } from '../shared/messages';
 import { EditModal } from './edit-modal';
 import { markPostAsEdited } from './post-badges';
-import { extractPostInfo, extractPostText, findPosts } from './post-detector';
+import { extractPostInfo, extractPostText, findPosts, updatePostText } from './post-detector';
 import { buildUpdatedPostRecord, type EditablePostRecord } from './post-editor';
 import './styles.css';
-
-// Debug: Log when content script loads
-console.log(`${APP_NAME}: content script loaded on ${document.location.href}`);
 
 const POST_MARKER_ATTRIBUTE = 'data-skeeditor-processed';
 const EDIT_BUTTON_ATTRIBUTE = 'data-skeeditor-edit-button';
@@ -61,12 +58,18 @@ const isPutRecordConflictResponse = (response: PutRecordResponse): response is P
 };
 
 const refreshAuthState = async (): Promise<void> => {
-  console.log(`${APP_NAME}: querying background for auth status...`);
-  const status = await sendMessage({ type: 'AUTH_GET_STATUS' });
-  console.log(`${APP_NAME}: received auth status response:`, status);
-  currentDid = status.authenticated ? status.did : null;
-  currentHandle = status.authenticated ? (status.handle ?? null) : null;
-  console.log(`${APP_NAME}: currentDid=${currentDid}, currentHandle=${currentHandle}`);
+  try {
+    console.log(`${APP_NAME}: querying background for auth status...`);
+    const status = await sendMessage({ type: 'AUTH_GET_STATUS' });
+    console.log(`${APP_NAME}: received auth status response:`, status);
+    currentDid = status.authenticated ? status.did : null;
+    currentHandle = status.authenticated ? (status.handle ?? null) : null;
+    console.log(`${APP_NAME}: currentDid=${currentDid}, currentHandle=${currentHandle}`);
+  } catch (err) {
+    console.error(`${APP_NAME}: failed to load auth state`, err);
+    currentDid = null;
+    currentHandle = null;
+  }
 
   // Trigger a scan for posts after updating auth state
   scanForPosts();
@@ -279,6 +282,7 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
     }
 
     modal.markSaved(text);
+    updatePostText(postElement, text);
     markPostAsEdited(postElement);
     modal.setSuccess('Edit saved.');
     console.info(`${APP_NAME}: edit saved`, { atUri: info.atUri, uri: writeResponse.uri, cid: writeResponse.cid });
@@ -498,7 +502,73 @@ export const start = (): void => {
   ensureStorageListener();
   ensureNavigationListeners();
 
-  void Promise.all([refreshAuthState(), loadKnownAccounts()])
+  // Connect a persistent port to keep the background SW alive (Chrome MV3 terminates
+  // idle SWs after ~30 s; an open port prevents that while the page is active).
+  // The SW posts SW_READY on the port once its onMessage handler is registered —
+  // we await that signal before sending auth messages to eliminate the cold-start race.
+  const waitForSwReady = (): Promise<void> =>
+    new Promise(resolve => {
+      let settled = false;
+      const done = (): void => {
+        if (!settled) {
+          settled = true;
+          resolve();
+        }
+      };
+      // Fallback: if SW_READY never arrives within 8 s, proceed anyway and let
+      // the retry-with-backoff in sendMessage handle any remaining startup lag.
+      // 8 s gives Chrome's MV3 SW enough time to cold-start even on a slower
+      // machine parsing the ~280 kB background bundle.
+      const fallback = setTimeout(done, 8000);
+
+      const isContextInvalidated = (): boolean => {
+        try {
+          // Accessing browser.runtime.id throws when context is invalidated.
+          return !browser.runtime.id;
+        } catch {
+          return true;
+        }
+      };
+
+      const connect = (): void => {
+        if (settled || isContextInvalidated()) {
+          clearTimeout(fallback);
+          done();
+          return;
+        }
+        let port: ReturnType<typeof browser.runtime.connect>;
+        try {
+          port = browser.runtime.connect({ name: 'keepalive' });
+        } catch {
+          // Context was invalidated between the check and the connect call.
+          clearTimeout(fallback);
+          done();
+          return;
+        }
+        port.onMessage.addListener((msg: unknown) => {
+          if ((msg as { type?: string })?.type === 'SW_READY') {
+            clearTimeout(fallback);
+            done();
+          }
+        });
+        port.onDisconnect.addListener(() => {
+          // SW was terminated; reconnect and wait for the next SW_READY.
+          // 300 ms is fast enough to catch a restarting SW without hammering it.
+          // Stop reconnecting if the extension context was invalidated (tab still
+          // open after the extension was reloaded from chrome://extensions).
+          if (!settled && !isContextInvalidated()) {
+            setTimeout(connect, 300);
+          } else {
+            clearTimeout(fallback);
+            done();
+          }
+        });
+      };
+      connect();
+    });
+
+  void waitForSwReady()
+    .then(() => Promise.all([refreshAuthState(), loadKnownAccounts()]))
     .then(() => {
       scanForPosts();
       document.documentElement.setAttribute('data-skeeditor-initialized', 'true');

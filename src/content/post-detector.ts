@@ -80,6 +80,24 @@ export function extractPostText(element: HTMLElement): string {
   return element.textContent?.trim() ?? '';
 }
 
+/**
+ * Immediately update the visible post text in the DOM after a successful save.
+ *
+ * bsky.app caches post data in its React client state and won't re-fetch until
+ * the user navigates away, even though the AppView picks up the change from the
+ * firehose within seconds. Updating the DOM directly gives the user immediate
+ * feedback. React will overwrite this if it re-renders the component, at which
+ * point it will use the already-updated AppView data.
+ */
+export function updatePostText(element: HTMLElement, text: string): void {
+  const textElement = element.querySelector<HTMLElement>(POST_TEXT_SELECTORS);
+  if (!textElement) return;
+  // Clear React-rendered rich text nodes and replace with plain text.
+  // Facet-based formatting (mentions, links) is lost until React re-renders,
+  // but the content will be correct immediately after the user saves.
+  textElement.textContent = text;
+}
+
 export function* findPosts(root: Document | HTMLElement = document): Generator<PostInfo> {
   const posts = root.querySelectorAll<HTMLElement>(POST_CONTAINER_SELECTORS);
   for (const post of Array.from(posts)) {
