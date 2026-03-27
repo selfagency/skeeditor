@@ -11,6 +11,9 @@ import './styles.css';
 // Debug: Log when content script loads
 console.log(`${APP_NAME}: content script loaded on ${document.location.href}`);
 
+// Debug: Log when content script loads
+console.log(`${APP_NAME}: content script loaded on ${document.location.href}`);
+
 const POST_MARKER_ATTRIBUTE = 'data-skeeditor-processed';
 const EDIT_BUTTON_ATTRIBUTE = 'data-skeeditor-edit-button';
 const ACTION_AREA_WAIT_TIMEOUT = 3000;
@@ -19,6 +22,9 @@ const ACTION_AREA_SELECTORS = [
   'button[aria-label="Open post options menu"]',
   'button[data-testid="postDropdownBtn"]',
 ];
+
+// Debug: Log when content script loads
+console.log(`${APP_NAME}: content script loaded on ${document.location.href}`);
 
 let mutationObserver: MutationObserver | null = null;
 let currentDid: string | null = null;
@@ -59,10 +65,16 @@ const isPutRecordConflictResponse = (response: PutRecordResponse): response is P
 
 const refreshAuthState = async (): Promise<void> => {
   console.log(`${APP_NAME}: querying background for auth status...`);
+  console.log(`${APP_NAME}: querying background for auth status...`);
   const status = await sendMessage({ type: 'AUTH_GET_STATUS' });
+  console.log(`${APP_NAME}: received auth status response:`, status);
   console.log(`${APP_NAME}: received auth status response:`, status);
   currentDid = status.authenticated ? status.did : null;
   currentHandle = status.authenticated ? (status.handle ?? null) : null;
+  console.log(`${APP_NAME}: currentDid=${currentDid}, currentHandle=${currentHandle}`);
+
+  // Trigger a scan for posts after updating auth state
+  scanForPosts();
   console.log(`${APP_NAME}: currentDid=${currentDid}, currentHandle=${currentHandle}`);
 
   // Trigger a scan for posts after updating auth state
@@ -253,6 +265,15 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
         await refreshAuthState();
         return;
       }
+      // If re-authentication is required, show a more helpful message
+      if (writeResponse.requiresReauth) {
+        modal.setError(
+          'Your session has expired or lacks permission. Please click the extension icon to sign in again.',
+        );
+        // Refresh auth state in case the user signs in again
+        await refreshAuthState();
+        return;
+      }
       modal.setError(writeResponse.message);
       return;
     }
@@ -343,62 +364,6 @@ const placeEditButton = (postElement: HTMLElement, button: HTMLButtonElement): v
   }
 };
 
-const hasActionArea = (postElement: HTMLElement): boolean =>
-  ACTION_AREA_SELECTORS.some(selector => postElement.querySelector<HTMLElement>(selector) !== null);
-
-const waitForActionArea = (postElement: HTMLElement): Promise<void> => {
-  if (hasActionArea(postElement)) {
-    return Promise.resolve();
-  }
-
-  return new Promise(resolve => {
-    const observer = new MutationObserver(() => {
-      if (hasActionArea(postElement)) {
-        cleanup();
-        resolve();
-      }
-    });
-
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
-    const cleanup = () => {
-      observer.disconnect();
-      if (timeoutId !== undefined) {
-        clearTimeout(timeoutId);
-      }
-    };
-
-    timeoutId = setTimeout(() => {
-      cleanup();
-      resolve();
-    }, ACTION_AREA_WAIT_TIMEOUT);
-
-    observer.observe(postElement, { childList: true, subtree: true });
-  });
-};
-
-const createEditButton = (): HTMLButtonElement => {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.textContent = 'Edit';
-  button.setAttribute(EDIT_BUTTON_ATTRIBUTE, 'true');
-  button.className = 'skeeditor-edit-button';
-  return button;
-};
-
-const placeEditButton = (postElement: HTMLElement, button: HTMLButtonElement): void => {
-  const actionContainer = postElement.querySelector<HTMLElement>('[data-testid="postButtonInline"]');
-  const optionsButton = postElement.querySelector<HTMLElement>('button[aria-label="Open post options menu"]');
-  const liveActionContainer = optionsButton?.parentElement;
-
-  if (actionContainer) {
-    actionContainer.appendChild(button);
-  } else if (liveActionContainer && optionsButton) {
-    liveActionContainer.insertBefore(button, optionsButton);
-  } else {
-    postElement.appendChild(button);
-  }
-};
-
 const injectEditButton = (postElement: HTMLElement): void => {
   if (postElement.hasAttribute(POST_MARKER_ATTRIBUTE) || postElement.querySelector(`[${EDIT_BUTTON_ATTRIBUTE}]`)) {
     return;
@@ -430,8 +395,10 @@ const injectEditButton = (postElement: HTMLElement): void => {
 
 const scanForPosts = (): void => {
   console.log(`${APP_NAME}: scanning for posts, currentDid=${currentDid}, currentHandle=${currentHandle}`);
+  console.log(`${APP_NAME}: scanning for posts, currentDid=${currentDid}, currentHandle=${currentHandle}`);
   // No authenticated DID → don't inject any edit buttons.
   if (currentDid === null) {
+    console.log(`${APP_NAME}: no auth session, skipping edit button injection`);
     console.log(`${APP_NAME}: no auth session, skipping edit button injection`);
     return;
   }
@@ -440,11 +407,16 @@ const scanForPosts = (): void => {
     console.log(
       `${APP_NAME}: found post with repo=${postInfo.repo}, comparing with currentDid=${currentDid}, currentHandle=${currentHandle}`,
     );
+    console.log(
+      `${APP_NAME}: found post with repo=${postInfo.repo}, comparing with currentDid=${currentDid}, currentHandle=${currentHandle}`,
+    );
     if (postInfo.repo !== currentDid && postInfo.repo !== currentHandle) {
+      console.log(`${APP_NAME}: skipping post, repo does not match currentDid or currentHandle`);
       console.log(`${APP_NAME}: skipping post, repo does not match currentDid or currentHandle`);
       continue;
     }
 
+    console.log(`${APP_NAME}: injecting edit button for post with repo=${postInfo.repo}`);
     console.log(`${APP_NAME}: injecting edit button for post with repo=${postInfo.repo}`);
     injectEditButton(postInfo.element);
   }
