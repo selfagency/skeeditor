@@ -17,6 +17,7 @@ const POST_CONTAINER_SELECTORS = [
   '[data-at-uri]',
   '[data-uri]',
   '[data-post]',
+  '[data-testid*="feedItem"]',
   '[data-testid*="post"]',
   '[role="article"]',
   'article',
@@ -50,7 +51,11 @@ export function extractPostInfo(element: HTMLElement): PostInfo | null {
       }
     }
 
-    const anchor = candidate.querySelector<HTMLAnchorElement>('a[href]');
+    // Prefer a link that points directly at a post (permalink or sub-page like /liked-by).
+    // Falls back to the first available anchor if no post-url link is found.
+    const anchor =
+      candidate.querySelector<HTMLAnchorElement>('a[href*="/post/"]') ??
+      candidate.querySelector<HTMLAnchorElement>('a[href]');
     if (anchor?.href) {
       try {
         const parsed = parseBskyPostUrl(anchor.href);

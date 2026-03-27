@@ -338,28 +338,26 @@ const ensureStorageListener = (): void => {
   }
 
   storageChangeHandler = (changes: Record<string, browser.Storage.StorageChange>) => {
-    const sessionsChanged = 'sessions' in changes;
-    const activeDidChanged = 'activeDid' in changes;
-
-    if (!sessionsChanged && !activeDidChanged) {
+    if (!('sessions' in changes) && !('activeDid' in changes)) {
       return;
     }
 
     // Detect sign-out: active DID cleared or all sessions wiped.
-    const activeDidCleared = activeDidChanged && changes['activeDid']?.newValue == null;
-    const sessionsCleared = sessionsChanged && changes['sessions']?.newValue == null;
+    const activeDidCleared = 'activeDid' in changes && changes['activeDid']?.newValue == null;
+    const sessionsCleared = 'sessions' in changes && changes['sessions']?.newValue == null;
 
     if (activeDidCleared || sessionsCleared) {
       currentDid = null;
       currentHandle = null;
       dismissActiveModal();
       removeInjectedElements();
-    } else {
-      // New session, token refresh, or account switch — re-check auth and re-scan.
-      void refreshAuthState()
-        .then(() => scheduleScanForPosts())
-        .catch(err => console.error(`${APP_NAME}: storage refresh failed`, err));
+      return;
     }
+
+    // Session added/updated or account switched — re-check auth and re-scan.
+    void refreshAuthState()
+      .then(() => scheduleScanForPosts())
+      .catch(err => console.error(`${APP_NAME}: storage refresh failed`, err));
   };
 
   browser.storage.onChanged.addListener(storageChangeHandler);

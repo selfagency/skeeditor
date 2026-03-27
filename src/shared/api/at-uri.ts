@@ -96,7 +96,9 @@ export const parseBskyPostUrl = (url: string | URL): ParsedAtUri => {
     throw new AtUriParseError('Unsupported Bluesky URL origin', input);
   }
 
-  const match = /^\/profile\/([^/]+)\/post\/([^/?#]+)$/.exec(parsedUrl.pathname);
+  // Allow sub-paths (e.g. /liked-by, /reposted-by) so that links to post
+  // sub-pages found inside feed/thread containers can still be parsed.
+  const match = /^\/profile\/([^/]+)\/post\/([^/?#]+)/.exec(parsedUrl.pathname);
 
   if (!match) {
     throw new AtUriParseError(INVALID_BSKY_URL_MESSAGE, input);
