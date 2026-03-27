@@ -1,4 +1,5 @@
 import { browser } from 'wxt/browser';
+
 import type { l } from '@atproto/lex';
 
 import type { GetRecordResult, PutRecordConflictDetails, PutRecordWithSwapError } from './api/xrpc-client';

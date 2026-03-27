@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 
 @theme {
-  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-xs: 0 1px 2px 0 oklch(0% 0 none / 0.05);
   --outline-offset--1: -1px;
 }
 
@@ -12,9 +12,9 @@
   gap: 0.375rem;
   margin-left: 0.5rem;
   padding: 0.375rem 0.75rem;
-  border: 1px solid rgb(209 213 219);
+  border: 1px solid oklch(87.17% 0.0093 258.3);
   border-radius: 9999px;
-  background-color: rgb(255 255 255);
+  background-color: oklch(100% 0 none);
   font-size: 0.875rem;
   font-weight: 600;
   line-height: 1.25rem;
@@ -26,13 +26,13 @@
 }
 
 .skeeditor-edit-button:hover {
-  background-color: rgb(249 250 251);
-  border-color: rgb(79 70 229);
-  color: rgb(79 70 229);
+  background-color: oklch(98.46% 0.0017 247.8);
+  border-color: oklch(58.99% 0.2247 259.4);
+  color: oklch(58.99% 0.2247 259.4);
 }
 
 .skeeditor-edit-button:focus-visible {
-  outline: 2px solid rgb(79 70 229);
+  outline: 2px solid oklch(58.99% 0.2247 259.4);
   outline-offset: 2px;
 }
 
@@ -40,7 +40,7 @@
   display: inline-flex;
   align-items: center;
   border-radius: 0.375rem;
-  background-color: rgb(243 244 246);
+  background-color: oklch(96.7% 0.0029 264.5);
   padding: 0.25rem 0.5rem;
   font-size: 0.75rem;
   font-weight: 500;
@@ -48,16 +48,16 @@
 }
 
 .dark .skeeditor-edit-button {
-  background-color: rgb(255 255 255 / 0.1);
+  background-color: oklch(100% 0 none / 0.1);
   color: rgb(255 255 255);
   border-color: rgb(255 255 255 / 0.1);
 }
 
 .dark .skeeditor-edit-button:hover {
-  background-color: rgb(255 255 255 / 0.2);
+  background-color: oklch(100% 0 none / 0.2);
 }
 
 .dark .skeeditor-edited-badge {
-  background-color: rgb(156 163 175 / 0.1);
-  color: rgb(156 163 175);
+  background-color: oklch(71.37% 0.0192 261.3 / 0.1);
+  color: oklch(71.37% 0.0192 261.3);
 }
