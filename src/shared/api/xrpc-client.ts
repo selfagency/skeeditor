@@ -266,7 +266,10 @@ export class XrpcClient {
       agentConfig.did = config.did as `did:${string}:${string}`;
     }
     if (config.accessJwt !== undefined) {
-      agentConfig.headers = { Authorization: `Bearer ${config.accessJwt}` };
+      // DPoP-bound tokens require the "DPoP" Authorization scheme (RFC 9449 §7.1).
+      // Plain bearer tokens (no dpopKeyPairLoader) use the standard "Bearer" scheme.
+      const scheme = config.dpopKeyPairLoader !== undefined ? 'DPoP' : 'Bearer';
+      agentConfig.headers = { Authorization: `${scheme} ${config.accessJwt}` };
     }
     if (config.dpopKeyPairLoader !== undefined) {
       const dpopKeyPairLoader = config.dpopKeyPairLoader;
