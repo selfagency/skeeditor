@@ -1,0 +1,86 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    // ─────────────────────────────────────────────────────────────────────────
+    // Start a Vite watch build for Chrome. Used as a preLaunchTask so that
+    // dist/chrome is always up-to-date before the debugger attaches.
+    // The "background" flag keeps it running while the debug session is live.
+    // ─────────────────────────────────────────────────────────────────────────
+    {
+      "label": "Build Chrome (watch)",
+      "type": "shell",
+      "command": "pnpm run build:watch:chrome",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "vite",
+        "pattern": {
+          "regexp": "^(.*):(\\d+):(\\d+):\\s+(error|warning):\\s+(.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "message": 5
+        },
+        // Vite prints "watching for file changes..." once the first build
+        // completes. We treat that as the "background task is ready" signal.
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "vite",
+          "endsPattern": "watching for file changes"
+        },
+        // Allow the task to be considered "done" immediately so the debugger
+        // can start while the watcher continues running in the background.
+        "watches": [
+          {
+            "regexp": "watching for file changes",
+            "isActive": true
+          }
+        ]
+      },
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated",
+        "group": "build"
+      },
+      "group": "build"
+    },
+    // ─────────────────────────────────────────────────────────────────────────
+    // One-shot Chrome build (no watch). Useful when you just want a fresh dist.
+    // ─────────────────────────────────────────────────────────────────────────
+    {
+      "label": "Build Chrome (once)",
+      "type": "shell",
+      "command": "pnpm run build:chrome",
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    // ─────────────────────────────────────────────────────────────────────────
+    // Launch Chrome with remote debugging on port 9222 + the unpacked extension.
+    // Use this when you prefer "attach" configs over "launch" configs
+    // (keeps your normal Chrome profile intact, you just add a new window).
+    //
+    // macOS only — adjust the path for Linux/Windows if needed.
+    // ─────────────────────────────────────────────────────────────────────────
+    {
+      "label": "Open Chrome (remote debug on 9222)",
+      "type": "shell",
+      "command": "'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' --remote-debugging-port=9222 --user-data-dir='${workspaceFolder}/.chrome-debug-profile' --load-extension='${workspaceFolder}/dist/chrome' --disable-extensions-except='${workspaceFolder}/dist/chrome' 'https://bsky.app' &",
+      "dependsOn": [
+        "Build Chrome (once)"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated",
+        "group": "debug"
+      }
+    }
+  ]
+}

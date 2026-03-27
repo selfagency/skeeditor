@@ -1,0 +1,232 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    // ─────────────────────────────────────────────────────────────────────────
+    // 1. Build-and-debug: launch Chrome with the unpacked extension pre-loaded.
+    //    Breaks into TypeScript sources courtesy of source maps.
+    //    Prereq: runs the "Build Chrome (watch)" task automatically.
+    // ─────────────────────────────────────────────────────────────────────────
+    {
+      "name": "Debug: Chrome Extension (launch)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "https://bsky.app",
+      "runtimeArgs": [
+        "--load-extension=${workspaceFolder}/dist/chrome",
+        "--disable-extensions-except=${workspaceFolder}/dist/chrome",
+        // Keeps a stable profile across sessions so you stay logged in.
+        "--user-data-dir=${workspaceFolder}/.chrome-debug-profile"
+      ],
+      "preLaunchTask": "Build Chrome (watch)",
+      "sourceMaps": true,
+      "webRoot": "${workspaceFolder}/src",
+      "outFiles": [
+        "${workspaceFolder}/dist/chrome/**/*.js"
+      ],
+      // Only resolve source maps from the extension's own output — suppresses
+      // noisy "Could not read source map" warnings from hls.js and other
+      // third-party scripts served by bsky.app.
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/dist/chrome/**",
+        "!**/node_modules/**"
+      ],
+      "skipFiles": [
+        "<node_internals>/**",
+        "${workspaceFolder}/node_modules/**",
+        "${workspaceFolder}/src/lexicons/**"
+      ],
+      "presentation": {
+        "group": "chrome-extension",
+        "order": 1
+      }
+    },
+    // ─────────────────────────────────────────────────────────────────────────
+    // 2. Attach to an already-running Chrome instance that was launched with
+    //    --remote-debugging-port=9222. Useful when you want to keep your own
+    //    Chrome session / cookies.
+    //
+    //    Launch Chrome manually first:
+    //    open -na "Google Chrome" --args \
+    //      --remote-debugging-port=9222 \
+    //      --user-data-dir=/tmp/chrome-debug \
+    //      --load-extension=<absolute-path>/dist/chrome
+    // ─────────────────────────────────────────────────────────────────────────
+    {
+      "name": "Debug: Chrome Extension (attach)",
+      "type": "chrome",
+      "request": "attach",
+      "port": 9222,
+      "url": "https://bsky.app/*",
+      "sourceMaps": true,
+      "webRoot": "${workspaceFolder}/src",
+      "outFiles": [
+        "${workspaceFolder}/dist/chrome/**/*.js"
+      ],
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/dist/chrome/**",
+        "!**/node_modules/**"
+      ],
+      "skipFiles": [
+        "<node_internals>/**",
+        "${workspaceFolder}/node_modules/**",
+        "${workspaceFolder}/src/lexicons/**"
+      ],
+      "presentation": {
+        "group": "chrome-extension",
+        "order": 2
+      }
+    },
+    // ─────────────────────────────────────────────────────────────────────────
+    // 3. Debug the service worker (background script).
+    //    Attaches to the extension's service-worker target specifically.
+    //    The service worker URL pattern:
+    //      chrome-extension://<extension-id>/background/service-worker.js
+    //    Replace <EXTENSION_ID> below with the value from chrome://extensions
+    //    after loading the unpacked extension, or use the wildcard pattern.
+    // ─────────────────────────────────────────────────────────────────────────
+    {
+      "name": "Debug: Service Worker (attach)",
+      "type": "chrome",
+      "request": "attach",
+      "port": 9222,
+      "targetSelection": "pick",
+      "sourceMaps": true,
+      "webRoot": "${workspaceFolder}/src",
+      "outFiles": [
+        "${workspaceFolder}/dist/chrome/background/*.js"
+      ],
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/dist/chrome/background/**",
+        "!**/node_modules/**"
+      ],
+      "skipFiles": [
+        "<node_internals>/**",
+        "${workspaceFolder}/node_modules/**"
+      ],
+      "presentation": {
+        "group": "chrome-extension",
+        "order": 3
+      }
+    },
+    // ─────────────────────────────────────────────────────────────────────────
+    // 4. Debug the popup page.
+    //    After attaching, open the popup from the Chrome toolbar — DevTools
+    //    will capture the context automatically.
+    // ─────────────────────────────────────────────────────────────────────────
+    {
+      "name": "Debug: Popup (attach)",
+      "type": "chrome",
+      "request": "attach",
+      "port": 9222,
+      "url": "chrome-extension://*/popup/popup.html",
+      "sourceMaps": true,
+      "webRoot": "${workspaceFolder}/src",
+      "outFiles": [
+        "${workspaceFolder}/dist/chrome/**/*.js"
+      ],
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/dist/chrome/**",
+        "!**/node_modules/**"
+      ],
+      "presentation": {
+        "group": "chrome-extension",
+        "order": 4
+      }
+    },
+    // ─────────────────────────────────────────────────────────────────────────
+    // 5. Debug content script on bsky.app.
+    //    This is the most useful config for tracking down why the edit button
+    //    isn't appearing — set breakpoints in:
+    //      src/content/post-detector.ts  — findPosts / extractPostInfo
+    //      src/content/content-script.ts — addEditButton / scheduleScan
+    // ─────────────────────────────────────────────────────────────────────────
+    {
+      "name": "Debug: Content Script on bsky.app (attach)",
+      "type": "chrome",
+      "request": "attach",
+      "port": 9222,
+      "url": "https://bsky.app/*",
+      "sourceMaps": true,
+      "webRoot": "${workspaceFolder}/src",
+      "outFiles": [
+        "${workspaceFolder}/dist/chrome/content/*.js"
+      ],
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/dist/chrome/content/**",
+        "!**/node_modules/**"
+      ],
+      "pathMapping": {
+        "/src/": "${workspaceFolder}/src/"
+      },
+      "skipFiles": [
+        "<node_internals>/**",
+        "${workspaceFolder}/node_modules/**",
+        "${workspaceFolder}/src/lexicons/**"
+      ],
+      "presentation": {
+        "group": "chrome-extension",
+        "order": 5
+      }
+    },
+    // ─────────────────────────────────────────────────────────────────────────
+    // 6. Vitest unit tests — debug a single test file.
+    // ─────────────────────────────────────────────────────────────────────────
+    {
+      "name": "Debug: Vitest (unit)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "exec",
+        "vitest",
+        "--project",
+        "unit",
+        "--reporter=verbose"
+      ],
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+      "presentation": {
+        "group": "tests",
+        "order": 6
+      }
+    },
+    // ─────────────────────────────────────────────────────────────────────────
+    // 7. Vitest integration tests.
+    // ─────────────────────────────────────────────────────────────────────────
+    {
+      "name": "Debug: Vitest (integration)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "exec",
+        "vitest",
+        "--project",
+        "integration",
+        "--reporter=verbose"
+      ],
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+      "presentation": {
+        "group": "tests",
+        "order": 7
+      }
+    }
+  ],
+  // ─────────────────────────────────────────────────────────────────────────
+  // Compound: build + launch Chrome + attach content-script debugger in one go.
+  // ─────────────────────────────────────────────────────────────────────────
+  "compounds": [
+    {
+      "name": "Debug: Full Extension (build + launch)",
+      "configurations": [
+        "Debug: Chrome Extension (launch)"
+      ],
+      "stopAll": true,
+      "presentation": {
+        "group": "chrome-extension",
+        "order": 0
+      }
+    }
+  ]
+}

@@ -174,6 +174,9 @@ dist
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
 
+# Chrome debug profile created by VS Code launch configs
+.chrome-debug-profile/
+
 # yarn v2
 .yarn/cache
 .yarn/unplugged
