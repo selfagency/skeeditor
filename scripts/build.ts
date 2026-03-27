@@ -3,7 +3,7 @@ import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { build, type Plugin } from 'vite';
 
-import { writeMergedManifest } from './merge-manifest';
+import { writeMergedManifest } from './merge-manifest.ts';
 
 const isWatchEnabled = process.argv.includes('--watch');
 const projectRoot = process.cwd();
