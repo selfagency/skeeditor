@@ -3,6 +3,7 @@ import browser from 'webextension-polyfill';
 import globalStyles from '../shadow-styles.css?inline';
 import type { AuthListAccountsAccount } from '../shared/messages';
 import { sendMessage } from '../shared/messages';
+import { escapeHTML } from '../shared/utils/escape-html';
 
 type PopupState = 'loading' | 'unauthenticated' | 'authenticated';
 
@@ -82,14 +83,14 @@ class AuthPopup extends HTMLElement {
         const accountCards = this.accounts
           .map(account => {
             const label = account.handle
-              ? `<span class="text-sm font-medium text-gray-900 dark:text-gray-100">${this.escapeHTML(account.handle)}</span>`
-              : `<span class="break-all font-mono text-xs text-gray-600 dark:text-gray-400">${this.escapeHTML(account.did)}</span>`;
+              ? `<span class="text-sm font-medium text-gray-900 dark:text-gray-100">${escapeHTML(account.handle)}</span>`
+              : `<span class="break-all font-mono text-xs text-gray-600 dark:text-gray-400">${escapeHTML(account.did)}</span>`;
             const activeIndicator = account.isActive
               ? '<span class="ml-1 text-xs text-indigo-600 dark:text-indigo-400">(active)</span>'
               : '';
             const switchBtn = account.isActive
               ? ''
-              : `<button type="button" class="account-switch rounded px-2 py-1 text-xs bg-indigo-600 text-white hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600" data-did="${this.escapeHTML(account.did)}">Switch</button>`;
+              : `<button type="button" class="account-switch rounded px-2 py-1 text-xs bg-indigo-600 text-white hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600" data-did="${escapeHTML(account.did)}">Switch</button>`;
             const reauthorizeBtn = account.isActive
               ? `<button id="reauthorize" type="button" class="rounded px-2 py-1 text-xs bg-white text-gray-900 inset-ring inset-ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:inset-ring-white/5 dark:hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2">Reauthorize</button>`
               : '';
@@ -100,7 +101,7 @@ class AuthPopup extends HTMLElement {
                 <div class="flex shrink-0 items-center gap-1">
                   ${switchBtn}
                   ${reauthorizeBtn}
-                  <button type="button" class="account-sign-out rounded px-2 py-1 text-xs bg-red-600 text-white hover:bg-red-500 dark:bg-red-500 dark:hover:bg-red-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600" data-did="${this.escapeHTML(account.did)}">Sign out</button>
+                  <button type="button" class="account-sign-out rounded px-2 py-1 text-xs bg-red-600 text-white hover:bg-red-500 dark:bg-red-500 dark:hover:bg-red-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600" data-did="${escapeHTML(account.did)}">Sign out</button>
                 </div>
               </div>
             </div>`;
@@ -178,16 +179,6 @@ class AuthPopup extends HTMLElement {
         }
       });
     });
-  }
-
-  /** Prevent XSS when interpolating user-controlled data (e.g. DIDs) into HTML */
-  private escapeHTML(unsafe: string): string {
-    return unsafe
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
   }
 }
 

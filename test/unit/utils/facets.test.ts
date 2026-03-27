@@ -136,6 +136,25 @@ describe('buildFacets', () => {
     ]);
   });
 
+  it('should include mention and hashtag facets when they do not overlap', () => {
+    const text = '#topic @user.bsky.social';
+    const facets = buildFacets(text, {
+      resolveMentionDid: handle => (handle === 'user.bsky.social' ? 'did:plc:user123' : undefined),
+    });
+
+    expect(facets).toHaveLength(2);
+
+    const types = facets.map(f => f.features[0]?.['$type']);
+    expect(types).toContain('app.bsky.richtext.facet#tag');
+    expect(types).toContain('app.bsky.richtext.facet#mention');
+
+    // Byte ranges must not overlap
+    const sorted = [...facets].sort((a, b) => a.index.byteStart - b.index.byteStart);
+    for (let i = 0; i < sorted.length - 1; i++) {
+      expect(sorted[i]!.index.byteEnd).toBeLessThanOrEqual(sorted[i + 1]!.index.byteStart);
+    }
+  });
+
   it('should include mention facets only when mention DID resolver returns a DID', () => {
     const text = 'Hey @alice.test';
     const facets = buildFacets(text, {

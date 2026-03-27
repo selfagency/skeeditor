@@ -452,8 +452,9 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
           collection: message['collection'],
           rkey: message['rkey'],
         });
-      } catch {
-        return { error: 'Failed to fetch record' };
+      } catch (err) {
+        console.error('[skeeditor] GET_RECORD failed:', err);
+        return { error: err instanceof Error ? err.message : 'Failed to fetch record' };
       }
     }
 
@@ -592,6 +593,9 @@ export function createDefaultDeps(): RouterDeps {
     createXrpc: (config: XrpcClientConfig) =>
       new XrpcClient({ ...config, dpopKeyPairLoader: () => getDpopKeyPair(config.did) }),
     storeAuthState: async (state: string, codeVerifier: string, pdsUrl?: string): Promise<void> => {
+      // Prefer browser.storage.session (cleared automatically on browser restart/SW termination).
+      // Fall back to browser.storage.local on Firefox where storage.session may be unavailable.
+      // On startup the SW clears any stale local pendingAuth from a previous lifecycle (see service-worker.ts).
       const storage = browser.storage.session ?? browser.storage.local;
       await storage.set({ pendingAuth: { state, codeVerifier, pdsUrl } });
     },

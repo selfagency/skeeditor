@@ -384,10 +384,24 @@ describe('handleMessage', () => {
       expect(result).toEqual({ value: { $type: 'app.bsky.feed.post', text: 'hello' }, cid: 'bafyreiabc' });
     });
 
-    it('returns an error object when getRecord throws', async () => {
+    it('returns the underlying error message when getRecord throws', async () => {
       const session = makeSession();
       const xrpc = makeXrpcMock();
       xrpc.getRecord.mockRejectedValueOnce(new Error('XRPC network error'));
+      const deps = makeDeps({ store: makeStoreMock(session), createXrpc: vi.fn().mockReturnValue(xrpc) });
+
+      const result = await handleMessage(
+        { type: 'GET_RECORD', repo: 'did:plc:alice', collection: 'app.bsky.feed.post', rkey: 'abc' },
+        deps,
+      );
+
+      expect(result).toEqual({ error: 'XRPC network error' });
+    });
+
+    it('returns a fallback error message when getRecord throws a non-Error', async () => {
+      const session = makeSession();
+      const xrpc = makeXrpcMock();
+      xrpc.getRecord.mockRejectedValueOnce('string-rejection');
       const deps = makeDeps({ store: makeStoreMock(session), createXrpc: vi.fn().mockReturnValue(xrpc) });
 
       const result = await handleMessage(

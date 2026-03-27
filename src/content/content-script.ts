@@ -88,6 +88,7 @@ const checkProfileSwitch = async (url: string): Promise<void> => {
   if (!account) return;
 
   try {
+    if (token !== navigationToken) return; // Already superseded before sending.
     await sendMessage({ type: 'AUTH_SWITCH_ACCOUNT', did: account.did });
     if (token !== navigationToken) return; // A newer navigation superseded this one.
     // Reload account list so isActive flags are up to date.
@@ -337,18 +338,24 @@ const ensureStorageListener = (): void => {
   }
 
   storageChangeHandler = (changes: Record<string, browser.Storage.StorageChange>) => {
-    if (!('session' in changes)) {
+    const sessionsChanged = 'sessions' in changes;
+    const activeDidChanged = 'activeDid' in changes;
+
+    if (!sessionsChanged && !activeDidChanged) {
       return;
     }
-    const { newValue } = changes['session'];
-    if (newValue == null) {
-      // Session cleared — signed out. Remove edit buttons immediately.
+
+    // Detect sign-out: active DID cleared or all sessions wiped.
+    const activeDidCleared = activeDidChanged && changes['activeDid']?.newValue == null;
+    const sessionsCleared = sessionsChanged && changes['sessions']?.newValue == null;
+
+    if (activeDidCleared || sessionsCleared) {
       currentDid = null;
       currentHandle = null;
       dismissActiveModal();
       removeInjectedElements();
     } else {
-      // Session updated (new login or token refresh) — re-check auth and re-scan.
+      // New session, token refresh, or account switch — re-check auth and re-scan.
       void refreshAuthState()
         .then(() => scheduleScanForPosts())
         .catch(err => console.error(`${APP_NAME}: storage refresh failed`, err));

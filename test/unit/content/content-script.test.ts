@@ -121,7 +121,7 @@ describe('content-script', () => {
     const onChanged = globalThis.browser.storage.onChanged as unknown as {
       _emit: (changes: Record<string, { newValue?: unknown; oldValue?: unknown }>) => void;
     };
-    onChanged._emit({ session: { newValue: { did: 'did:plc:alice123' } } });
+    onChanged._emit({ activeDid: { newValue: 'did:plc:alice123' } });
 
     await flushMicrotasks(3);
     await vi.advanceTimersByTimeAsync(120);
@@ -154,7 +154,7 @@ describe('content-script', () => {
     const onChanged = globalThis.browser.storage.onChanged as unknown as {
       _emit: (changes: Record<string, { newValue?: unknown; oldValue?: unknown }>) => void;
     };
-    onChanged._emit({ session: { newValue: null } });
+    onChanged._emit({ activeDid: { newValue: null } });
 
     expect(document.querySelector('[data-skeeditor-edit-button]')).toBeNull();
   });
@@ -235,7 +235,7 @@ describe('content-script', () => {
     const onChanged = globalThis.browser.storage.onChanged as unknown as {
       _emit: (changes: Record<string, { newValue?: unknown; oldValue?: unknown }>) => void;
     };
-    onChanged._emit({ session: { newValue: null } });
+    onChanged._emit({ activeDid: { newValue: null } });
 
     expect(document.querySelector('edit-modal')).toBeNull();
   });
@@ -390,6 +390,59 @@ describe('content-script', () => {
     await flushMicrotasks(3);
 
     expect(sendMessage).toHaveBeenCalledWith({ type: 'AUTH_SWITCH_ACCOUNT', did: 'did:plc:bob456' });
+  });
+
+  it('should not sync UI when a rapid subsequent navigation supersedes the switch', async () => {
+    let resolveSwitch: (() => void) | undefined;
+    const switchInFlight = new Promise<void>(resolve => {
+      resolveSwitch = resolve;
+    });
+
+    const sendMessage = vi.fn(async request => {
+      if (request.type === 'AUTH_GET_STATUS')
+        return {
+          authenticated: true,
+          did: 'did:plc:alice123',
+          handle: 'alice.bsky.social',
+          expiresAt: Date.now() + 60_000,
+        };
+      if (request.type === 'AUTH_LIST_ACCOUNTS')
+        return {
+          accounts: [
+            { did: 'did:plc:alice123', handle: 'alice.bsky.social', expiresAt: Date.now() + 60_000, isActive: true },
+            { did: 'did:plc:bob456', handle: 'bob.bsky.social', expiresAt: Date.now() + 60_000, isActive: false },
+          ],
+        };
+      if (request.type === 'AUTH_SWITCH_ACCOUNT') {
+        await switchInFlight; // Suspend so we can fire a second navigation.
+        return { ok: true };
+      }
+      return { ok: true };
+    });
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    await import('@src/content/content-script');
+    await flushMicrotasks(3);
+
+    // Navigation A — triggers switch to bob.
+    history.pushState({}, '', '/profile/bob.bsky.social');
+
+    // Yield so checkProfileSwitch for bob reaches its first await (sendMessage).
+    await Promise.resolve();
+
+    // Navigation B fires while A is suspended — increments the navigation token.
+    history.pushState({}, '', '/');
+
+    // Allow A's sendMessage to resolve.
+    resolveSwitch?.();
+    await flushMicrotasks(4);
+
+    // AUTH_SWITCH_ACCOUNT was sent (can't cancel an in-flight message), but
+    // AUTH_LIST_ACCOUNTS should NOT have been called again because the token
+    // check aborted A's UI sync steps.
+    const listAccountsCalls = sendMessage.mock.calls.filter(c => c[0]?.type === 'AUTH_LIST_ACCOUNTS');
+    // Only the startup call — not a second one from A's post-switch sync.
+    expect(listAccountsCalls).toHaveLength(1);
   });
 
   it('should block editing when the post is older than the configured edit time limit', async () => {

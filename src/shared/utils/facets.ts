@@ -134,7 +134,7 @@ export function toByteOffsets(text: string, start: number, end: number): ByteOff
 export function buildFacets(text: string, options: BuildFacetsOptions = {}): RichtextFacet[] {
   const links = detectLinks(text);
   const hashtags = detectHashtags(text).filter(token => !overlapsAny(token, links));
-  const mentions = detectMentions(text).filter(token => !overlapsAny(token, links));
+  const mentions = detectMentions(text).filter(token => !overlapsAny(token, links) && !overlapsAny(token, hashtags));
 
   const tokens = [...links, ...hashtags, ...mentions].sort((left, right) => left.start - right.start);
 
