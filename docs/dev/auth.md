@@ -1,6 +1,6 @@
 # Authentication
 
-skeeditor authenticates with the Bluesky PDS (Personal Data Server) via OAuth 2.0 with PKCE (Proof Key for Code Exchange). All auth flow logic lives in the background service worker.
+skeeditor authenticates with the Bluesky PDS (Personal Data Server) via OAuth 2.0 with PKCE (Proof Key for Code Exchange) and DPoP (Demonstrating Proof of Possession). All auth flow logic lives in the background service worker.
 
 ## Key principle
 
@@ -17,28 +17,47 @@ Popup: AUTH_SIGN_IN message
 Background: buildAuthorizationRequest()
   → generates code_verifier + code_challenge (PKCE)
   → generates state (CSRF protection)
-  → opens new tab to bsky.social/oauth/authorize
+  → stores { state, codeVerifier } in browser.storage.local ('pendingAuth')
+  → opens new tab to <pdsUrl>/oauth/authorize
   │
   ▼
 User authorizes on bsky.social
   │
   ▼
-PDS redirects to chrome-extension://<id>/callback.html?code=…&state=…
+PDS redirects to https://docs.skeeditor.link/callback.html?code=…&state=…
   │
   ▼
-callback.html: sends { code, state } to background via chrome.runtime.sendMessage
+callback.html: sends { code, state } to background via browser.runtime.sendMessage
   │
   ▼
-Background: verifies state, calls exchangeCodeForTokens()
-  → POST bsky.social/oauth/token (code, code_verifier, redirect_uri)
+Background (AUTH_CALLBACK handler):
+  → verifies state against stored pendingAuth.state (CSRF check)
+  → calls exchangeCodeForTokens() with code + code_verifier
+  → POST <pdsUrl>/oauth/token (DPoP proof header included)
   → receives { access_token, refresh_token, expires_in }
   │
   ▼
-Background: SessionStore.write(tokens)  → browser.storage.local
+Background: sessionStore.set(session)  → browser.storage.local (keyed by DID)
+  │
+  ▼
+Background: sends CHECK_LABELER_SUBSCRIPTION
+  → if not subscribed, popup shows consent dialog on next open
   │
   ▼
 Background: closes callback tab, notifies popup of success
 ```
+
+---
+
+## DPoP (Demonstrating Proof of Possession)
+
+The Bluesky PDS requires `dpop_bound_access_tokens: true`. Every token request and token refresh includes a DPoP proof header:
+
+- A per-request signed JWT created with an ephemeral private key.
+- The DPoP private key is generated at sign-in time and retained for the life of the session.
+- DPoP binds access tokens to the private key — a stolen token cannot be used without the key.
+
+DPoP key generation and proof-header signing are implemented in `src/shared/auth/auth-client.ts`.
 
 ---
 
@@ -66,13 +85,10 @@ AT Protocol requires the client to be identified by a **client ID that is a vali
 
 ```json
 {
-  "client_id": "https://skeeditor.app/client-metadata.json",
+  "client_id": "https://docs.skeeditor.link/oauth/client-metadata.json",
   "client_name": "skeeditor",
-  "client_uri": "https://skeeditor.app",
-  "redirect_uris": [
-    "chrome-extension://<extension-id>/callback.html",
-    "moz-extension://<extension-id>/callback.html"
-  ],
+  "client_uri": "https://docs.skeeditor.link",
+  "redirect_uris": ["https://docs.skeeditor.link/callback.html"],
   "response_types": ["code"],
   "grant_types": ["authorization_code", "refresh_token"],
   "token_endpoint_auth_method": "none",
@@ -81,27 +97,71 @@ AT Protocol requires the client to be identified by a **client ID that is a vali
 }
 ```
 
-The `client_id` is exported from `src/shared/constants.ts` as `BSKY_OAUTH_CLIENT_ID`.
-
-::: warning Extension IDs differ per browser and build
-The redirect URI must be listed in the metadata document. Because the extension ID differs between Chrome, Firefox, and development vs. production builds, you may need multiple redirect URIs, or use a stable extension ID via Chrome's `key` field and Firefox's `browser_specific_settings.gecko.id`.
-:::
+The `client_id` is `BSKY_OAUTH_CLIENT_ID` and the redirect URI is `BSKY_OAUTH_REDIRECT_URI`, both exported from `src/shared/constants.ts`. Using a stable hosted redirect URI avoids dealing with per-browser, per-install extension IDs in the OAuth flow.
 
 ---
 
 ## Session store (`src/shared/auth/session-store.ts`)
 
-`SessionStore` reads and writes tokens in `browser.storage.local` — sandboxed to the extension, inaccessible to page context.
+The session store persists OAuth sessions in `browser.storage.local` under the key `"sessions"`, keyed by DID. This enables multiple Bluesky accounts to be signed in simultaneously.
 
 ```ts
-import { SessionStore } from "@src/shared/auth/session-store";
+// Internal API — called only from the background service worker
 
-const store = new SessionStore();
+// Persist a session (marks DID as active)
+await sessionStore.set(session);
 
-await store.write(tokens); // Persist access + refresh tokens
-const tokens = await store.read(); // null if not signed in
-await store.clear(); // Delete tokens (sign-out)
+// Read the active account's session
+const session = await sessionStore.get();
+
+// Read a specific account's session by DID
+const session = await sessionStore.getByDid(did);
+
+// List all signed-in accounts (returns public metadata only, no tokens)
+const accounts = await sessionStore.listAll();
+
+// Get / set the active DID
+const did = await sessionStore.getActiveDid();
+await sessionStore.setActiveDid(did);
+
+// Sign out a specific account
+await sessionStore.clearForDid(did);
+
+// Sign out all accounts
+await sessionStore.clear();
+
+// Migrate a legacy single-account session to the new multi-account storage
+await sessionStore.migrateFromLegacy();
 ```
+
+Storage layout in `browser.storage.local`:
+
+```json
+{
+  "sessions": {
+    "did:plc:alice": { "accessToken": "...", "refreshToken": "...", "expiresAt": 1234567890, "did": "did:plc:alice", "handle": "alice.bsky.social", "scope": "atproto transition:generic" },
+    "did:plc:bob":   { ... }
+  },
+  "activeDid": "did:plc:alice",
+  "pdsUrls": {
+    "did:plc:alice": "https://bsky.social",
+    "did:plc:bob": "https://alice.pds.example"
+  }
+}
+```
+
+---
+
+## Multi-account messages
+
+The popup queries and switches accounts via the message layer — it never reads storage directly.
+
+| Message | Payload | Description |
+| --- | --- | --- |
+| `AUTH_LIST_ACCOUNTS` | — | Returns all signed-in accounts |
+| `AUTH_SWITCH_ACCOUNT` | `did` | Makes a different account active |
+| `AUTH_SIGN_OUT_ACCOUNT` | `did` | Signs out one account without affecting others |
+| `AUTH_GET_STATUS` | — | Returns auth status for the active account |
 
 ---
 
@@ -111,35 +171,38 @@ await store.clear(); // Delete tokens (sign-out)
 
 - Deduplicates concurrent refresh requests (only one in-flight at a time).
 - Retries on transient network errors.
-- Calls `SessionStore.write()` with the new tokens after a successful refresh.
+- Calls `sessionStore.set()` with the new tokens after a successful refresh.
 - Emits an `auth-session-invalidated` event on unrecoverable failures (e.g. refresh token revoked), which triggers a re-auth prompt in the popup.
 
 ---
 
 ## Required scopes
 
-| Scope                | Purpose                                           |
-| -------------------- | ------------------------------------------------- |
-| `atproto`            | Identifies this as an AT Protocol client          |
+| Scope | Purpose |
+| --- | --- |
+| `atproto` | Identifies this as an AT Protocol client |
 | `transition:generic` | Grants read/write access to records the user owns |
 
 ---
 
 ## OAuth endpoints
 
-| Endpoint      | URL                                                          |
-| ------------- | ------------------------------------------------------------ |
-| Discover      | `https://bsky.social/.well-known/oauth-authorization-server` |
-| Authorization | `https://bsky.social/oauth/authorize`                        |
-| Token         | `https://bsky.social/oauth/token`                            |
+The extension discovers OAuth endpoints dynamically from the PDS's well-known document. The default PDS is `https://bsky.social`.
 
-Exported from `src/shared/constants.ts` as `BSKY_OAUTH_AUTHORIZE_URL` and `BSKY_OAUTH_TOKEN_URL`.
+| Endpoint | URL pattern |
+| --- | --- |
+| Discovery | `<pdsUrl>/.well-known/oauth-authorization-server` |
+| Authorization | `<pdsUrl>/oauth/authorize` |
+| Token | `<pdsUrl>/oauth/token` |
+
+Helper functions `getOAuthAuthorizeUrl(pdsUrl)` and `getOAuthTokenUrl(pdsUrl)` in `src/shared/constants.ts` construct these URLs.
 
 ---
 
 ## Security notes
 
 - **Never expose tokens to content scripts.** Content scripts run in the page context and can be observed by bsky.app's JavaScript. All token access goes through background messages.
-- **Always verify `state`** in the OAuth callback. A mismatch means a CSRF attempt.
+- **Always verify `state`** in the OAuth callback. A mismatch means a CSRF attempt — the handler returns an error immediately.
 - **No client secret.** Public browser extension clients use `token_endpoint_auth_method: "none"`. PKCE replaces the client secret.
-- **DPoP.** The Bluesky PDS requires `dpop_bound_access_tokens: true`. DPoP key generation and proof headers are implemented in the auth client.
+- **DPoP** binds access tokens to an ephemeral private key, limiting the impact of token theft.
+- **Pending auth state** (PKCE verifier + state) is stored ephemerally in `browser.storage.local` under `"pendingAuth"` and removed immediately after the code exchange completes.

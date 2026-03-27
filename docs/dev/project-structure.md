@@ -12,65 +12,70 @@ skeeditor/
 │   ├── app/bsky/                # Bluesky app lexicons
 │   └── com/atproto/             # Core AT Protocol lexicons
 │
-├── manifests/                   # Browser extension manifests
-│   ├── base.json                # Shared fields (merged into every browser manifest)
-│   ├── chrome/manifest.json     # Chrome-specific overrides
-│   ├── firefox/manifest.json    # Firefox-specific overrides (gecko id, strict_min_version)
-│   └── safari/manifest.json     # Safari-specific overrides
-│
-├── packages/                    # Internal workspace packages (if any)
+├── packages/                    # Internal workspace packages
+│   └── labeler/                 # Cloudflare Worker — skeeditor labeler service
+│       ├── package.json
+│       ├── tsconfig.json
+│       ├── wrangler.jsonc       # Cloudflare Worker config (routes, bindings, vars)
+│       └── src/
+│           ├── index.ts         # Worker entry point (fetch handler)
+│           ├── auth.ts          # DID authentication helpers
+│           ├── hub.ts           # BroadcastHub Durable Object (subscription state)
+│           ├── label.ts         # Label creation / signing logic
+│           ├── did-document.ts  # DID document resolver
+│           └── types.ts         # Shared types for the labeler worker
 │
 ├── scripts/                     # Build-time scripts
-│   ├── build.ts                 # Main build orchestrator
-│   ├── clean.ts                 # Removes dist/
-│   ├── merge-manifest.ts        # Merges base.json + browser overlay → dist/<browser>/manifest.json
-│   └── prepare-generated-lexicons.ts  # Processes lexicon JSON for use at runtime
+│   ├── merge-manifest.ts        # Merges manifest overlays (legacy; not used by main WXT build)
+│   └── prepare-generated-lexicons.ts  # Processes lexicon JSON for runtime use
 │
 ├── src/                         # Extension source
+│   ├── assets/
+│   │   └── icon.svg             # Source icon — auto-icons generates PNGs from this
+│   │
 │   ├── background/
-│   │   ├── service-worker.ts    # Entry point for background context; registers message router
 │   │   └── message-router.ts    # Routes incoming browser.runtime messages to handlers
 │   │
+│   ├── entrypoints/             # WXT entrypoints (discovered automatically by WXT)
+│   │   ├── background.ts        # Background service worker entry point
+│   │   ├── content.ts           # Content script entry point (injected into bsky.app)
+│   │   ├── popup/
+│   │   │   ├── index.html       # Popup HTML shell
+│   │   │   └── main.ts          # Popup entry point — mounts the auth-popup component
+│   │   └── options/
+│   │       ├── index.html       # Options page HTML shell
+│   │       └── main.ts          # Options page entry point
+│   │
 │   ├── content/
-│   │   ├── content-script.ts    # Entry point injected into bsky.app pages
-│   │   ├── post-detector.ts     # DOM scanning: finds posts authored by you; extracts PostInfo
+│   │   ├── post-detector.ts     # DOM scanning: finds your posts; extracts PostInfo
 │   │   ├── post-badges.ts       # Injects Edit badge elements next to your posts
 │   │   ├── post-editor.ts       # Orchestrates GET_RECORD → edit modal → PUT_RECORD
 │   │   ├── edit-modal.ts        # In-page editor modal Web Component
-│   │   └── styles.css           # Extension content styles
+│   │   └── styles.css           # Content-script styles
 │   │
 │   ├── lexicons/                # Generated TypeScript types from AT Protocol lexicons
 │   │   ├── app.ts               # Re-exports from app/bsky.ts
 │   │   ├── com.ts               # Re-exports from com/atproto.ts
 │   │   └── tools.ts             # Re-exports from tools/ozone.ts
 │   │
-│   ├── options/                 # Extension options page (currently minimal)
-│   │   ├── options.html
-│   │   ├── options.ts
-│   │   └── options.css
-│   │
 │   ├── platform/                # Per-browser API shims
 │   │   ├── chrome/              # Chrome-specific shim
 │   │   ├── firefox/             # Firefox-specific shim
 │   │   └── safari/              # Safari-specific shim
 │   │
-│   ├── popup/                   # Toolbar popup UI
-│   │   ├── popup.html
-│   │   ├── popup.ts             # Popup entry point; imports auth-popup Web Component
-│   │   ├── auth-popup.ts        # <auth-popup> Web Component: sign in / out / status
-│   │   └── popup.css
+│   ├── popup/
+│   │   └── auth-popup.ts        # <auth-popup> Web Component: sign in/out, multi-account, status
 │   │
 │   └── shared/                  # Code shared across all extension contexts
-│       ├── constants.ts         # APP_NAME, BSKY origins, OAuth endpoints/scopes
+│       ├── constants.ts         # APP_NAME, BSKY origins, OAuth endpoints, settings helpers
 │       ├── messages.ts          # Typed message union + ResponseFor<T> + sendMessage()
 │       ├── api/
 │       │   ├── at-uri.ts        # AT-URI parser and builder (AtUri class)
 │       │   └── xrpc-client.ts   # XrpcClient: getRecord, putRecord, putRecordWithSwap
 │       ├── auth/
-│       │   ├── app-password.ts  # App password auth (fallback for non-OAuth PDS instances)
 │       │   ├── auth-client.ts   # OAuth PKCE client (initiate flow, exchange code, revoke)
 │       │   ├── pkce.ts          # generateCodeVerifier / generateCodeChallenge utilities
-│       │   ├── session-store.ts # SessionStore: read/write/clear tokens in browser.storage.local
+│       │   ├── session-store.ts # Multi-account session store; keyed by DID in browser.storage.local
 │       │   ├── token-refresh.ts # TokenRefreshManager: deduplication, proactive refresh
 │       │   └── types.ts         # OAuthTokens, Session, AuthStatus types
 │       └── utils/
@@ -92,7 +97,8 @@ skeeditor/
 │   ├── mocks/                   # Shared test mocks
 │   │   ├── browser-apis.ts      # chrome/browser API stubs
 │   │   ├── handlers.ts          # MSW request handlers (XRPC mock responses)
-│   │   └── server.ts            # MSW server setup
+│   │   ├── server.ts            # MSW server setup
+│   │   └── wxt-utils.ts         # Stubs for wxt/utils/* (not resolvable outside WXT pipeline)
 │   │
 │   ├── setup/
 │   │   ├── unit.ts              # Vitest unit setup (registers browser-api mocks)
@@ -105,12 +111,14 @@ skeeditor/
 │       ├── content/
 │       └── utils/
 │
+├── .wxt/                        # Generated by WXT (type stubs, tsconfig patches)
+│                                # Not committed; regenerated by `pnpm install`
+│
 ├── package.json                 # Root workspace package (scripts, devDependencies)
 ├── pnpm-workspace.yaml          # pnpm monorepo workspace definition
-├── # Turborepo removed - using pnpm workspaces directly
 ├── tsconfig.json                # Root TypeScript config (paths, strict)
 ├── tsconfig.build.json          # TypeScript config for production builds (excludes test/)
-├── vite.config.ts               # Vite config (entry points, resolve aliases)
+├── wxt.config.ts                # WXT build config (manifest, entrypoints, browser targets)
 ├── vitest.config.ts             # Vitest config (unit + integration environments)
 └── playwright.config.ts         # Playwright config (E2E)
 ```
@@ -120,7 +128,7 @@ skeeditor/
 All `src/` imports use the `@src` alias, which maps to the `src/` directory. This is configured in:
 
 - `tsconfig.json` — `paths: { "@src/*": ["src/*"] }`
-- `vite.config.ts` — `resolve.alias: { "@src": "src/" }`
+- `wxt.config.ts` — `resolve.alias: { "@src": "src/" }` (passed into Vite)
 - `vitest.config.ts` — same alias for test imports
 
 Example:
