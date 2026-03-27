@@ -3,16 +3,14 @@
   "name": "skeeditor-labeler",
   "main": "src/index.ts",
   "compatibility_date": "2025-03-27",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
+  "compatibility_flags": ["nodejs_compat"],
   "durable_objects": {
     "bindings": [
       {
         "name": "BROADCAST_HUB",
-        "class_name": "BroadcastHub"
-      }
-    ]
+        "class_name": "BroadcastHub",
+      },
+    ],
   },
   "kv_namespaces": [
     {
@@ -20,26 +18,24 @@
       // Replace with real ID: wrangler kv namespace create LABELS_KV
       "id": "REPLACE_WITH_KV_NAMESPACE_ID",
       // Replace with real preview ID: wrangler kv namespace create LABELS_KV --preview
-      "preview_id": "REPLACE_WITH_PREVIEW_KV_NAMESPACE_ID"
-    }
+      "preview_id": "REPLACE_WITH_PREVIEW_KV_NAMESPACE_ID",
+    },
   ],
   "workers_dev": false,
   "routes": [
     {
       "pattern": "labeler.skeeditor.link",
-      "custom_domain": true
-    }
+      "custom_domain": true,
+    },
   ],
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": [
-        "BroadcastHub"
-      ]
-    }
+      "new_sqlite_classes": ["BroadcastHub"],
+    },
   ],
   "vars": {
     "LABELER_DID": "did:plc:m6h36r2hzbnozuhxj4obhkyb",
-    "LABELER_HANDLE": "skeeditor.link"
-  }
+    "LABELER_HANDLE": "skeeditor.link",
+  },
 }

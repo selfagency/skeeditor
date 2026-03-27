@@ -136,8 +136,8 @@ See the [Architecture](https://docs.skeeditor.link/dev/architecture) and [Messag
 
 ## Documentation
 
-| Section                                                              | Description                                         |
-| -------------------------------------------------------------------- | --------------------------------------------------- |
+| Section                                                            | Description                                         |
+| ------------------------------------------------------------------ | --------------------------------------------------- |
 | [User Guide](https://docs.skeeditor.link/guide/introduction)       | Installation, usage, privacy & security, FAQ        |
 | [Architecture](https://docs.skeeditor.link/dev/architecture)       | Extension context model, data flow                  |
 | [Getting Started](https://docs.skeeditor.link/dev/getting-started) | Dev environment setup                               |
