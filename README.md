@@ -72,6 +72,25 @@ pnpm build:watch:firefox
 
 **Safari**: Build, then open the generated Xcode project under `dist/safari/` and run it. See [Cross-Browser Platform docs](https://skeeditor.self.agency/dev/platform) for full instructions.
 
+### Debugging in VS Code
+
+1. **Launch mode** (simplest):
+   - Hit **F5** with **"Debug: Full Extension (build + launch + content)"** selected.
+   - VS Code will build the extension, open a fresh Chrome instance with the extension pre-loaded, and attach the debugger to the content script context on bsky.app.
+   - Breakpoints in TypeScript source will be hit automatically.
+
+2. **Attach mode** (keeps your normal Chrome profile):
+   - Run the task **"Open Chrome (remote debug on 9222)"** (or launch Chrome manually with `--remote-debugging-port=9222`).
+   - Select **"Debug: Content Script on bsky.app (attach)"** and hit F5.
+   - VS Code will attach to the running Chrome instance and breakpoints will work.
+
+3. **Debugging the service worker or popup**:
+   - Use **"Debug: Service Worker (attach)"** or **"Debug: Popup (attach)"** after launching Chrome with remote debugging enabled.
+
+All configs support source maps and skip third-party scripts (hls.js, etc.) to avoid noisy warnings.
+
+See `.vscode/launch.json` and `.vscode/tasks.json` for full configuration details.
+
 ### Test
 
 ```sh
