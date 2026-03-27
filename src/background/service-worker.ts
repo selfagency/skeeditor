@@ -22,7 +22,8 @@ if (!('session' in browser.storage)) {
         return;
       }
 
-      const createdAt = typeof pendingAuth.createdAt === 'number' ? pendingAuth.createdAt : undefined;
+      const record = pendingAuth as Record<string, unknown>;
+      const createdAt = typeof record['createdAt'] === 'number' ? record['createdAt'] : undefined;
 
       if (createdAt === undefined) {
         // Without a timestamp, we can't confidently treat this as stale; leave it in place.
