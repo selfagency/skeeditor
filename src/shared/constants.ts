@@ -112,7 +112,7 @@ export function getOAuthTokenUrl(pdsUrl: string = DEFAULT_PDS_URL): string {
   return `${pdsUrl}/oauth/token`;
 }
 /** Minimal scope for reading and writing AT Protocol records */
-export const BSKY_OAUTH_SCOPE = 'repo:app.bsky.feed.post';
+export const BSKY_OAUTH_SCOPE = 'atproto repo:app.bsky.feed.post';
 /**
  * OAuth client_id for skeeditor. Per the AT Protocol OAuth spec, the client_id
  * MUST be a URL pointing to a JSON client metadata document.
