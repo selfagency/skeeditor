@@ -14,6 +14,6 @@
   "response_types": [
     "code"
   ],
-  "scope": "atproto repo:app.bsky.feed.post",
+  "scope": "atproto transition:generic",
   "token_endpoint_auth_method": "none"
 }
