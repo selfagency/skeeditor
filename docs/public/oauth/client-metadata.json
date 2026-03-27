@@ -1,15 +1,15 @@
 {
-  "client_id": "https://skeeditor.self.agency/oauth/client-metadata.json",
+  "client_id": "https://docs.skeeditor.link/oauth/client-metadata.json",
   "application_type": "web",
   "client_name": "skeeditor",
-  "client_uri": "https://skeeditor.self.agency",
+  "client_uri": "https://docs.skeeditor.link",
   "dpop_bound_access_tokens": true,
   "grant_types": [
     "authorization_code",
     "refresh_token"
   ],
   "redirect_uris": [
-    "https://skeeditor.self.agency/callback.html"
+    "https://docs.skeeditor.link/callback.html"
   ],
   "response_types": [
     "code"

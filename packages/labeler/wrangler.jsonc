@@ -17,8 +17,17 @@
   "kv_namespaces": [
     {
       "binding": "LABELS_KV",
+      // Replace with real ID: wrangler kv namespace create LABELS_KV
       "id": "REPLACE_WITH_KV_NAMESPACE_ID",
+      // Replace with real preview ID: wrangler kv namespace create LABELS_KV --preview
       "preview_id": "REPLACE_WITH_PREVIEW_KV_NAMESPACE_ID"
+    }
+  ],
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "labeler.skeeditor.link",
+      "custom_domain": true
     }
   ],
   "migrations": [
@@ -31,6 +40,6 @@
   ],
   "vars": {
     "LABELER_DID": "did:plc:m6h36r2hzbnozuhxj4obhkyb",
-    "LABELER_HANDLE": "skeeditor.bsky.social"
+    "LABELER_HANDLE": "skeeditor.link"
   }
 }

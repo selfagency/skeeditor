@@ -117,9 +117,9 @@ export const BSKY_OAUTH_SCOPE = 'atproto transition:generic';
  * OAuth client_id for skeeditor. Per the AT Protocol OAuth spec, the client_id
  * MUST be a URL pointing to a JSON client metadata document.
  */
-export const BSKY_OAUTH_CLIENT_ID = 'https://skeeditor.self.agency/oauth/client-metadata.json';
+export const BSKY_OAUTH_CLIENT_ID = 'https://docs.skeeditor.link/oauth/client-metadata.json';
 /** OAuth redirect URI - must match exactly what's registered in the client metadata */
-export const BSKY_OAUTH_REDIRECT_URI = 'https://skeeditor.self.agency/callback.html';
+export const BSKY_OAUTH_REDIRECT_URI = 'https://docs.skeeditor.link/callback.html';
 
-/** DID of the skeeditor labeler account (@skeeditor.bsky.social) */
+/** DID of the skeeditor labeler account (@skeeditor.link) */
 export const LABELER_DID = 'did:plc:m6h36r2hzbnozuhxj4obhkyb';
