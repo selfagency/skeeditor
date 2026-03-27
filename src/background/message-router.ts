@@ -14,6 +14,7 @@ import type { AuthorizationRequest, TokenResponse } from '../shared/auth/auth-cl
 import { buildAuthorizationRequest, exchangeCodeForTokens } from '../shared/auth/auth-client';
 import type { StoredSession } from '../shared/auth/session-store';
 import { sessionStore } from '../shared/auth/session-store';
+import { getPdsUrlForDid, getHandleForDid } from '../shared/api/resolve-did';
 import {
   BSKY_OAUTH_CLIENT_ID,
   BSKY_OAUTH_REDIRECT_URI,
@@ -54,13 +55,46 @@ async function getDpopKeyPair(did?: string): Promise<CryptoKeyPair> {
 /**
  * Fetch the account handle from the PDS using com.atproto.server.getSession.
  * Returns the handle string, or null if unavailable (non-fatal).
+ *
+ * IMPORTANT: This function resolves the DID to get the correct PDS URL.
+ * OAuth tokens are scoped to a specific PDS and cannot be used with the
+ * authorization server (entryway).
  */
-async function fetchHandle(pdsUrl: string, accessToken: string): Promise<string | null> {
+async function fetchHandle(pdsUrl: string, accessToken: string, did: string): Promise<string | null> {
+  // First, try to get the correct PDS URL from the DID document
+  // OAuth tokens are scoped to a specific PDS and cannot be used with the authorization server
+  const resolvedPdsUrl = await getPdsUrlForDid(did);
+  const actualPdsUrl = resolvedPdsUrl ?? pdsUrl;
+
+  console.log('[fetchHandle] PDS URL - stored:', pdsUrl, 'resolved:', resolvedPdsUrl, 'using:', actualPdsUrl);
+
+  // If we have the correct PDS URL, try getSession
+  if (actualPdsUrl) {
+    const handleFromSession = await fetchHandleFromSession(actualPdsUrl, accessToken);
+    if (handleFromSession !== null) {
+      return handleFromSession;
+    }
+  }
+
+  // Fallback: Try to get handle directly from DID document
+  console.log('[fetchHandle] Session failed, trying DID document resolution');
+  const handleFromDid = await getHandleForDid(did);
+  console.log('[fetchHandle] Handle from DID document:', handleFromDid);
+  return handleFromDid;
+}
+
+/**
+ * Fetch handle from com.atproto.server.getSession endpoint.
+ */
+async function fetchHandleFromSession(pdsUrl: string, accessToken: string): Promise<string | null> {
   const url = `${pdsUrl}/xrpc/com.atproto.server.getSession`;
+  console.log('[fetchHandleFromSession] Fetching handle from:', url);
 
   const makeRequest = async (nonce?: string): Promise<Response> => {
     const keyPair = await getDpopKeyPair();
+    console.log('[fetchHandleFromSession] DPoP key pair created');
     const dpopProof = await createDpopProof(keyPair, 'GET', url, accessToken, nonce);
+    console.log('[fetchHandleFromSession] DPoP proof created, length:', dpopProof?.length);
     return fetch(url, {
       headers: {
         Authorization: `DPoP ${accessToken}`,
@@ -71,21 +105,32 @@ async function fetchHandle(pdsUrl: string, accessToken: string): Promise<string 
 
   try {
     let response = await makeRequest();
+    console.log('[fetchHandleFromSession] Initial response status:', response.status, response.statusText);
 
     // Server may require a nonce on the first attempt
     if (!response.ok) {
       const serverNonce = response.headers.get('DPoP-Nonce');
+      console.log('[fetchHandleFromSession] Server nonce:', serverNonce);
       if (serverNonce !== null) {
+        console.log('[fetchHandleFromSession] Retrying with nonce...');
         response = await makeRequest(serverNonce);
+        console.log('[fetchHandleFromSession] Retry response status:', response.status, response.statusText);
       }
     }
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[fetchHandleFromSession] Response not OK:', response.status, response.statusText, errorText);
+      return null;
+    }
 
     const data = (await response.json()) as Record<string, unknown>;
+    console.log('[fetchHandleFromSession] Response data:', JSON.stringify(data, null, 2));
     const handle = data['handle'];
+    console.log('[fetchHandleFromSession] Extracted handle:', handle);
     return typeof handle === 'string' && handle.length > 0 ? handle : null;
-  } catch {
+  } catch (error) {
+    console.error('[fetchHandleFromSession] Error fetching handle:', error);
     return null;
   }
 }
@@ -346,13 +391,20 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
           scope: tokens.scope ?? BSKY_OAUTH_SCOPE,
           did: tokens.sub,
         };
+
+        // Fetch and store the handle immediately after setting the session
+        const userHandle = await fetchHandle(pdsUrl, session.accessToken, session.did);
+        if (userHandle !== null) {
+          session.handle = userHandle;
+        }
+
         await deps.store.set(session);
 
         // Persist the PDS URL for this DID now that we know who authenticated
         await setCurrentPdsUrl(session.did, pdsUrl);
 
         // Fetch the handle (best-effort; non-fatal if it fails)
-        const handle = await fetchHandle(pdsUrl, tokens.access_token);
+        const handle = await fetchHandle(pdsUrl, tokens.access_token, tokens.sub!);
         if (handle !== null) {
           await deps.store.set({ ...session, handle });
         }
@@ -367,21 +419,29 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
     }
 
     case 'AUTH_GET_STATUS': {
+      console.log('[AUTH_GET_STATUS] checking auth state...');
       const stored = await deps.store.get();
+      console.log('[AUTH_GET_STATUS] stored session:', stored ? 'found' : 'none');
       const valid = await deps.store.isAccessTokenValid();
+      console.log('[AUTH_GET_STATUS] token valid:', valid);
       if (stored !== null && valid) {
+        console.log('[AUTH_GET_STATUS] returning authenticated status for DID:', stored.did);
         // Lazily hydrate handle if it was missing (e.g. fetchHandle failed during AUTH_CALLBACK).
         // This heals existing sessions without requiring the user to sign out and back in.
         if (!stored.handle) {
           const pdsUrl = await getCurrentPdsUrl(stored.did);
-          const handle = await fetchHandle(pdsUrl, stored.accessToken);
+          console.log('[AUTH_GET_STATUS] fetching handle from PDS...');
+          const handle = await fetchHandle(pdsUrl, stored.accessToken, stored.did);
+          console.log('[AUTH_GET_STATUS] fetched handle:', handle);
           if (handle !== null) {
             await deps.store.set({ ...stored, handle });
             return { authenticated: true, did: stored.did, handle, expiresAt: stored.expiresAt };
           }
         }
+        console.log('[AUTH_GET_STATUS] returning handle:', stored.handle);
         return { authenticated: true, did: stored.did, handle: stored.handle, expiresAt: stored.expiresAt };
       }
+      console.log('[AUTH_GET_STATUS] returning not authenticated');
       return { authenticated: false };
     }
 
@@ -513,10 +573,33 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
 
         const result = await client.putRecord(params);
         return { type: 'PUT_RECORD_SUCCESS', uri: result.uri, cid: result.cid } satisfies PutRecordSuccessResponse;
-      } catch {
+      } catch (err) {
+        // Check for authentication/scope errors that require re-authentication
+        const errorMessage = err instanceof Error ? err.message : 'Failed to update record';
+        const isAuthError =
+          errorMessage.toLowerCase().includes('invalid token') ||
+          errorMessage.toLowerCase().includes('bad token') ||
+          errorMessage.toLowerCase().includes('scope') ||
+          errorMessage.toLowerCase().includes('unauthorized') ||
+          errorMessage.toLowerCase().includes('forbidden') ||
+          (err instanceof Error && 'status' in err && (err.status === 401 || err.status === 403));
+
+        console.log('[PUT_RECORD] Error detected:', { errorMessage, isAuthError, err });
+
+        if (isAuthError) {
+          // Clear the invalid session to force re-authentication
+          console.log('[PUT_RECORD] Clearing session due to auth error');
+          await deps.store.clear();
+          return {
+            type: 'PUT_RECORD_ERROR',
+            message: 'Authentication required. Please sign in again.',
+            requiresReauth: true,
+          } satisfies PutRecordErrorResponse;
+        }
+
         return {
           type: 'PUT_RECORD_ERROR',
-          message: 'Failed to update record',
+          message: errorMessage,
         } satisfies PutRecordErrorResponse;
       }
     }

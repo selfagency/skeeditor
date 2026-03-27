@@ -99,6 +99,8 @@ export interface PutRecordSuccessResponse {
 export interface PutRecordErrorResponse {
   type: 'PUT_RECORD_ERROR';
   message: string;
+  /** If true, the error is due to an authentication/permission issue and the user needs to re-authenticate */
+  requiresReauth?: boolean;
 }
 
 export interface PutRecordConflictResponse {

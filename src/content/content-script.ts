@@ -8,6 +8,9 @@ import { extractPostInfo, extractPostText, findPosts } from './post-detector';
 import { buildUpdatedPostRecord, type EditablePostRecord } from './post-editor';
 import './styles.css';
 
+// Debug: Log when content script loads
+console.log(`${APP_NAME}: content script loaded on ${document.location.href}`);
+
 const POST_MARKER_ATTRIBUTE = 'data-skeeditor-processed';
 const EDIT_BUTTON_ATTRIBUTE = 'data-skeeditor-edit-button';
 const ACTION_AREA_WAIT_TIMEOUT = 3000;
@@ -16,6 +19,9 @@ const ACTION_AREA_SELECTORS = [
   'button[aria-label="Open post options menu"]',
   'button[data-testid="postDropdownBtn"]',
 ];
+
+// Debug: Log when content script loads
+console.log(`${APP_NAME}: content script loaded on ${document.location.href}`);
 
 let mutationObserver: MutationObserver | null = null;
 let currentDid: string | null = null;
@@ -55,9 +61,15 @@ const isPutRecordConflictResponse = (response: PutRecordResponse): response is P
 };
 
 const refreshAuthState = async (): Promise<void> => {
+  console.log(`${APP_NAME}: querying background for auth status...`);
   const status = await sendMessage({ type: 'AUTH_GET_STATUS' });
+  console.log(`${APP_NAME}: received auth status response:`, status);
   currentDid = status.authenticated ? status.did : null;
   currentHandle = status.authenticated ? (status.handle ?? null) : null;
+  console.log(`${APP_NAME}: currentDid=${currentDid}, currentHandle=${currentHandle}`);
+
+  // Trigger a scan for posts after updating auth state
+  scanForPosts();
 };
 
 const loadKnownAccounts = async (): Promise<void> => {
@@ -235,6 +247,15 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
     });
 
     if (writeResponse.type === 'PUT_RECORD_ERROR') {
+      // If re-authentication is required, show a more helpful message
+      if (writeResponse.requiresReauth) {
+        modal.setError(
+          'Your session has expired or lacks permission. Please click the extension icon to sign in again.',
+        );
+        // Refresh auth state in case the user signs in again
+        await refreshAuthState();
+        return;
+      }
       modal.setError(writeResponse.message);
       return;
     }
@@ -291,23 +312,37 @@ const waitForActionArea = (postElement: HTMLElement): Promise<void> => {
 const createEditButton = (): HTMLButtonElement => {
   const button = document.createElement('button');
   button.type = 'button';
-  button.textContent = 'Edit';
   button.setAttribute(EDIT_BUTTON_ATTRIBUTE, 'true');
   button.className = 'skeeditor-edit-button';
+  button.setAttribute('aria-label', 'Edit post');
+  button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>`;
   return button;
 };
 
 const placeEditButton = (postElement: HTMLElement, button: HTMLButtonElement): void => {
-  const actionContainer = postElement.querySelector<HTMLElement>('[data-testid="postButtonInline"]');
+  // Find the options menu button (three dots) - we want to place edit right next to it
   const optionsButton = postElement.querySelector<HTMLElement>('button[aria-label="Open post options menu"]');
-  const liveActionContainer = optionsButton?.parentElement;
+  const optionsContainer = optionsButton?.parentElement;
 
-  if (actionContainer) {
-    actionContainer.appendChild(button);
-  } else if (liveActionContainer && optionsButton) {
-    liveActionContainer.insertBefore(button, optionsButton);
+  if (optionsContainer && optionsButton) {
+    // Get the CSS class from the options button's container (dynamic class like "css-g5y9jx")
+    const containerClass = optionsContainer.className;
+
+    // Create our own wrapper div with the same class to match Bluesky's styling
+    const editWrapper = document.createElement('div');
+    editWrapper.className = containerClass;
+    editWrapper.appendChild(button);
+
+    // Insert our wrapper immediately before the options container's parent
+    optionsContainer.parentElement?.insertBefore(editWrapper, optionsContainer);
   } else {
-    postElement.appendChild(button);
+    // Fallback: find the action container with like/reply/repost buttons
+    const actionContainer = postElement.querySelector<HTMLElement>('[data-testid="postButtonInline"]');
+    if (actionContainer) {
+      actionContainer.appendChild(button);
+    } else {
+      postElement.appendChild(button);
+    }
   }
 };
 
@@ -341,16 +376,23 @@ const injectEditButton = (postElement: HTMLElement): void => {
 };
 
 const scanForPosts = (): void => {
+  console.log(`${APP_NAME}: scanning for posts, currentDid=${currentDid}, currentHandle=${currentHandle}`);
   // No authenticated DID → don't inject any edit buttons.
   if (currentDid === null) {
+    console.log(`${APP_NAME}: no auth session, skipping edit button injection`);
     return;
   }
 
   for (const postInfo of findPosts(document)) {
+    console.log(
+      `${APP_NAME}: found post with repo=${postInfo.repo}, comparing with currentDid=${currentDid}, currentHandle=${currentHandle}`,
+    );
     if (postInfo.repo !== currentDid && postInfo.repo !== currentHandle) {
+      console.log(`${APP_NAME}: skipping post, repo does not match currentDid or currentHandle`);
       continue;
     }
 
+    console.log(`${APP_NAME}: injecting edit button for post with repo=${postInfo.repo}`);
     injectEditButton(postInfo.element);
   }
 };
