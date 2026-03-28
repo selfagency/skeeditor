@@ -711,7 +711,7 @@ export function createDefaultDeps(): RouterDeps {
     storeAuthState: async (state: string, codeVerifier: string, pdsUrl?: string): Promise<void> => {
       // Prefer browser.storage.session (cleared automatically on browser restart/SW termination).
       // Fall back to browser.storage.local on Firefox where storage.session may be unavailable.
-      // On startup the SW clears any stale local pendingAuth from a previous lifecycle (see service-worker.ts).
+      // On startup the SW clears any stale local pendingAuth from a previous lifecycle (see entrypoints/background.ts).
       const storage = browser.storage.session ?? browser.storage.local;
       await storage.set({ pendingAuth: { state, codeVerifier, pdsUrl } });
     },
