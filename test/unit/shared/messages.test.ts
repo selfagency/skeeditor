@@ -142,8 +142,8 @@ describe('sendMessage', () => {
     const swNotReady = new Error('Could not establish connection. Receiving end does not exist.');
     vi.mocked(browser.runtime.sendMessage).mockRejectedValue(swNotReady as never);
 
-    await expect(
-      sendMessage({ type: 'AUTH_SIGN_IN' }, { maxAttempts: 3, retryDelayMs: 0 }),
-    ).rejects.toThrow('Could not establish connection. Receiving end does not exist.');
+    await expect(sendMessage({ type: 'AUTH_SIGN_IN' }, { maxAttempts: 3, retryDelayMs: 0 })).rejects.toThrow(
+      'Could not establish connection. Receiving end does not exist.',
+    );
   });
 });
