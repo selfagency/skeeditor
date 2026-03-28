@@ -27,11 +27,11 @@ It authenticates via OAuth 2.0 + PKCE, fetches the actual record from the Bluesk
 
 ## Browser support
 
-| Browser | Minimum version |
-| --- | --- |
-| Chrome | 120+ |
-| Firefox | 125+ |
-| Safari | macOS 14+ (Sonoma) |
+| Browser | Minimum version    |
+| ------- | ------------------ |
+| Chrome  | 120+               |
+| Firefox | 125+               |
+| Safari  | macOS 14+ (Sonoma) |
 
 ---
 
