@@ -234,18 +234,32 @@ export async function sendMessage<T extends MessageRequest>(
   request: T,
   { maxAttempts = 8, retryDelayMs = 300 }: { maxAttempts?: number; retryDelayMs?: number } = {},
 ): Promise<ResponseFor<T>> {
-  // In MV3 the service worker may be starting up when the content script first
-  // sends a message, causing chrome.runtime.sendMessage to resolve to undefined
-  // instead of waiting for the listener.  Retry with backoff so the SW has time
-  // to register its onMessage handler.
+  // In MV3 the service worker may be starting up when the popup or content
+  // script first sends a message.  Two failure modes exist:
+  //
+  //  1. sendMessage resolves to `undefined` — the SW started but hasn't yet
+  //     called onMessage.addListener (normal cold-start race).
+  //  2. sendMessage rejects with "Could not establish connection. Receiving end
+  //     does not exist." — the SW process hasn't started at all yet, or the SW
+  //     crashed before registering the listener.
+  //
+  // Both are transient and should be retried with backoff.  The one terminal
+  // error is "Extension context invalidated", which means the extension was
+  // reloaded while this script was still running — there is no recovery path
+  // so we propagate it immediately.
+  const RETRYABLE = 'Could not establish connection. Receiving end does not exist.';
+
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     let response: unknown;
     try {
       response = await browser.runtime.sendMessage(request);
     } catch (err) {
-      // "Extension context invalidated" means the extension was reloaded while
-      // this content script was still running in the tab.  There is no recovery
-      // path — propagate so the caller can handle it gracefully.
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes(RETRYABLE) && attempt < maxAttempts) {
+        await new Promise<void>(resolve => setTimeout(resolve, retryDelayMs * attempt));
+        continue;
+      }
+      // Terminal errors ("Extension context invalidated") or exhausted retries.
       throw err;
     }
     if (response !== undefined) {
