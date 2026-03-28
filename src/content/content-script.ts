@@ -16,6 +16,24 @@ const ACTION_AREA_WAIT_TIMEOUT = 3000;
 const EDITED_POSTS_KEY = 'editedPosts';
 const EDITED_POST_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+/**
+ * Normalize an AT-URI so its repo segment is always the DID, not a handle.
+ *
+ * bsky.app produces post URLs in handle form on profile pages
+ * (e.g. /profile/self.agency/post/...) but in DID form on the home feed
+ * (e.g. /profile/did:plc:xxx/post/...).  Storing and looking up cache
+ * entries by the raw AT-URI would cause misses whenever the form differs
+ * between save-time and lookup-time.  We normalize to DID form using the
+ * currentDid/currentHandle values that are always available in this module.
+ */
+function normalizeCacheKey(atUri: string, repo: string): string {
+  if (currentDid !== null && (repo === currentHandle || repo === currentDid)) {
+    // Replace the repo segment with the canonical DID
+    return atUri.replace(`at://${repo}/`, `at://${currentDid}/`);
+  }
+  return atUri;
+}
+
 interface EditedPostEntry {
   text: string;
   editedAt: number;
@@ -68,7 +86,9 @@ function applyEditedPostsFromCache(): void {
   if (editedPostsCache.size === 0) return;
   const now = Date.now();
   for (const postInfo of findPosts(document)) {
-    const entry = editedPostsCache.get(postInfo.atUri);
+    // Normalize to DID form so handle-form and DID-form URIs hit the same entry.
+    const cacheKey = normalizeCacheKey(postInfo.atUri, postInfo.repo);
+    const entry = editedPostsCache.get(cacheKey);
     if (entry !== undefined && now - entry.editedAt < EDITED_POST_TTL_MS) {
       // Guard: only mutate the DOM if the visible text differs from the cached
       // text. Without this check, every updatePostText() call triggers the
@@ -247,7 +267,8 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
 
   // Use the in-memory record cache when a save just happened (avoids stale AppView data from GET_RECORD).
   const nowMs = Date.now();
-  const cachedEntry = recentRecordsCache.get(info.atUri);
+  const normalizedAtUri = normalizeCacheKey(info.atUri, info.repo);
+  const cachedEntry = recentRecordsCache.get(normalizedAtUri);
 
   let currentRecord: EditablePostRecord;
   let currentCid: string | undefined;
@@ -366,10 +387,13 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
 
     modal.markSaved(text);
     updatePostText(postElement, text);
-    void saveEditedPost(info.atUri, text);
-    recentRecordsCache.set(info.atUri, { record: updatedRecord, cid: writeResponse.cid, savedAt: Date.now() });
+    // Normalize to DID form so cache lookups succeed regardless of whether the
+    // post was found via handle-form or DID-form URL.
+    const normalizedAtUri = normalizeCacheKey(info.atUri, info.repo);
+    void saveEditedPost(normalizedAtUri, text);
+    recentRecordsCache.set(normalizedAtUri, { record: updatedRecord, cid: writeResponse.cid, savedAt: Date.now() });
     modal.setSuccess('Edit saved.');
-    console.info(`${APP_NAME}: edit saved`, { atUri: info.atUri, uri: writeResponse.uri, cid: writeResponse.cid });
+    console.info(`${APP_NAME}: edit saved`, { atUri: normalizedAtUri, uri: writeResponse.uri, cid: writeResponse.cid });
   });
 };
 

@@ -14,6 +14,13 @@ export interface StoredSession {
   did: string;
   /** Authenticated user handle (e.g. user.bsky.social); optional for backward compat */
   handle?: string;
+  /**
+   * OAuth authorization server URL (e.g. https://bsky.social).
+   * Distinct from the PDS URL (which may be a regional shard like *.bsky.network).
+   * Used to hit the correct /oauth/token endpoint during token refresh.
+   * Optional for backward-compatibility with sessions created before this field existed.
+   */
+  authServerUrl?: string;
 }
 
 /** Non-sensitive session metadata safe to expose in popup context (no tokens) */

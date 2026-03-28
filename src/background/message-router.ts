@@ -87,6 +87,32 @@ function emitLabelTrigger(uri: string, cid: string, did: string, accessToken: st
     });
 }
 
+/**
+ * Discover the OAuth authorization server URL for a PDS by fetching its
+ * /.well-known/oauth-protected-resource metadata document.
+ *
+ * For bsky.social-hosted accounts the PDS may be a regional shard
+ * (e.g. shimeji.us-east.host.bsky.network) while the authorization server
+ * (entryway) is bsky.social. Token refresh must always use the entryway URL.
+ *
+ * Falls back to the pdsUrl itself if discovery fails or the field is absent.
+ */
+async function resolveAuthServerForPds(pdsUrl: string): Promise<string> {
+  try {
+    const res = await fetch(`${pdsUrl}/.well-known/oauth-protected-resource`);
+    if (res.ok) {
+      const meta = (await res.json()) as { authorization_servers?: string[] };
+      const authServer = meta.authorization_servers?.[0];
+      if (typeof authServer === 'string' && authServer.length > 0) {
+        return authServer;
+      }
+    }
+  } catch {
+    // Network error — fall through to pdsUrl fallback
+  }
+  return pdsUrl;
+}
+
 async function checkAndScheduleLabelerPrompt(pdsUrl: string, accessToken: string): Promise<void> {
   const prefsUrl = `${pdsUrl}/xrpc/app.bsky.actor.getPreferences`;
 
@@ -441,6 +467,10 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
           expiresAt: tokens.expires_in !== undefined ? Date.now() + tokens.expires_in * 1000 : Date.now() + 3_600_000,
           scope: tokens.scope ?? BSKY_OAUTH_SCOPE,
           did: tokens.sub,
+          // Store the authorization server URL (entryway, e.g. bsky.social) separately
+          // from the PDS URL (which will be resolved to a regional shard below).
+          // Token refresh must always hit the auth server, not the PDS shard.
+          authServerUrl: pdsUrl,
         };
 
         // Resolve the user's actual PDS from their DID document.
@@ -482,8 +512,13 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
       // a silent refresh using the stored refresh token before giving up.
       if (stored !== null && !valid) {
         try {
-          const pdsUrl = await getCurrentPdsUrl(stored.did);
-          const tokens = await deps.refreshTokens(getOAuthTokenUrl(pdsUrl), stored.refreshToken, BSKY_OAUTH_CLIENT_ID);
+          // Use the stored auth server URL when available. For sessions created before this
+          // field was added, fall back to discovering the auth server via the PDS well-known
+          // resource metadata (which lists authorization_servers). This avoids a 404 that
+          // occurs when the PDS URL is a regional shard (*.bsky.network) that does not host
+          // the OAuth token endpoint — only the entryway (bsky.social) does.
+          const authServerUrl = stored.authServerUrl ?? await resolveAuthServerForPds(await getCurrentPdsUrl(stored.did));
+          const tokens = await deps.refreshTokens(getOAuthTokenUrl(authServerUrl), stored.refreshToken, BSKY_OAUTH_CLIENT_ID);
           if (isNonEmptyString(tokens.access_token) && isNonEmptyString(tokens.refresh_token)) {
             const refreshed: StoredSession = {
               ...stored,
