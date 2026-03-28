@@ -36,6 +36,8 @@ function normalizeCacheKey(atUri: string, repo: string): string {
 
 interface EditedPostEntry {
   text: string;
+  /** Original text before the edit — shown in Bluesky's "Edited" moderation dialog */
+  originalText?: string;
   editedAt: number;
 }
 
@@ -64,8 +66,8 @@ async function loadEditedPostsCache(): Promise<void> {
   }
 }
 
-async function saveEditedPost(atUri: string, text: string): Promise<void> {
-  const entry: EditedPostEntry = { text, editedAt: Date.now() };
+async function saveEditedPost(atUri: string, text: string, originalText?: string): Promise<void> {
+  const entry: EditedPostEntry = { text, ...(originalText !== undefined && { originalText }), editedAt: Date.now() };
   editedPostsCache.set(atUri, entry);
   try {
     const stored = await browser.storage.local.get(EDITED_POSTS_KEY);
@@ -390,7 +392,9 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
     // Normalize to DID form so cache lookups succeed regardless of whether the
     // post was found via handle-form or DID-form URL.
     const normalizedAtUri = normalizeCacheKey(info.atUri, info.repo);
-    void saveEditedPost(normalizedAtUri, text);
+    // initialRecordText is the pre-edit original — pass it so the moderation
+    // dialog can display it when the user clicks the "Edited" label.
+    void saveEditedPost(normalizedAtUri, text, initialRecordText);
     recentRecordsCache.set(normalizedAtUri, { record: updatedRecord, cid: writeResponse.cid, savedAt: Date.now() });
     modal.setSuccess('Edit saved.');
     console.info(`${APP_NAME}: edit saved`, { atUri: normalizedAtUri, uri: writeResponse.uri, cid: writeResponse.cid });
@@ -590,6 +594,82 @@ const ensureStorageListener = (): void => {
   browser.storage.onChanged.addListener(storageChangeHandler);
 };
 
+// ── "Edited" label dialog injection ─────────────────────────────────────────
+//
+// When the user clicks Bluesky's "Edited" label chip, the app adds a
+// "Moderation details" dialog to the DOM.  We intercept the click to identify
+// the originating post, look up the original text from the cache, and inject
+// it into the dialog once it appears.
+
+let pendingOriginalText: string | null = null;
+let editedLabelListenerAttached = false;
+
+const ensureEditedLabelListener = (): void => {
+  if (editedLabelListenerAttached) return;
+  editedLabelListenerAttached = true;
+
+  // Use capture phase so we fire before Bluesky's own React synthetic handlers.
+  document.addEventListener(
+    'click',
+    (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      const editedButton = target.closest('button[aria-label="Edited"]') as HTMLElement | null;
+      if (!editedButton) return;
+
+      // Trace up to closest post container to find the AT-URI.
+      const postElement =
+        editedButton.closest<HTMLElement>('[data-at-uri]') ??
+        editedButton.closest<HTMLElement>('[data-uri]') ??
+        editedButton.closest<HTMLElement>('article');
+      if (!postElement) return;
+
+      const info = extractPostInfo(postElement);
+      if (!info) return;
+
+      const cacheKey = normalizeCacheKey(info.atUri, info.repo);
+      pendingOriginalText = editedPostsCache.get(cacheKey)?.originalText ?? null;
+    },
+    true,
+  );
+};
+
+const injectOriginalTextIntoDialog = (): void => {
+  if (pendingOriginalText === null) return;
+
+  const dialog = document.querySelector<HTMLElement>('[aria-label="Moderation details"][role="dialog"]');
+  if (!dialog) return;
+
+  // Idempotent — don't inject twice.
+  if (dialog.querySelector('.skeeditor-original-text')) return;
+
+  // The description span is the best anchor — insert our block right after it.
+  const bodySpan = dialog.querySelector<HTMLElement>('span');
+  if (!bodySpan) return;
+
+  const originalText = pendingOriginalText;
+  pendingOriginalText = null; // consume
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'skeeditor-original-text';
+  wrapper.style.cssText =
+    'margin-top:12px;padding:10px 12px;background:rgba(255,255,255,0.06);border-radius:8px;';
+
+  const label = document.createElement('div');
+  label.style.cssText =
+    'font-size:11px;color:rgb(171,184,201);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;';
+  label.textContent = 'Original text';
+
+  const body = document.createElement('div');
+  body.style.cssText = 'font-size:15px;line-height:21px;color:rgb(255,255,255);white-space:pre-wrap;';
+  body.textContent = originalText;
+
+  wrapper.appendChild(label);
+  wrapper.appendChild(body);
+
+  // Insert after the span but still inside its parent container.
+  bodySpan.parentElement?.appendChild(wrapper);
+};
+
 const ensureObserver = (): void => {
   if (mutationObserver) {
     return;
@@ -598,6 +678,8 @@ const ensureObserver = (): void => {
   mutationObserver = new MutationObserver(() => {
     // Re-apply cached text immediately so React re-renders don't produce a visible flicker.
     applyEditedPostsFromCache();
+    // Inject original text into Bluesky's "Edited" moderation dialog if one just appeared.
+    injectOriginalTextIntoDialog();
     // Debounced scan for edit-button injection (more expensive).
     scheduleScanForPosts();
   });
@@ -615,6 +697,7 @@ export const start = (): void => {
   ensureObserver();
   ensureStorageListener();
   ensureNavigationListeners();
+  ensureEditedLabelListener();
 
   // Connect a persistent port to keep the background SW alive (Chrome MV3 terminates
   // idle SWs after ~30 s; an open port prevents that while the page is active).
