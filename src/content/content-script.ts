@@ -3,7 +3,6 @@ import { APP_NAME } from '../shared/constants';
 import type { AuthListAccountsAccount, PutRecordConflictResponse, PutRecordResponse } from '../shared/messages';
 import { sendMessage } from '../shared/messages';
 import { EditModal } from './edit-modal';
-import { markPostAsEdited } from './post-badges';
 import { extractPostInfo, extractPostText, findPosts, updatePostText } from './post-detector';
 import { buildUpdatedPostRecord, type EditablePostRecord } from './post-editor';
 import './styles.css';
@@ -60,7 +59,6 @@ function applyEditedPostsFromCache(): void {
     const entry = editedPostsCache.get(postInfo.atUri);
     if (entry !== undefined && now - entry.editedAt < EDITED_POST_TTL_MS) {
       updatePostText(postInfo.element, entry.text);
-      markPostAsEdited(postInfo.element);
     }
   }
 }
@@ -336,7 +334,6 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
 
     modal.markSaved(text);
     updatePostText(postElement, text);
-    markPostAsEdited(postElement);
     void saveEditedPost(info.atUri, text);
     modal.setSuccess('Edit saved.');
     console.info(`${APP_NAME}: edit saved`, { atUri: info.atUri, uri: writeResponse.uri, cid: writeResponse.cid });

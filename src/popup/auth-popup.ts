@@ -1,11 +1,14 @@
 import { browser } from 'wxt/browser';
 
 import globalStyles from '../shadow-styles.css?inline';
+import { LABELER_DID } from '../shared/constants';
 import type { AuthListAccountsAccount } from '../shared/messages';
 import { sendMessage } from '../shared/messages';
 import { escapeHTML } from '../shared/utils/escape-html';
 
 type PopupState = 'loading' | 'unauthenticated' | 'authenticated';
+
+const LABELER_SUBSCRIBE_URL = `https://bsky.app/profile/${LABELER_DID}`;
 
 /**
  * `<auth-popup>` Web Component — renders login/logout UI inside the extension
@@ -17,6 +20,7 @@ class AuthPopup extends HTMLElement {
   private readonly shadow: ShadowRoot;
   private state: PopupState = 'loading';
   private accounts: AuthListAccountsAccount[] = [];
+  private showLabelerPrompt = false;
 
   constructor() {
     super();
@@ -40,9 +44,14 @@ class AuthPopup extends HTMLElement {
       console.error('Failed to load accounts', error);
       this.accounts = [];
       this.state = 'unauthenticated';
-    } finally {
-      this.render();
     }
+    try {
+      const stored = await browser.storage.local.get('pendingLabelerPrompt');
+      this.showLabelerPrompt = stored['pendingLabelerPrompt'] === true;
+    } catch {
+      this.showLabelerPrompt = false;
+    }
+    this.render();
   }
 
   private render(): void {
@@ -80,6 +89,19 @@ class AuthPopup extends HTMLElement {
           </div>`;
 
       case 'authenticated': {
+        const labelerBanner = this.showLabelerPrompt
+          ? `<div class="rounded-lg border border-indigo-500/30 bg-indigo-950/50 p-3">
+              <p class="text-xs text-indigo-200">Subscribe to the skeeditor labeler to see
+              <strong>Edited</strong> labels on posts in Bluesky.</p>
+              <a id="subscribe-labeler" href="${escapeHTML(LABELER_SUBSCRIBE_URL)}" target="_blank" rel="noopener noreferrer"
+                class="mt-2 flex w-full items-center justify-center gap-1 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400">
+                Subscribe to labeler
+              </a>
+              <button id="dismiss-labeler-prompt" type="button"
+                class="mt-1.5 w-full text-center text-xs text-indigo-400 hover:text-indigo-200">Dismiss</button>
+            </div>`
+          : '';
+
         const accountCards = this.accounts
           .map(account => {
             const label = account.handle
@@ -111,6 +133,7 @@ class AuthPopup extends HTMLElement {
         return `
           ${style}
           <div class="space-y-3 p-4">
+            ${labelerBanner}
             ${accountCards}
             <div>
               <label for="add-pds-url" class="block text-sm/6 font-medium text-gray-900 dark:text-gray-100">PDS URL</label>
@@ -156,6 +179,21 @@ class AuthPopup extends HTMLElement {
 
     this.shadow.getElementById('open-settings')?.addEventListener('click', () => {
       void browser.runtime.openOptionsPage();
+    });
+
+    this.shadow.getElementById('subscribe-labeler')?.addEventListener('click', () => {
+      // Dismiss the prompt once the user clicks through — they've seen it.
+      void browser.storage.local.remove('pendingLabelerPrompt').then(() => {
+        this.showLabelerPrompt = false;
+        this.render();
+      });
+    });
+
+    this.shadow.getElementById('dismiss-labeler-prompt')?.addEventListener('click', () => {
+      void browser.storage.local.remove('pendingLabelerPrompt').then(() => {
+        this.showLabelerPrompt = false;
+        this.render();
+      });
     });
 
     this.shadow.querySelectorAll<HTMLButtonElement>('.account-switch').forEach(btn => {
