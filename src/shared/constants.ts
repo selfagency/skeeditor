@@ -123,3 +123,6 @@ export const BSKY_OAUTH_REDIRECT_URI = 'https://docs.skeeditor.link/callback.htm
 
 /** DID of the skeeditor labeler account (@skeeditor.link) */
 export const LABELER_DID = 'did:plc:m6h36r2hzbnozuhxj4obhkyb';
+
+/** Endpoint to trigger a label broadcast after a successful edit */
+export const LABELER_EMIT_URL = 'https://labeler.skeeditor.link/xrpc/tools.skeeditor.emitLabel';

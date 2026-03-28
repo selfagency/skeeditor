@@ -25,6 +25,7 @@ import {
   getSettings,
   isValidEditTimeLimit,
   LABELER_DID,
+  LABELER_EMIT_URL,
   setCurrentPdsUrl,
   setGlobalPdsUrl,
   setSettings,
@@ -58,6 +59,24 @@ async function getDpopKeyPair(did?: string): Promise<CryptoKeyPair> {
  * If not, mark storage so the popup can show a consent prompt.
  * All errors are swallowed — this must never block sign-in.
  */
+/**
+ * Fire-and-forget: notify the labeler after a successful edit so it can
+ * broadcast a signed `edited` label to all subscribed extension clients.
+ * Errors are swallowed — the real-time update is best-effort only.
+ */
+function emitLabelTrigger(uri: string, cid: string, did: string, accessToken: string): void {
+  void fetch(LABELER_EMIT_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ uri, cid, did }),
+  }).catch(err => {
+    console.warn('[skeeditor] labeler emit failed:', err);
+  });
+}
+
 async function checkAndScheduleLabelerPrompt(pdsUrl: string, accessToken: string): Promise<void> {
   const prefsUrl = `${pdsUrl}/xrpc/app.bsky.actor.getPreferences`;
 
@@ -596,6 +615,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
           });
 
           if (result.success) {
+            emitLabelTrigger(result.uri, result.cid, stored.did, stored.accessToken);
             return { type: 'PUT_RECORD_SUCCESS', uri: result.uri, cid: result.cid } satisfies PutRecordSuccessResponse;
           }
 
@@ -621,6 +641,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
         }
 
         const result = await client.putRecord(params);
+        emitLabelTrigger(result.uri, result.cid, stored.did, stored.accessToken);
         return { type: 'PUT_RECORD_SUCCESS', uri: result.uri, cid: result.cid } satisfies PutRecordSuccessResponse;
       } catch (err) {
         // Check for authentication/scope errors that require re-authentication
