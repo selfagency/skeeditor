@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "skeeditor-labeler",
+  "account_id": "b86b82d6fb914285229cdd89518db462",
   "main": "src/index.ts",
   "compatibility_date": "2025-03-27",
   "compatibility_flags": ["nodejs_compat"],

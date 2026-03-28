@@ -26,8 +26,7 @@ export function serveDidDocument(env: Env): Response {
         id: `${did}#atproto_label`,
         type: 'EcdsaSecp256k1VerificationKey2019',
         controller: did,
-        // Replace with actual base58-encoded secp256k1 public key
-        publicKeyMultibase: 'REPLACE_WITH_PUBLIC_KEY_MULTIBASE',
+        publicKeyMultibase: 'zQ3shtSrUuoZLm2nz6mwUrh3H3qDyZpbqxDVwim4SjktNrKe2',
       },
     ],
     service: [
