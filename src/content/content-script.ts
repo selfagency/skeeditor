@@ -39,12 +39,6 @@ interface RecentRecordEntry {
 
 const recentRecordsCache = new Map<string, RecentRecordEntry>();
 
-/**
- * Selector string for post text elements — mirrors post-detector.ts.
- */
-const POST_TEXT_QUERY =
-  '[data-testid="postDetailedText"], [data-testid="post-text"], [data-testid="postText"], [data-testid="post-content"]';
-
 function applyEditedPostsFromCache(): void {
   if (getCacheSize() === 0) return;
 
@@ -77,33 +71,46 @@ function applyToThreadRoot(text?: string, rkey?: string): boolean {
   if (!urlRepo || !urlRkey) return false;
 
   // If explicit text is given, apply directly.
-  // Otherwise look up from cache using all repo candidates.
+  // Otherwise look up from cache. Only try the URL repo (which is the
+  // post author's identity) — do NOT try currentDid/currentHandle here,
+  // as that causes cross-contamination when the current user's cached post
+  // gets applied to someone else's thread root.
   let resolvedText = text ?? null;
 
   if (resolvedText === null) {
-    const repoCandidates = Array.from(
-      new Set([urlRepo, currentDid, currentHandle].filter((v): v is string => v !== null && v !== '')),
-    );
-    for (const repo of repoCandidates) {
-      const candidateUri = `at://${repo}/${APP_BSKY_FEED_POST_COLLECTION}/${urlRkey}`;
-      const normalizedKey = normalizeCacheKey(candidateUri, repo);
-      const entry = getCached(normalizedKey);
-      if (entry !== null) {
-        resolvedText = entry.text;
-        break;
-      }
+    // The URL repo might be a handle or DID. Try both forms via normalizeCacheKey
+    // which will normalize currentUser's handle→DID. For other users, try as-is.
+    const candidateUri = `at://${urlRepo}/${APP_BSKY_FEED_POST_COLLECTION}/${urlRkey}`;
+    const normalizedKey = normalizeCacheKey(candidateUri, urlRepo);
+    const entry = getCached(normalizedKey);
+    if (entry !== null) {
+      resolvedText = entry.text;
     }
   }
 
   if (resolvedText === null) return false;
 
-  const textEl = document.querySelector<HTMLElement>(POST_TEXT_QUERY);
-  if (!textEl) return false;
-
-  if (textEl.textContent?.trim() !== resolvedText) {
-    textEl.textContent = resolvedText;
+  // Find the thread root's text element specifically — the first post in
+  // a thread view is the root. Use findPosts to match by rkey rather than
+  // blindly taking the first POST_TEXT_QUERY match (which could be a reply).
+  for (const p of findPosts(document)) {
+    if (p.rkey === urlRkey) {
+      if (extractPostText(p.element) !== resolvedText) {
+        updatePostText(p.element, resolvedText);
+      }
+      return true;
+    }
   }
-  return true;
+
+  // Fallback: if findPosts doesn't find the thread root (DOM not fully rendered),
+  // try the first detailed-text element (permalink pages have a distinct testid).
+  const detailedTextEl = document.querySelector<HTMLElement>('[data-testid="postDetailedText"]');
+  if (detailedTextEl && detailedTextEl.textContent?.trim() !== resolvedText) {
+    detailedTextEl.textContent = resolvedText;
+    return true;
+  }
+
+  return false;
 }
 
 // ── Fetch triggers ────────────────────────────────────────────────────────────
@@ -112,11 +119,18 @@ function applyToThreadRoot(text?: string, rkey?: string): boolean {
 // NEVER fetches — it only applies cached text to the DOM.
 
 /**
- * Trigger 1: Permalink page load — always fetch from Slingshot for the thread root.
+ * Trigger 1: Permalink page load — fetch from Slingshot for the thread root,
+ * but ONLY if the post is known to be edited ("Edited" badge in the DOM).
+ * Without this gate we'd fetch and cache every permalink post, overwriting
+ * the DOM with Slingshot's text even for unedited posts.
  */
 async function fetchPermalinkPost(): Promise<void> {
   const urlMatch = /\/profile\/([^/?#]+)\/post\/([^/?#]+)/.exec(window.location.pathname);
   if (!urlMatch) return;
+
+  // Only fetch if the thread root has an "Edited" badge
+  const editedBadge = document.querySelector('button[aria-label="Edited"]');
+  if (!editedBadge) return;
 
   const repo = urlMatch[1]!;
   const rkey = urlMatch[2]!;
@@ -126,9 +140,9 @@ async function fetchPermalinkPost(): Promise<void> {
   if (text !== null) {
     applyToThreadRoot(text, rkey);
     // Also try findPosts in case the DOM has rendered
+    const atCacheKey = normalizeCacheKey(atUri, repo);
     for (const p of findPosts(document)) {
       const cacheKey = normalizeCacheKey(p.atUri, p.repo);
-      const atCacheKey = normalizeCacheKey(atUri, repo);
       if (cacheKey === atCacheKey && extractPostText(p.element) !== text) {
         updatePostText(p.element, text);
         break;
