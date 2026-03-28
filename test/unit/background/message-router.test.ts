@@ -290,6 +290,7 @@ describe('handleMessage', () => {
         expiresAt: expect.any(Number),
         scope: 'atproto transition:generic',
         did: 'did:plc:testuser',
+        authServerUrl: expect.any(String),
       });
       expect(vi.mocked(deps.clearAuthState)).toHaveBeenCalledOnce();
       expect(result).toEqual({ ok: true });

@@ -517,8 +517,13 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
           // resource metadata (which lists authorization_servers). This avoids a 404 that
           // occurs when the PDS URL is a regional shard (*.bsky.network) that does not host
           // the OAuth token endpoint — only the entryway (bsky.social) does.
-          const authServerUrl = stored.authServerUrl ?? await resolveAuthServerForPds(await getCurrentPdsUrl(stored.did));
-          const tokens = await deps.refreshTokens(getOAuthTokenUrl(authServerUrl), stored.refreshToken, BSKY_OAUTH_CLIENT_ID);
+          const authServerUrl =
+            stored.authServerUrl ?? (await resolveAuthServerForPds(await getCurrentPdsUrl(stored.did)));
+          const tokens = await deps.refreshTokens(
+            getOAuthTokenUrl(authServerUrl),
+            stored.refreshToken,
+            BSKY_OAUTH_CLIENT_ID,
+          );
           if (isNonEmptyString(tokens.access_token) && isNonEmptyString(tokens.refresh_token)) {
             const refreshed: StoredSession = {
               ...stored,

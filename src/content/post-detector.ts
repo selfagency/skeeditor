@@ -9,6 +9,7 @@ export interface PostInfo {
 }
 
 const POST_TEXT_SELECTORS = [
+  '[data-testid="postDetailedText"]',
   '[data-testid="post-text"]',
   '[data-testid="postText"]',
   '[data-testid="post-content"]',
@@ -17,8 +18,13 @@ const POST_CONTAINER_SELECTORS = [
   '[data-at-uri]',
   '[data-uri]',
   '[data-post]',
+  // Feed items (home feed, profile feed, list feed)
   '[data-testid*="feedItem"]',
+  // Posts in thread views, search results, list views, notifications, etc.
   '[data-testid*="post"]',
+  '[data-testid*="thread"]',
+  '[data-testid*="notification"]',
+  // Generic semantic fallbacks
   '[role="article"]',
   'article',
   '.post',
@@ -91,11 +97,33 @@ export function extractPostText(element: HTMLElement): string {
  */
 export function updatePostText(element: HTMLElement, text: string): void {
   const textElement = element.querySelector<HTMLElement>(POST_TEXT_SELECTORS);
-  if (!textElement) return;
-  // Clear React-rendered rich text nodes and replace with plain text.
-  // Facet-based formatting (mentions, links) is lost until React re-renders,
-  // but the content will be correct immediately after the user saves.
-  textElement.textContent = text;
+  if (textElement) {
+    // Clear React-rendered rich text nodes and replace with plain text.
+    // Facet-based formatting (mentions, links) is lost until React re-renders,
+    // but the content will be correct immediately after the user saves.
+    textElement.textContent = text;
+    return;
+  }
+
+  // Fallback: the element itself may *be* the text node (e.g. permalink thread
+  // root where bsky.app uses an unlisted testid). Walk shallow children to
+  // find the first element whose text roughly matches the current post text
+  // rather than blowing away the entire container (which includes timestamps,
+  // action buttons, etc.).
+  const children = Array.from(element.children) as HTMLElement[];
+  for (const child of children) {
+    const childText = child.querySelector<HTMLElement>(POST_TEXT_SELECTORS);
+    if (childText) {
+      childText.textContent = text;
+      return;
+    }
+  }
+
+  // Last resort: if the element itself has no child containers and its own
+  // textContent looks like a short post body, write directly to it.
+  if (element.children.length === 0) {
+    element.textContent = text;
+  }
 }
 
 export function* findPosts(root: Document | HTMLElement = document): Generator<PostInfo> {

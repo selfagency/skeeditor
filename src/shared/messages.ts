@@ -153,6 +153,19 @@ export interface CheckLabelerSubscriptionRequest {
 
 export type CheckLabelerSubscriptionResponse = OkResponse | { error: string };
 
+// ── Label push notifications (SW → content scripts) ────────────────────────────
+
+/**
+ * Broadcast by the background service worker to all bsky.app content scripts
+ * when a `edited` label is received from the labeler WebSocket. The content
+ * script uses the AT-URI to fetch fresh post text and update the DOM.
+ */
+export interface LabelReceivedNotification {
+  type: 'LABEL_RECEIVED';
+  /** AT-URI of the post that was edited, e.g. at://did:plc:.../app.bsky.feed.post/rkey */
+  uri: string;
+}
+
 // ── Discriminated union of all inbound requests ─────────────────────────────────
 
 export type MessageRequest =
@@ -247,7 +260,15 @@ export async function sendMessage<T extends MessageRequest>(
   // error is "Extension context invalidated", which means the extension was
   // reloaded while this script was still running — there is no recovery path
   // so we propagate it immediately.
-  const RETRYABLE = 'Could not establish connection. Receiving end does not exist.';
+  //
+  //  3. sendMessage rejects with "A listener indicated an asynchronous response
+  //     by returning true, but the message channel closed before a response was
+  //     received." — the SW was terminated mid-async-handler (MV3 idle eviction).
+  //     This is also transient and should be retried.
+  const RETRYABLE_PATTERNS = [
+    'Could not establish connection. Receiving end does not exist.',
+    'message channel closed before a response was received',
+  ];
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     let response: unknown;
@@ -255,7 +276,7 @@ export async function sendMessage<T extends MessageRequest>(
       response = await browser.runtime.sendMessage(request);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      if (message.includes(RETRYABLE) && attempt < maxAttempts) {
+      if (RETRYABLE_PATTERNS.some(p => message.includes(p)) && attempt < maxAttempts) {
         await new Promise<void>(resolve => setTimeout(resolve, retryDelayMs * attempt));
         continue;
       }
