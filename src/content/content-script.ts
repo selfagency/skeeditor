@@ -7,25 +7,57 @@ import type {
   PutRecordResponse,
 } from '../shared/messages';
 import { sendMessage } from '../shared/messages';
+import { EditModal } from './edit-modal';
 import {
   getCached,
   getCacheSize,
   loadFromStorage,
   normalizeCacheKey,
-  resolve as resolveEditedText,
+  registerIdentity,
   resolveBatch,
+  resolve as resolveEditedText,
   setCached,
   setIdentity,
   setStorage,
 } from './edited-post-cache';
-import { EditModal } from './edit-modal';
 import { extractPostInfo, extractPostText, findPosts, updatePostText } from './post-detector';
 import { buildUpdatedPostRecord, type EditablePostRecord } from './post-editor';
+import { getHandleForDid } from '../shared/api/resolve-did';
 import './styles.css';
 
 const POST_MARKER_ATTRIBUTE = 'data-skeeditor-processed';
 const EDIT_BUTTON_ATTRIBUTE = 'data-skeeditor-edit-button';
 const ACTION_AREA_WAIT_TIMEOUT = 3000;
+const DEBUG_LOCAL_STORAGE_KEY = 'skeeditor:debug';
+const DEBUG_QUERY_PARAM = 'skeeditor_debug';
+const DEBUG_DATA_ATTRIBUTE = 'data-skeeditor-debug';
+
+const isDebugEnabled = (): boolean => {
+  try {
+    if (document.documentElement.getAttribute(DEBUG_DATA_ATTRIBUTE) === '1') return true;
+  } catch {
+    // noop
+  }
+
+  try {
+    if (window.localStorage.getItem(DEBUG_LOCAL_STORAGE_KEY) === '1') return true;
+  } catch {
+    // localStorage may be unavailable in some privacy modes.
+  }
+
+  const value = new URLSearchParams(location.search).get(DEBUG_QUERY_PARAM);
+  return value === '1' || value === 'true';
+};
+
+const debugLog = (event: string, data?: Record<string, unknown>): void => {
+  if (!isDebugEnabled()) return;
+  const prefix = `${APP_NAME}:debug:${event}`;
+  if (data === undefined) {
+    console.debug(prefix);
+    return;
+  }
+  console.debug(prefix, data);
+};
 
 // ── Recent record cache (avoids stale GET_RECORD after a fresh save) ──────────
 
@@ -42,20 +74,28 @@ const recentRecordsCache = new Map<string, RecentRecordEntry>();
 function applyEditedPostsFromCache(): void {
   if (getCacheSize() === 0) return;
 
+  let scanned = 0;
+  let cacheHits = 0;
+  let applied = 0;
+
   // ── 1. Normal path: findPosts() covers feed items, replies, search results,
   //       list views, notifications — anything with a recognisable container.
   for (const postInfo of findPosts(document)) {
+    scanned += 1;
     const cacheKey = normalizeCacheKey(postInfo.atUri, postInfo.repo);
     const entry = getCached(cacheKey);
     if (entry !== null) {
+      cacheHits += 1;
       if (extractPostText(postInfo.element).trim() !== entry.text.trim()) {
         updatePostText(postInfo.element, entry.text);
+        applied += 1;
       }
     }
   }
 
   // ── 2. Thread-root fallback for post permalink pages.
-  applyToThreadRoot();
+  const threadApplied = applyToThreadRoot();
+  debugLog('apply-cache', { cacheSize: getCacheSize(), scanned, cacheHits, applied, threadApplied });
 }
 
 /**
@@ -85,6 +125,20 @@ function applyToThreadRoot(text?: string, rkey?: string): boolean {
     const entry = getCached(normalizedKey);
     if (entry !== null) {
       resolvedText = entry.text;
+    } else {
+      // If URL repo is a handle, try DID-canonicalized keys discovered from
+      // visible post metadata (e.g. feedItem-by-did:* containers).
+      for (const p of findPosts(document)) {
+        if (p.rkey !== urlRkey) continue;
+        if (p.repo.startsWith('did:')) {
+          const didKey = normalizeCacheKey(`at://${p.repo}/${APP_BSKY_FEED_POST_COLLECTION}/${urlRkey}`, p.repo);
+          const didEntry = getCached(didKey);
+          if (didEntry !== null) {
+            resolvedText = didEntry.text;
+            break;
+          }
+        }
+      }
     }
   }
 
@@ -126,15 +180,22 @@ function applyToThreadRoot(text?: string, rkey?: string): boolean {
  */
 async function fetchPermalinkPost(): Promise<void> {
   const urlMatch = /\/profile\/([^/?#]+)\/post\/([^/?#]+)/.exec(window.location.pathname);
-  if (!urlMatch) return;
+  if (!urlMatch) {
+    debugLog('fetch-permalink-skip', { reason: 'not-permalink', pathname: window.location.pathname });
+    return;
+  }
 
   // Only fetch if the thread root has an "Edited" badge
   const editedBadge = document.querySelector('button[aria-label="Edited"]');
-  if (!editedBadge) return;
+  if (!editedBadge) {
+    debugLog('fetch-permalink-skip', { reason: 'no-edited-badge', pathname: window.location.pathname });
+    return;
+  }
 
   const repo = urlMatch[1]!;
   const rkey = urlMatch[2]!;
   const atUri = `at://${repo}/${APP_BSKY_FEED_POST_COLLECTION}/${rkey}`;
+  debugLog('fetch-permalink-start', { atUri, repo, rkey });
 
   const text = await resolveEditedText(atUri, repo, APP_BSKY_FEED_POST_COLLECTION, rkey);
   if (text !== null) {
@@ -148,6 +209,9 @@ async function fetchPermalinkPost(): Promise<void> {
         break;
       }
     }
+    debugLog('fetch-permalink-applied', { atUri, textLength: text.length });
+  } else {
+    debugLog('fetch-permalink-miss', { atUri });
   }
 }
 
@@ -157,7 +221,10 @@ async function fetchPermalinkPost(): Promise<void> {
  */
 async function fetchEditedPostsInView(): Promise<void> {
   const editedButtons = document.querySelectorAll<HTMLElement>('button[aria-label="Edited"]');
-  if (editedButtons.length === 0) return;
+  if (editedButtons.length === 0) {
+    debugLog('fetch-edited-skip', { reason: 'no-edited-buttons' });
+    return;
+  }
 
   const postsToFetch: Array<{ atUri: string; repo: string; rkey: string }> = [];
 
@@ -179,16 +246,27 @@ async function fetchEditedPostsInView(): Promise<void> {
     postsToFetch.push({ atUri: info.atUri, repo: info.repo, rkey: info.rkey });
   }
 
-  if (postsToFetch.length === 0) return;
+  if (postsToFetch.length === 0) {
+    debugLog('fetch-edited-skip', { reason: 'no-uncached-posts', editedButtonCount: editedButtons.length });
+    return;
+  }
+
+  debugLog('fetch-edited-start', {
+    editedButtonCount: editedButtons.length,
+    postsToFetch: postsToFetch.map(p => ({ atUri: p.atUri, repo: p.repo, rkey: p.rkey })),
+  });
 
   const results = await resolveBatch(postsToFetch);
+  debugLog('fetch-edited-resolved', { resultCount: results.size });
 
   // Apply resolved text to DOM
+  let applied = 0;
   for (const [cacheKey, text] of results) {
     for (const p of findPosts(document)) {
       if (normalizeCacheKey(p.atUri, p.repo) === cacheKey) {
         if (extractPostText(p.element).trim() !== text.trim()) {
           updatePostText(p.element, text);
+          applied += 1;
         }
         break;
       }
@@ -197,10 +275,83 @@ async function fetchEditedPostsInView(): Promise<void> {
 
   // Also try thread-root
   applyToThreadRoot();
+  debugLog('fetch-edited-applied', { applied });
+}
+
+/**
+ * Fallback trigger: resolve visible own posts even when the "Edited" badge is
+ * not rendered in this surface (e.g. some search/profile variants).
+ */
+async function fetchOwnPostsInView(): Promise<void> {
+  if (currentDid === null) {
+    debugLog('fetch-own-skip', { reason: 'no-auth' });
+    return;
+  }
+
+  const postsToFetch: Array<{ atUri: string; repo: string; rkey: string }> = [];
+  let scanned = 0;
+  let ownVisible = 0;
+  let alreadyCached = 0;
+
+  for (const postInfo of findPosts(document)) {
+    scanned += 1;
+    if (!isElementOwnPost(postInfo.element, postInfo.repo)) {
+      continue;
+    }
+
+    ownVisible += 1;
+
+    const cacheKey = normalizeCacheKey(postInfo.atUri, postInfo.repo);
+    if (getCached(cacheKey) !== null) {
+      alreadyCached += 1;
+      continue;
+    }
+
+    postsToFetch.push({ atUri: postInfo.atUri, repo: postInfo.repo, rkey: postInfo.rkey });
+  }
+
+  if (postsToFetch.length === 0) {
+    debugLog('fetch-own-skip', { reason: 'no-uncached-own-posts', scanned, ownVisible, alreadyCached });
+    return;
+  }
+
+  debugLog('fetch-own-start', {
+    currentDid,
+    scanned,
+    ownVisible,
+    alreadyCached,
+    postsToFetch: postsToFetch.map(p => ({ atUri: p.atUri, repo: p.repo, rkey: p.rkey })),
+  });
+
+  const results = await resolveBatch(postsToFetch);
+  debugLog('fetch-own-resolved', { resultCount: results.size });
+
+  let applied = 0;
+  for (const [cacheKey, text] of results) {
+    for (const p of findPosts(document)) {
+      if (normalizeCacheKey(p.atUri, p.repo) === cacheKey) {
+        if (extractPostText(p.element).trim() !== text.trim()) {
+          updatePostText(p.element, text);
+          applied += 1;
+        }
+        break;
+      }
+    }
+  }
+
+  const threadApplied = applyToThreadRoot();
+  debugLog('fetch-own-applied', { applied, threadApplied });
 }
 
 /**
  * Trigger 3: LABEL_RECEIVED push from the service worker WebSocket.
+ *
+ * Label URIs always use the DID form (`at://did:plc:xyz/...`), but the DOM
+ * may only contain handle-based URIs (e.g. from anchor hrefs). To bridge the
+ * mismatch we:
+ *   1. Resolve the DID to a handle and register the mapping so all future
+ *      cache lookups work in both directions.
+ *   2. Match DOM posts by rkey (+ collection) since the URI form may differ.
  */
 async function handleLabelPush(uri: string): Promise<void> {
   const match = /^at:\/\/([^/]+)\/([^/]+)\/([^/]+)$/.exec(uri);
@@ -210,13 +361,28 @@ async function handleLabelPush(uri: string): Promise<void> {
   const collection = match[2]!;
   const rkey = match[3]!;
 
+  // Resolve DID → handle and register the pair so the cache module can
+  // translate between handle-form and DID-form keys.
+  if (repo.startsWith('did:')) {
+    try {
+      const handle = await getHandleForDid(repo);
+      if (handle) {
+        registerIdentity(handle, repo);
+        debugLog('label-push-resolved-identity', { did: repo, handle });
+      }
+    } catch {
+      // Best-effort — continue without the mapping.
+      debugLog('label-push-resolve-failed', { did: repo });
+    }
+  }
+
   const text = await resolveEditedText(uri, repo, collection, rkey);
   if (text === null) return;
 
-  // Apply to DOM via findPosts
-  const cacheKey = normalizeCacheKey(uri, repo);
+  // Apply to DOM — match by rkey since the URI form in the DOM may differ
+  // from the DID-based URI in the label notification.
   for (const p of findPosts(document)) {
-    if (normalizeCacheKey(p.atUri, p.repo) === cacheKey) {
+    if (p.rkey === rkey && p.collection === collection) {
       if (extractPostText(p.element).trim() !== text.trim()) {
         updatePostText(p.element, text);
       }
@@ -250,6 +416,34 @@ const ACTION_AREA_SELECTORS = [
   'button[aria-label="Open post options menu"]',
   'button[data-testid="postDropdownBtn"]',
 ];
+
+const isElementOwnPost = (postElement: HTMLElement, postRepo: string): boolean => {
+  if (currentDid === null) {
+    return false;
+  }
+
+  if (postRepo === currentDid || postRepo === currentHandle) {
+    return true;
+  }
+
+  const dataTestId = postElement.getAttribute('data-testid') ?? '';
+  if (
+    dataTestId.includes(`by-${currentDid}`) ||
+    (currentHandle !== null && dataTestId.includes(`by-${currentHandle}`))
+  ) {
+    return true;
+  }
+
+  const profileAnchors = postElement.querySelectorAll<HTMLAnchorElement>('a[href*="/profile/"]');
+  for (const anchor of profileAnchors) {
+    const href = anchor.getAttribute('href') ?? anchor.href;
+    if (!href) continue;
+    if (href.includes(`/profile/${currentDid}`)) return true;
+    if (currentHandle !== null && href.includes(`/profile/${currentHandle}`)) return true;
+  }
+
+  return false;
+};
 
 // Debug: Log when content script loads
 console.log(`${APP_NAME}: content script loaded on ${document.location.href}`);
@@ -341,6 +535,10 @@ const checkProfileSwitch = async (url: string): Promise<void> => {
 
   const identifier = extractProfileIdentifier(url);
   if (!identifier) return;
+
+  if (knownAccounts.length === 0) {
+    await loadKnownAccounts();
+  }
 
   const account = knownAccounts.find(acc => !acc.isActive && (acc.handle === identifier || acc.did === identifier));
   if (!account) return;
@@ -493,6 +691,25 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
         modal.setError('Failed to upload media. Please try again.');
         return;
       }
+    }
+
+    // Create a history record for the old version before modifying the post!
+    try {
+      await sendMessage({
+        type: 'CREATE_RECORD',
+        repo: info.repo,
+        collection: 'agency.self.skeeditor.postVersion',
+        record: {
+          $type: 'agency.self.skeeditor.postVersion',
+          postUri: `at://${info.repo}/${info.collection}/${info.rkey}`,
+          postCid: currentCid,
+          text: currentRecord.text,
+          createdAt: new Date().toISOString(),
+        },
+      });
+    } catch (err) {
+      console.warn('Failed to archive previous post version:', err);
+      // We do not abort the actual edit if archiving fails.
     }
 
     const writeResponse = await sendMessage({
@@ -661,22 +878,42 @@ const scanForPosts = (): void => {
   // This runs async — the MO path will apply the results once they land in cache.
   void fetchEditedPostsInView();
 
+  // Fallback trigger: own posts should still resolve even when this surface
+  // does not render the Edited badge.
+  void fetchOwnPostsInView();
+
   // Trigger 1: on permalink pages, always fetch the thread root.
   void fetchPermalinkPost();
 
   // No authenticated DID → don't inject any edit buttons.
   if (currentDid === null) {
     console.log(`${APP_NAME}: no auth session, skipping edit button injection`);
+    debugLog('scan-no-auth');
     return;
   }
 
+  let visiblePosts = 0;
+  let ownPosts = 0;
+
   for (const postInfo of findPosts(document)) {
-    if (postInfo.repo !== currentDid && postInfo.repo !== currentHandle) {
+    visiblePosts += 1;
+    if (!isElementOwnPost(postInfo.element, postInfo.repo)) {
       continue;
     }
+    ownPosts += 1;
 
     injectEditButton(postInfo.element);
   }
+
+  if (visiblePosts === 0) {
+    console.warn(`${APP_NAME}: no post containers detected on page`, {
+      pathname: location.pathname,
+      currentDid,
+      currentHandle,
+    });
+  }
+
+  debugLog('scan-summary', { currentDid, currentHandle, visiblePosts, ownPosts });
 };
 
 export const scheduleScanForPosts = (): void => {
@@ -922,7 +1159,12 @@ export const start = (): void => {
 
   void waitForSwReady()
     .then(() => Promise.all([refreshAuthState(), loadKnownAccounts(), loadFromStorage()]))
-    .then(() => {
+    .then(async () => {
+      debugLog('start-ready', { pathname: location.pathname, search: location.search });
+      // On first page load (not just SPA navigation), ensure active account
+      // matches the profile currently being viewed.
+      await checkProfileSwitch(location.href);
+
       scanForPosts();
 
       // scanForPosts() already triggers fetchPermalinkPost() and
@@ -933,6 +1175,10 @@ export const start = (): void => {
     })
     .catch(error => {
       console.error(`${APP_NAME}: failed to load auth state`, error);
+      debugLog('start-fallback-anonymous', {
+        pathname: location.pathname,
+        message: error instanceof Error ? error.message : String(error),
+      });
       scanForPosts();
       document.documentElement.setAttribute('data-skeeditor-initialized', 'true');
       console.info(`${APP_NAME}: content script loaded with anonymous state`);

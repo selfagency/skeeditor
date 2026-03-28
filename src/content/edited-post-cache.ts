@@ -16,6 +16,29 @@ const STORAGE_KEY = 'editedPosts';
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const SLINGSHOT_TIMEOUT_MS = 5_000;
 const MAX_CONCURRENT_FETCHES = 5;
+const DEBUG_LOCAL_STORAGE_KEY = 'skeeditor:debug';
+const DEBUG_QUERY_PARAM = 'skeeditor_debug';
+
+const isDebugEnabled = (): boolean => {
+  try {
+    if (globalThis.localStorage?.getItem(DEBUG_LOCAL_STORAGE_KEY) === '1') return true;
+  } catch {
+    // localStorage may be unavailable in some contexts.
+  }
+
+  const value = new URLSearchParams(globalThis.location?.search ?? '').get(DEBUG_QUERY_PARAM);
+  return value === '1' || value === 'true';
+};
+
+const debugLog = (event: string, data?: Record<string, unknown>): void => {
+  if (!isDebugEnabled()) return;
+  const prefix = `${APP_NAME}:debug:cache:${event}`;
+  if (data === undefined) {
+    console.debug(prefix);
+    return;
+  }
+  console.debug(prefix, data);
+};
 
 // ── Cache ─────────────────────────────────────────────────────────────────────
 
@@ -25,24 +48,98 @@ const inFlight = new Map<string, Promise<string | null>>();
 let currentDid: string | null = null;
 let currentHandle: string | null = null;
 
+// ── Handle ↔ DID registry ─────────────────────────────────────────────────────
+//
+// Bluesky's DOM uses handle-based URLs (e.g. feedItem-by-handle.bsky.social)
+// while label pushes arrive with DID-based AT-URIs. This registry maps between
+// the two so cache lookups succeed regardless of which form was used to store.
+
+const handleToDidMap = new Map<string, string>();
+const didToHandleMap = new Map<string, string>();
+
+/**
+ * Register a handle ↔ DID pair so the cache can look up entries stored under
+ * either form. Call this whenever the mapping becomes known (auth state,
+ * DID resolution on label push, etc.).
+ */
+export function registerIdentity(handle: string, did: string): void {
+  const h = handle.toLowerCase();
+  const d = did.toLowerCase();
+  handleToDidMap.set(h, d);
+  didToHandleMap.set(d, h);
+  debugLog('registry-add', { handle: h, did: d });
+}
+
+function lookupDid(identifier: string): string | null {
+  const lower = identifier.toLowerCase();
+  if (lower.startsWith('did:')) return lower;
+  return handleToDidMap.get(lower) ?? null;
+}
+
+function lookupHandle(identifier: string): string | null {
+  const lower = identifier.toLowerCase();
+  if (!lower.startsWith('did:')) return lower;
+  return didToHandleMap.get(lower) ?? null;
+}
+
+/**
+ * Return the alternate cache key form (handle↔DID swap), or null if the
+ * mapping is unknown.
+ */
+function getAlternateCacheKey(cacheKey: string): string | null {
+  const match = /^at:\/\/([^/]+)\/(.+)$/.exec(cacheKey);
+  if (!match) return null;
+  const repo = match[1]!;
+  const rest = match[2]!;
+
+  if (repo.startsWith('did:')) {
+    const handle = lookupHandle(repo);
+    if (handle) return `at://${handle}/${rest}`;
+  } else {
+    const did = lookupDid(repo);
+    if (did) return `at://${did}/${rest}`;
+  }
+  return null;
+}
+
 export function setIdentity(did: string | null, handle: string | null): void {
   currentDid = did;
   currentHandle = handle;
+  // Register the current user's handle ↔ DID pair.
+  if (did !== null && handle !== null) {
+    registerIdentity(handle, did);
+  }
 }
 
 /**
  * Normalize an AT-URI so its repo segment is always the DID, not a handle.
+ * Uses the handle↔DID registry to resolve any known user, not just the
+ * currently authenticated one.
  */
 export function normalizeCacheKey(atUri: string, repo: string): string {
+  // Already DID-form — return as-is.
+  if (repo.startsWith('did:')) return atUri;
+
+  // Current user shortcut (most common case).
   if (currentDid !== null && (repo === currentHandle || repo === currentDid)) {
     return atUri.replace(`at://${repo}/`, `at://${currentDid}/`);
   }
+
+  // Check the global registry for any known handle → DID mapping.
+  const did = lookupDid(repo);
+  if (did) {
+    return atUri.replace(`at://${repo}/`, `at://${did}/`);
+  }
+
   return atUri;
 }
 
 // ── Storage persistence ───────────────────────────────────────────────────────
 
-let browserStorage: { get: (key: string) => Promise<Record<string, unknown>>; set: (items: Record<string, unknown>) => Promise<void> } | null = null;
+let browserStorage: {
+  get: (key: string) => Promise<Record<string, unknown>>;
+  set: (items: Record<string, unknown>) => Promise<void>;
+} | null = null;
 
 export function setStorage(storage: typeof browserStorage): void {
   browserStorage = storage;
@@ -83,7 +180,16 @@ async function persistToStorage(): Promise<void> {
 // ── Cache access ──────────────────────────────────────────────────────────────
 
 export function getCached(cacheKey: string): CachedPost | null {
-  const entry = cache.get(cacheKey);
+  let entry = cache.get(cacheKey);
+
+  // Try alternate key form (handle ↔ DID swap) if primary key missed.
+  if (!entry) {
+    const altKey = getAlternateCacheKey(cacheKey);
+    if (altKey) {
+      entry = cache.get(altKey);
+    }
+  }
+
   if (!entry) return null;
   if (Date.now() - entry.fetchedAt >= CACHE_TTL_MS) {
     cache.delete(cacheKey);
@@ -99,6 +205,14 @@ export function setCached(cacheKey: string, text: string, originalText?: string)
     fetchedAt: Date.now(),
   };
   cache.set(cacheKey, entry);
+
+  // Also store under alternate key form so lookups succeed regardless of
+  // whether the caller used the handle-form or DID-form URI.
+  const altKey = getAlternateCacheKey(cacheKey);
+  if (altKey) {
+    cache.set(altKey, entry);
+  }
+
   void persistToStorage();
 }
 
@@ -109,7 +223,7 @@ export function getCacheSize(): number {
 // ── Slingshot fetch ───────────────────────────────────────────────────────────
 
 async function fetchFromSlingshot(repo: string, collection: string, rkey: string): Promise<string | null> {
-  const resolvedRepo = (repo === currentHandle && currentDid !== null) ? currentDid : repo;
+  const resolvedRepo = repo === currentHandle && currentDid !== null ? currentDid : repo;
 
   const url = new URL('https://slingshot.microcosm.blue/xrpc/com.atproto.repo.getRecord');
   url.searchParams.set('repo', resolvedRepo);
@@ -120,13 +234,20 @@ async function fetchFromSlingshot(repo: string, collection: string, rkey: string
   const timeout = setTimeout(() => controller.abort(), SLINGSHOT_TIMEOUT_MS);
 
   try {
+    debugLog('slingshot-start', { repo: resolvedRepo, collection, rkey });
     const response = await fetch(url.toString(), { signal: controller.signal });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      debugLog('slingshot-non-ok', { repo: resolvedRepo, collection, rkey, status: response.status });
+      return null;
+    }
 
     const data = (await response.json()) as { value?: { text?: unknown } };
     const text = data.value?.text;
-    return typeof text === 'string' ? text : null;
+    const resolvedText = typeof text === 'string' ? text : null;
+    debugLog('slingshot-done', { repo: resolvedRepo, collection, rkey, textLength: resolvedText?.length ?? 0 });
+    return resolvedText;
   } catch {
+    debugLog('slingshot-error', { repo: resolvedRepo, collection, rkey });
     return null;
   } finally {
     clearTimeout(timeout);
@@ -137,16 +258,23 @@ async function fetchFromSlingshot(repo: string, collection: string, rkey: string
 
 async function fetchFromPds(repo: string, collection: string, rkey: string): Promise<string | null> {
   try {
+    debugLog('pds-start', { repo, collection, rkey });
     const response = await sendMessage({
       type: 'GET_RECORD',
       repo,
       collection,
       rkey,
     });
-    if ('error' in response) return null;
+    if ('error' in response) {
+      debugLog('pds-error-response', { repo, collection, rkey, error: response.error });
+      return null;
+    }
     const text = (response as { value?: { text?: unknown } }).value?.text;
-    return typeof text === 'string' ? text : null;
+    const resolvedText = typeof text === 'string' ? text : null;
+    debugLog('pds-done', { repo, collection, rkey, textLength: resolvedText?.length ?? 0 });
+    return resolvedText;
   } catch {
+    debugLog('pds-throw', { repo, collection, rkey });
     return null;
   }
 }
@@ -164,11 +292,19 @@ export async function resolve(atUri: string, repo: string, collection: string, r
 
   // Cache hit — return immediately
   const cached = getCached(cacheKey);
-  if (cached) return cached.text;
+  if (cached) {
+    debugLog('resolve-cache-hit', { cacheKey, textLength: cached.text.length });
+    return cached.text;
+  }
 
   // Already fetching — return existing promise result (dedup)
   const existing = inFlight.get(cacheKey);
-  if (existing) return existing;
+  if (existing) {
+    debugLog('resolve-inflight-hit', { cacheKey });
+    return existing;
+  }
+
+  debugLog('resolve-miss', { atUri, repo, collection, rkey, cacheKey });
 
   const fetchPromise = doFetch(cacheKey, repo, collection, rkey);
   inFlight.set(cacheKey, fetchPromise);
@@ -181,21 +317,37 @@ export async function resolve(atUri: string, repo: string, collection: string, r
 }
 
 async function doFetch(cacheKey: string, repo: string, collection: string, rkey: string): Promise<string | null> {
-  // Primary: Slingshot (public, firehose-invalidated)
-  let text = await fetchFromSlingshot(repo, collection, rkey);
+  const resolvedRepo = repo === currentHandle && currentDid !== null ? currentDid : repo;
+  const isOwnPost = resolvedRepo === currentDid && currentDid !== null;
+  debugLog('doFetch-start', { cacheKey, repo, resolvedRepo, collection, rkey, isOwnPost });
+
+  // For own posts, prefer authenticated PDS reads first. Slingshot can lag by
+  // a few seconds and temporarily return the pre-edit text, which causes the UI
+  // to regress to stale content.
+  let text: string | null;
+  if (isOwnPost) {
+    text = await fetchFromPds(resolvedRepo, collection, rkey);
+    if (text === null) {
+      debugLog('doFetch-own-pds-miss-fallback-slingshot', { cacheKey, resolvedRepo, rkey });
+      text = await fetchFromSlingshot(repo, collection, rkey);
+    }
+  } else {
+    // Primary for non-own posts: Slingshot (public, firehose-invalidated)
+    text = await fetchFromSlingshot(repo, collection, rkey);
+  }
 
   // If the text from Slingshot matches the original (pre-edit) text,
   // Slingshot hasn't processed the edit yet — treat as miss
   const cached = cache.get(cacheKey);
   if (text !== null && cached?.originalText !== undefined && text === cached.originalText) {
+    debugLog('doFetch-reject-original-text-match', { cacheKey, rkey });
     text = null;
   }
 
   // Fallback: PDS for current user's own posts
   if (text === null) {
-    const resolvedRepo = (repo === currentHandle && currentDid !== null) ? currentDid : repo;
-    const isOwnPost = resolvedRepo === currentDid;
-    if (isOwnPost && currentDid !== null) {
+    if (isOwnPost) {
+      debugLog('doFetch-own-fallback-pds-retry', { cacheKey, resolvedRepo, rkey });
       text = await fetchFromPds(resolvedRepo, collection, rkey);
     }
   }
@@ -203,6 +355,9 @@ async function doFetch(cacheKey: string, repo: string, collection: string, rkey:
   if (text !== null) {
     const existingEntry = cache.get(cacheKey);
     setCached(cacheKey, text, existingEntry?.originalText);
+    debugLog('doFetch-cache-store', { cacheKey, textLength: text.length });
+  } else {
+    debugLog('doFetch-null', { cacheKey, repo: resolvedRepo, rkey });
   }
 
   return text;
@@ -223,11 +378,12 @@ interface PostRef {
 export async function resolveBatch(posts: PostRef[]): Promise<Map<string, string>> {
   const results = new Map<string, string>();
   const pending = [...posts];
+  debugLog('resolveBatch-start', { count: posts.length, maxConcurrent: MAX_CONCURRENT_FETCHES });
 
   while (pending.length > 0) {
     const batch = pending.splice(0, MAX_CONCURRENT_FETCHES);
     const settled = await Promise.allSettled(
-      batch.map(async (post) => {
+      batch.map(async post => {
         const text = await resolve(post.atUri, post.repo, APP_BSKY_FEED_POST_COLLECTION, post.rkey);
         if (text !== null) {
           const cacheKey = normalizeCacheKey(post.atUri, post.repo);
@@ -242,6 +398,8 @@ export async function resolveBatch(posts: PostRef[]): Promise<Map<string, string
       }
     }
   }
+
+  debugLog('resolveBatch-done', { resolvedCount: results.size });
 
   return results;
 }
