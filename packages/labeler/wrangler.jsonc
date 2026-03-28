@@ -34,6 +34,10 @@
       "new_sqlite_classes": ["BroadcastHub"],
     },
   ],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+  },
   "vars": {
     "LABELER_DID": "did:plc:m6h36r2hzbnozuhxj4obhkyb",
     "LABELER_HANDLE": "skeeditor.link",

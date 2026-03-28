@@ -65,6 +65,7 @@ async function getDpopKeyPair(did?: string): Promise<CryptoKeyPair> {
  * Errors are swallowed — the real-time update is best-effort only.
  */
 function emitLabelTrigger(uri: string, cid: string, did: string, accessToken: string): void {
+  console.log('[skeeditor] emitting label trigger', { uri, cid, did });
   void fetch(LABELER_EMIT_URL, {
     method: 'POST',
     headers: {
@@ -72,9 +73,18 @@ function emitLabelTrigger(uri: string, cid: string, did: string, accessToken: st
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ uri, cid, did }),
-  }).catch(err => {
-    console.warn('[skeeditor] labeler emit failed:', err);
-  });
+  })
+    .then(async res => {
+      const body = await res.text().catch(() => '');
+      if (!res.ok) {
+        console.warn(`[skeeditor] labeler emit HTTP ${res.status}:`, body);
+      } else {
+        console.log('[skeeditor] labeler emit ok:', body);
+      }
+    })
+    .catch(err => {
+      console.warn('[skeeditor] labeler emit failed:', err);
+    });
 }
 
 async function checkAndScheduleLabelerPrompt(pdsUrl: string, accessToken: string): Promise<void> {

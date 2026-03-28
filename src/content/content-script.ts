@@ -11,6 +11,59 @@ import './styles.css';
 const POST_MARKER_ATTRIBUTE = 'data-skeeditor-processed';
 const EDIT_BUTTON_ATTRIBUTE = 'data-skeeditor-edit-button';
 const ACTION_AREA_WAIT_TIMEOUT = 3000;
+
+// ── Persistent edit cache ─────────────────────────────────────────────────────
+
+const EDITED_POSTS_KEY = 'editedPosts';
+const EDITED_POST_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+interface EditedPostEntry {
+  text: string;
+  editedAt: number;
+}
+
+let editedPostsCache = new Map<string, EditedPostEntry>();
+
+async function loadEditedPostsCache(): Promise<void> {
+  try {
+    const stored = await browser.storage.local.get(EDITED_POSTS_KEY);
+    const raw = (stored[EDITED_POSTS_KEY] ?? {}) as Record<string, EditedPostEntry>;
+    const now = Date.now();
+    editedPostsCache = new Map(Object.entries(raw).filter(([, v]) => now - v.editedAt < EDITED_POST_TTL_MS));
+  } catch (err) {
+    console.warn(`${APP_NAME}: could not load edit cache`, err);
+  }
+}
+
+async function saveEditedPost(atUri: string, text: string): Promise<void> {
+  const entry: EditedPostEntry = { text, editedAt: Date.now() };
+  editedPostsCache.set(atUri, entry);
+  try {
+    const stored = await browser.storage.local.get(EDITED_POSTS_KEY);
+    const raw = (stored[EDITED_POSTS_KEY] ?? {}) as Record<string, EditedPostEntry>;
+    const now = Date.now();
+    const pruned: Record<string, EditedPostEntry> = {};
+    for (const [k, v] of Object.entries(raw)) {
+      if (now - v.editedAt < EDITED_POST_TTL_MS) pruned[k] = v;
+    }
+    pruned[atUri] = entry;
+    await browser.storage.local.set({ [EDITED_POSTS_KEY]: pruned });
+  } catch (err) {
+    console.warn(`${APP_NAME}: could not persist edited post`, err);
+  }
+}
+
+function applyEditedPostsFromCache(): void {
+  if (editedPostsCache.size === 0) return;
+  const now = Date.now();
+  for (const postInfo of findPosts(document)) {
+    const entry = editedPostsCache.get(postInfo.atUri);
+    if (entry !== undefined && now - entry.editedAt < EDITED_POST_TTL_MS) {
+      updatePostText(postInfo.element, entry.text);
+      markPostAsEdited(postInfo.element);
+    }
+  }
+}
 const ACTION_AREA_SELECTORS = [
   '[data-testid="postButtonInline"]',
   'button[aria-label="Open post options menu"]',
@@ -284,6 +337,7 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
     modal.markSaved(text);
     updatePostText(postElement, text);
     markPostAsEdited(postElement);
+    void saveEditedPost(info.atUri, text);
     modal.setSuccess('Edit saved.');
     console.info(`${APP_NAME}: edit saved`, { atUri: info.atUri, uri: writeResponse.uri, cid: writeResponse.cid });
   });
@@ -391,6 +445,9 @@ const injectEditButton = (postElement: HTMLElement): void => {
 };
 
 const scanForPosts = (): void => {
+  // Always re-apply persisted text edits — React may have re-rendered since last time.
+  applyEditedPostsFromCache();
+
   console.log(`${APP_NAME}: scanning for posts, currentDid=${currentDid}, currentHandle=${currentHandle}`);
   // No authenticated DID → don't inject any edit buttons.
   if (currentDid === null) {
@@ -568,7 +625,7 @@ export const start = (): void => {
     });
 
   void waitForSwReady()
-    .then(() => Promise.all([refreshAuthState(), loadKnownAccounts()]))
+    .then(() => Promise.all([refreshAuthState(), loadKnownAccounts(), loadEditedPostsCache()]))
     .then(() => {
       scanForPosts();
       document.documentElement.setAttribute('data-skeeditor-initialized', 'true');
