@@ -112,11 +112,9 @@ jobs:
       - name: Build extension
         run: pnpm build
 
-      - name: Render browser manifests
+      - name: Copy browser manifests
         run: |
-          pnpm manifest:chrome > /tmp/chrome-manifest.json
-          pnpm manifest:firefox > /tmp/firefox-manifest.json
-          pnpm manifest:safari > /tmp/safari-manifest.json
+          cp dist/chrome/manifest.json /tmp/chrome-manifest.json
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
