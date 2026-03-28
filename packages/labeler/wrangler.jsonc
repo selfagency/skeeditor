@@ -4,7 +4,9 @@
   "account_id": "b86b82d6fb914285229cdd89518db462",
   "main": "src/index.ts",
   "compatibility_date": "2025-03-27",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "durable_objects": {
     "bindings": [
       {
@@ -31,12 +33,25 @@
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": ["BroadcastHub"],
+      "new_sqlite_classes": [
+        "BroadcastHub"
+      ],
     },
   ],
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "persist": true,
+      "invocation_logs": true
+    },
+    "traces": {
+      "enabled": true,
+      "persist": true,
+      "head_sampling_rate": 1
+    }
   },
   "vars": {
     "LABELER_DID": "did:plc:m6h36r2hzbnozuhxj4obhkyb",
