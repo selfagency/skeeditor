@@ -70,7 +70,13 @@ function applyEditedPostsFromCache(): void {
   for (const postInfo of findPosts(document)) {
     const entry = editedPostsCache.get(postInfo.atUri);
     if (entry !== undefined && now - entry.editedAt < EDITED_POST_TTL_MS) {
-      updatePostText(postInfo.element, entry.text);
+      // Guard: only mutate the DOM if the visible text differs from the cached
+      // text. Without this check, every updatePostText() call triggers the
+      // MutationObserver which immediately calls applyEditedPostsFromCache()
+      // again, creating an infinite loop that locks the browser.
+      if (extractPostText(postInfo.element) !== entry.text) {
+        updatePostText(postInfo.element, entry.text);
+      }
     }
   }
 }
