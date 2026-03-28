@@ -22,6 +22,8 @@ export interface Label {
   neg?: boolean;
   cts: string;
   exp?: string;
+  /** secp256k1 signature over the DAG-CBOR-encoded label (without the sig field) */
+  sig?: Uint8Array;
 }
 
 /** subscribeLabels frame sent to WebSocket clients */

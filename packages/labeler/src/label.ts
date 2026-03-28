@@ -1,3 +1,4 @@
+import { createSign, createPrivateKey } from 'node:crypto';
 import type { Env, Label, LabelFrame, ErrorFrame } from './types.ts';
 
 // ── Minimal CBOR encoder ──────────────────────────────────────────────────────
@@ -112,16 +113,48 @@ function concatBytes(arrays: Uint8Array[]): Uint8Array {
   return result;
 }
 
+/**
+ * Sign an ATProto label with the labeler's secp256k1 private key.
+ *
+ * The signature is computed over the DAG-CBOR encoding of the label
+ * object with the `sig` field absent, as per the ATProto label spec.
+ * The `sig` field contains a compact 64-byte (r || s) secp256k1 signature.
+ *
+ * @see https://atproto.com/specs/label#signed-label-objects
+ */
+function signLabel(label: Label, privateKeyHex: string): Label {
+  // Encode label without sig field
+  const { sig: _, ...unsigned } = label;
+  const encoded = cborEncode(unsigned);
+
+  // Build SEC1 DER for secp256k1 private key:
+  // SEQUENCE { INTEGER 1, OCTET STRING <priv>, [0] { OID secp256k1 } }
+  const privBytes = Buffer.from(privateKeyHex, 'hex'); // 32 bytes
+  const oidSecp256k1 = Buffer.from([0x2b, 0x81, 0x04, 0x00, 0x0a]); // 1.3.132.0.10
+  const inner = Buffer.concat([
+    Buffer.from([0x02, 0x01, 0x01]), // INTEGER 1 (version)
+    Buffer.from([0x04, privBytes.length]),
+    privBytes, // OCTET STRING
+    Buffer.from([0xa0, 0x07, 0x06, 0x05]),
+    oidSecp256k1, // [0] { OID secp256k1 }
+  ]);
+  const sec1Der = Buffer.concat([Buffer.from([0x30, inner.length]), inner]);
+
+  const privateKey = createPrivateKey({ key: sec1Der, format: 'der', type: 'sec1' });
+
+  // ieee-p1363 encoding gives compact 64-byte r||s signature (not DER)
+  const sig = createSign('SHA256').update(encoded).sign({ key: privateKey, dsaEncoding: 'ieee-p1363' });
+
+  return { ...unsigned, sig: new Uint8Array(sig) };
+}
+
 // ── Label construction ────────────────────────────────────────────────────────
 
 /**
- * Build an ATProto label object marking a post as edited.
- * We do not cryptographically sign yet — leave sig field absent so that
- * AppView treats us as an unsigned self-label propagation until a signing
- * key is registered in the DID document.
+ * Build a signed ATProto label object marking a post as edited.
  */
 export function buildLabel(env: Env, uri: string, cid: string, _seq: number): Label {
-  return {
+  const unsigned: Label = {
     ver: 1,
     src: env.LABELER_DID,
     uri,
@@ -129,6 +162,16 @@ export function buildLabel(env: Env, uri: string, cid: string, _seq: number): La
     val: 'edited',
     cts: new Date().toISOString(),
   };
+
+  if (env.LABELER_SIGNING_KEY) {
+    try {
+      return signLabel(unsigned, env.LABELER_SIGNING_KEY);
+    } catch (e) {
+      console.error('Failed to sign label:', e);
+    }
+  }
+
+  return unsigned;
 }
 
 // ── Frame encoding ────────────────────────────────────────────────────────────
