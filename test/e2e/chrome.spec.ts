@@ -15,7 +15,7 @@ import { expect, test } from './fixtures/chromium-extension';
 // ── Popup smoke tests ─────────────────────────────────────────────────────────
 
 test('should load the extension popup in Chromium', async ({ extensionId, page }) => {
-  await page.goto(`chrome-extension://${extensionId}/popup/popup.html`);
+  await page.goto(`chrome-extension://${extensionId}/popup.html`);
 
   await expect(page.getByRole('heading', { name: 'skeeditor' })).toBeVisible();
   await expect(page.locator('auth-popup')).toBeAttached();

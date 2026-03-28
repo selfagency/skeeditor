@@ -14,7 +14,7 @@
   position: fixed;
   inset: 0;
   z-index: 10000;
-  background: rgba(0, 0, 0, 0.5);
+  background: oklch(0% 0 none / 0.5);
   align-items: center;
   justify-content: center;
 }
@@ -28,35 +28,35 @@
   flex-direction: column;
   border-radius: 0.5rem;
   background: white;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 25px 50px -12px oklch(0% 0 none / 0.25);
 }
 
 .edit-modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid oklch(92.76% 0.0058 264.5);
   padding: 1rem 1.25rem;
 }
 
 .edit-modal-title {
   font-size: 1rem;
   font-weight: 600;
-  color: #111827;
+  color: oklch(21.01% 0.0318 264.7);
 }
 
 .edit-modal-close {
   border-radius: 0.375rem;
   padding: 0.25rem;
-  color: #9ca3af;
+  color: oklch(71.37% 0.0192 261.3);
   background: transparent;
   border: none;
   cursor: pointer;
 }
 
 .edit-modal-close:hover {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: oklch(96.7% 0.0029 264.5);
+  color: oklch(55.1% 0.0234 264.4);
 }
 
 .edit-modal-body {
@@ -74,34 +74,34 @@
   width: 100%;
   resize: vertical;
   border-radius: 0.375rem;
-  background: white;
+  background: oklch(100% 0 none);
   padding: 0.5rem 0.75rem;
   font-size: 1rem;
-  color: #111827;
-  border: 1px solid #d1d5db;
+  color: oklch(21.01% 0.0318 264.7);
+  border: 1px solid oklch(87.17% 0.0093 258.3);
 }
 
 .edit-modal-textarea:focus {
-  outline: 2px solid #4f46e5;
+  outline: 2px solid oklch(58.99% 0.2247 259.4);
   outline-offset: -1px;
 }
 
 .edit-modal-textarea::placeholder {
-  color: #9ca3af;
+  color: oklch(71.37% 0.0192 261.3);
 }
 
 .edit-modal-char-count {
   display: flex;
   justify-content: flex-end;
   font-size: 0.75rem;
-  color: #6b7280;
+  color: oklch(55.1% 0.0234 264.4);
 }
 
 .edit-modal-footer {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid oklch(92.76% 0.0058 264.5);
   padding: 1rem 1.25rem;
 }
 
@@ -115,87 +115,87 @@
 
 .edit-modal-btn-cancel {
   background: white;
-  color: #111827;
-  border: 1px solid #d1d5db;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  color: oklch(21.01% 0.0318 264.7);
+  border: 1px solid oklch(87.17% 0.0093 258.3);
+  box-shadow: 0 1px 2px 0 oklch(0% 0 none / 0.05);
 }
 
 .edit-modal-btn-cancel:hover {
-  background: #f9fafb;
+  background: oklch(98.46% 0.0017 247.8);
 }
 
 .edit-modal-btn-save {
-  background: #4f46e5;
+  background: oklch(58.99% 0.2247 259.4);
   color: white;
   border: none;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 2px 0 oklch(0% 0 none / 0.05);
 }
 
 .edit-modal-btn-save:hover {
-  background: #4338ca;
+  background: oklch(45.68% 0.2146 277);
 }
 
 .edit-modal-btn-save:disabled {
-  background: #e5e7eb;
-  color: #9ca3af;
+  background: oklch(92.76% 0.0058 264.5);
+  color: oklch(71.37% 0.0192 261.3);
   cursor: not-allowed;
 }
 
 /* Dark theme support */
 @media (prefers-color-scheme: dark) {
   .edit-modal-container {
-    background: #1f2937;
-    outline: 1px solid rgba(255, 255, 255, 0.1);
+    background: oklch(27.81% 0.0296 256.8);
+    outline: 1px solid oklch(100% 0 none / 0.1);
     outline-offset: -1px;
   }
-  
+
   .edit-modal-header {
-    border-bottom-color: rgba(255, 255, 255, 0.1);
+    border-bottom-color: oklch(100% 0 none / 0.1);
   }
-  
+
   .edit-modal-title {
-    color: white;
+    color: oklch(100% 0 none);
   }
-  
+
   .edit-modal-close:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
+    background: oklch(100% 0 none / 0.1);
+    color: oklch(100% 0 none);
   }
-  
+
   .edit-modal-textarea {
-    background: rgba(255, 255, 255, 0.05);
-    color: white;
-    border-color: rgba(255, 255, 255, 0.1);
+    background: oklch(100% 0 none / 0.05);
+    color: oklch(100% 0 none);
+    border-color: oklch(100% 0 none / 0.1);
   }
-  
+
   .edit-modal-textarea:focus {
-    outline-color: #6366f1;
+    outline-color: oklch(58.99% 0.2247 259.4);
   }
-  
+
   .edit-modal-footer {
-    border-top-color: rgba(255, 255, 255, 0.1);
+    border-top-color: oklch(100% 0 none / 0.1);
   }
-  
+
   .edit-modal-btn-cancel {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-    border-color: rgba(255, 255, 255, 0.05);
+    background: oklch(100% 0 none / 0.1);
+    color: oklch(100% 0 none);
+    border-color: oklch(100% 0 none / 0.05);
   }
-  
+
   .edit-modal-btn-cancel:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: oklch(100% 0 none / 0.2);
   }
-  
+
   .edit-modal-btn-save {
-    background: #6366f1;
+    background: oklch(58.99% 0.2247 259.4);
   }
-  
+
   .edit-modal-btn-save:hover {
-    background: #4f46e5;
+    background: oklch(51.06% 0.2301 277);
   }
-  
+
   .edit-modal-btn-save:disabled {
-    background: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.3);
+    background: oklch(100% 0 none / 0.1);
+    color: oklch(100% 0 none / 0.3);
   }
 }

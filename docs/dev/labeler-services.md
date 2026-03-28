@@ -1,108 +1,122 @@
-# Labeler Services for skeeditor
+# Labeler Services
 
-Based on the Bluesky moderation documentation, here's what we need to know about implementing labeler services:
+skeeditor operates its own AT Protocol labeler service that applies an **"edited"** label to posts the user has edited through the extension. This lets other users see at a glance that a post has been modified.
 
-## What are Labeler Services?
+---
 
-Labeler services are moderation services that can apply labels to content on the Bluesky network. These labels help users filter and moderate content according to their preferences.
+## Overview
 
-## Key Components
+After a user edits a post, skeeditor writes the updated record to their PDS and simultaneously has the labeler service apply an `edited` label to that AT-URI. Users who have subscribed to the skeeditor labeler will see a badge on edited posts in the Bluesky app.
 
-### 1. Labeler Declaration
+---
 
-To become a labeler service, an account must:
+## Labeler account
 
-- Publish an `app.bsky.labeler.service` record declaring itself as a labeler
-- Include policies about what labels they publish
-- Specify subject types and collections they handle
+| Property | Value |
+| --- | --- |
+| Handle | `@skeeditor.link` |
+| DID | `did:plc:m6h36r2hzbnozuhxj4obhkyb` |
+| Deployed at | `https://labeler.skeeditor.link` |
 
-Example declaration:
+The DID is exported from `src/shared/constants.ts` as `LABELER_DID`.
 
-```json
+---
+
+## Cloudflare Worker (`packages/labeler/`)
+
+The labeler service runs as a [Cloudflare Worker](https://workers.cloudflare.com/), deployed via [Wrangler](https://developers.cloudflare.com/workers/wrangler/). The source lives in `packages/labeler/src/`.
+
+### Key files
+
+| File | Purpose |
+| --- | --- |
+| `src/index.ts` | Worker entry point — handles incoming HTTP requests |
+| `src/auth.ts` | DID authentication and request verification |
+| `src/hub.ts` | `BroadcastHub` Durable Object — tracks active subscriptions |
+| `src/label.ts` | Label creation and signing |
+| `src/did-document.ts` | DID document resolution |
+| `src/types.ts` | Shared TypeScript types |
+
+### Bindings (wrangler.jsonc)
+
+| Binding | Kind | Purpose |
+| --- | --- | --- |
+| `LABELS_KV` | KV Namespace | Stores signed label records |
+| `BROADCAST_HUB` | Durable Object | Manages WebSocket listener fan-out |
+
+### Environment variables
+
+| Variable | Value |
+| --- | --- |
+| `LABELER_DID` | `did:plc:m6h36r2hzbnozuhxj4obhkyb` |
+| `LABELER_HANDLE` | `skeeditor.link` |
+
+---
+
+## Labeler subscription flow
+
+Subscribing to the labeler is optional. On first sign-in, the extension checks whether the user has already subscribed and shows a **consent dialog** in the popup if they have not.
+
+```text
+AUTH_CALLBACK completes successfully
+  │
+  ▼
+Background: sends CHECK_LABELER_SUBSCRIPTION message to itself
+  → calls checkAndScheduleLabelerPrompt()
+  → fetches the user's labeler preferences from the PDS
+  │
+  ├── User already subscribed → no UI shown
+  │
+  └── User not subscribed → sets a flag in extension storage
+        │
+        ▼
+      Popup next opens → sees flag → shows consent dialog
+        │
+        ├── User accepts → extension adds LABELER_DID to user's labeler preferences
+        │
+        └── User declines → flag cleared, user subscribed to nothing
+```
+
+The `CHECK_LABELER_SUBSCRIPTION` message is fire-and-forget from the perspective of the popup. A network error during the check is silently swallowed — it must never block or delay the sign-in flow.
+
+---
+
+## Label structure
+
+Labels applied by the skeeditor labeler follow the AT Protocol label specification:
+
+```ts
 {
-  "$type": "app.bsky.labeler.service",
-  "policies": {
-    "labelValues": ["porn", "spider"],
-    "labelValueDefinitions": [
-      {
-        "identifier": "spider",
-        "severity": "alert",
-        "blurs": "media",
-        "defaultSetting": "warn",
-        "locales": [
-          { "lang": "en", "name": "Spider Warning", "description": "Spider!!!" }
-        ]
-      }
-    ]
-  },
-  "subjectTypes": ["record"],
-  "subjectCollections": ["app.bsky.feed.post", "app.bsky.actor.profile"],
-  "reasonTypes": ["com.atproto.moderation.defs#reasonOther"],
-  "createdAt": "2026-03-25T00:00:00.000Z"
+  src: "did:plc:m6h36r2hzbnozuhxj4obhkyb",  // labeler DID
+  uri: "at://did:plc:alice/app.bsky.feed.post/3jxyz",  // labeled post
+  cid: "<post-cid>",         // CID of the version being labeled
+  val: "edited",             // label value
+  cts: "2025-01-01T00:00:00.000Z",  // creation timestamp
 }
 ```
 
-### 2. Label Structure
+---
 
-Labels have this structure:
+## Deploying the labeler worker
 
-```typescript
-{
-  src: string; // DID of the labeler
-  uri: string; // AT URI of the labeled content
-  cid?: string; // Optional CID for version-specific labeling
-  val: string; // Label value (e.g., "edited", "spam")
-  neg?: boolean; // Negation flag
-  cts: string; // Creation timestamp
-}
+```sh
+cd packages/labeler
+
+# Create KV namespaces (first time only)
+wrangler kv namespace create LABELS_KV
+wrangler kv namespace create LABELS_KV --preview
+# → copy the returned IDs into wrangler.jsonc
+
+# Deploy
+wrangler deploy
 ```
 
-### 3. Label Values
+The custom domain `labeler.skeeditor.link` is configured as a route in `wrangler.jsonc` and must be set up in the Cloudflare dashboard.
 
-- **Global labels**: Defined by the protocol (e.g., `porn`, `sexual`, `gore`, `bot`)
-- **Custom labels**: Defined by individual labelers
-- **Special labels**: Start with `!` (e.g., `!hide`, `!warn`, `!no-unauthenticated`)
-
-## Implementation Considerations for skeeditor
-
-### 1. Self-Labeling (Already Implemented)
-
-We've implemented self-labeling for edited posts using the `edited` label. This is the correct approach for our use case.
-
-### 2. Labeler Service Requirements
-
-If we want to create a full labeler service:
-
-1. **Service Declaration**: Publish the `app.bsky.labeler.service` record
-2. **Label Publishing**: Implement a labeling service that publishes signed labels
-3. **Label Sync**: Users would need to subscribe to our labeler DID
-4. **Label Definitions**: Provide clear definitions for any custom labels we create
-
-### 3. User Subscription
-
-Users can subscribe to labelers by setting the `atproto-accept-labelers` HTTP header with a comma-separated list of labeler DIDs.
-
-### 4. Moderation Preferences
-
-Our extension should respect user moderation preferences from `app.bsky.actor.preferences`.
-
-## Current Implementation Status
-
-✅ **Self-labeling for edited posts**: Implemented using the `edited` label
-✅ **Label structure**: Follows AT Protocol specifications
-❌ **Full labeler service**: Not implemented (would require separate service infrastructure)
-
-## Recommendations
-
-1. **For now**: Continue with self-labeling approach - it's sufficient for our edit tracking needs
-2. **Future consideration**: If we want to provide moderation services, we would need to:
-   - Set up a separate labeling service
-   - Publish labeler declaration
-   - Implement label signing and publishing
-   - Handle user subscriptions
+---
 
 ## Resources
 
-- [Bluesky Moderation Documentation](https://docs.bsky.app/docs/advanced-guides/moderation)
-- [AT Protocol Label Specification](https://atproto.com/specs/label)
-- [Official TypeScript SDK Moderation APIs](https://github.com/bluesky-social/atproto/tree/main/packages/api)
+- [AT Protocol label specification](https://atproto.com/specs/label)
+- [Bluesky moderation documentation](https://docs.bsky.app/docs/advanced-guides/moderation)
+- [Cloudflare Workers documentation](https://developers.cloudflare.com/workers/)

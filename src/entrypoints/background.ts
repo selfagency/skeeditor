@@ -1,6 +1,13 @@
+import { browser } from 'wxt/browser';
 import { defineBackground } from 'wxt/utils/define-background';
 import { APP_NAME } from '../shared/constants';
 import { registerMessageRouter } from '../background/message-router';
+
+// Tell TypeScript that `self` in this module is a ServiceWorkerGlobalScope,
+// not a Window. Both DOM and WebWorker are in the project's lib, so TypeScript
+// defaults to the DOM definition of `self`; this override corrects that for the
+// background entrypoint which only ever runs inside a service worker.
+declare const self: ServiceWorkerGlobalScope & typeof globalThis;
 
 export default defineBackground(() => {
   console.info(`${APP_NAME}: background service worker started`);
@@ -43,6 +50,29 @@ export default defineBackground(() => {
     });
   } catch (err) {
     console.warn(`${APP_NAME}: alarms API unavailable, skipping alarm keepalive`, err);
+  }
+
+  // On install/activate, clear stale OAuth PKCE state that may have been written to
+  // browser.storage.local on Firefox (where storage.session is unavailable). Any
+  // pendingAuth older than 5 minutes from a previous lifecycle can never be redeemed.
+  if (!('session' in browser.storage)) {
+    const PENDING_AUTH_TTL_MS = 5 * 60 * 1000;
+    void (async () => {
+      try {
+        const result = await browser.storage.local.get('pendingAuth');
+        const record = (result as Record<string, unknown>)['pendingAuth'];
+        if (!record) return;
+        const createdAt =
+          typeof (record as Record<string, unknown>)['createdAt'] === 'number'
+            ? ((record as Record<string, unknown>)['createdAt'] as number)
+            : undefined;
+        if (createdAt !== undefined && Date.now() - createdAt > PENDING_AUTH_TTL_MS) {
+          await browser.storage.local.remove('pendingAuth');
+        }
+      } catch {
+        // Best-effort; failure here must never block the message router.
+      }
+    })();
   }
 
   registerMessageRouter();

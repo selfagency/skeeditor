@@ -19,7 +19,7 @@ export default defineConfig({
     description: 'Edit your own Bluesky posts directly on bsky.app.',
     incognito: 'not_allowed' as const,
     permissions: ['storage', 'activeTab', 'tabs', 'alarms'] as const,
-    host_permissions: ['https://bsky.app/*', 'https://*.bsky.network/*', 'https://skeeditor.self.agency/*'],
+    host_permissions: ['https://bsky.app/*', 'https://*.bsky.network/*', 'https://docs.skeeditor.link/*'],
     action: {
       default_title: 'skeeditor',
       default_popup: 'popup/index.html',

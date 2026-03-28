@@ -19,12 +19,12 @@ export const resolveBuiltExtensionPath = async (browserOverride?: Browser): Prom
     ? (rawBrowser as Browser)
     : 'chrome';
 
-  const extensionPath = resolve(process.cwd(), 'dist', `${browser}-mv3`);
+  const extensionPath = resolve(process.cwd(), 'dist', browser);
 
   await Promise.all([
     access(resolve(extensionPath, 'background.js')),
     access(resolve(extensionPath, 'manifest.json')),
-    access(resolve(extensionPath, 'popup/index.html')),
+    access(resolve(extensionPath, 'popup.html')),
   ]);
 
   return extensionPath;

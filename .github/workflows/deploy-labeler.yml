@@ -1,0 +1,46 @@
+name: Deploy labeler
+
+# Auto-deploy is intentionally disabled until:
+# 1. packages/labeler/src/ worker source is committed to the repo
+# 2. CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID secrets are set
+# 3. KV namespace IDs are filled in wrangler.jsonc
+# 4. LABELER_SIGNING_KEY secret is set via `wrangler secret put LABELER_SIGNING_KEY`
+# Enable the push trigger (and remove workflow_dispatch-only) once all of the above are done.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-labeler-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Cloudflare Workers
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Deploy labeler Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: packages/labeler
+          command: deploy --minify

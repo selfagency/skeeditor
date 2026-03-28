@@ -92,7 +92,7 @@ export const test = chromiumBase.extend<BskyRouteFixtures>({
   setAuthState: async ({ context, extensionId }, use) => {
     await use(async (did: string) => {
       const popupPage = await context.newPage();
-      await popupPage.goto(`chrome-extension://${extensionId}/popup/popup.html`);
+      await popupPage.goto(`chrome-extension://${extensionId}/popup.html`);
       await popupPage.waitForLoadState('domcontentloaded');
       // chrome.storage.local is available on extension pages.
       // session-store.ts now uses a DID-keyed sessions map + activeDid key.

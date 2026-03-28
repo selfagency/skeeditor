@@ -8,7 +8,7 @@ skeeditor uses Bluesky's official OAuth 2.0 flow. Your password is never stored 
 2. The popup shows a **Sign In** button. Click it.
 3. A new tab opens to `bsky.social` (the Bluesky authorization server).
 4. Log in with your Bluesky credentials and approve the access request.
-5. The tab closes automatically and the popup now shows your handle and a **Sign Out** button.
+5. The tab closes automatically and the popup now shows your handle and account controls.
 
 ::: info Re-authorization
 OAuth tokens expire. When your session expires, the popup will prompt you to **Re-authorize**. This repeats the same OAuth flow but does not require you to re-enter your password if Bluesky still has an active session for your browser.
@@ -16,10 +16,42 @@ OAuth tokens expire. When your session expires, the popup will prompt you to **R
 
 ---
 
+## Manage multiple accounts
+
+You can sign in to more than one Bluesky account. The active account is the one used when injecting Edit badges and saving edits.
+
+### Switch accounts
+
+1. Click the **skeeditor** toolbar icon.
+2. The popup lists all signed-in accounts. Click any account to make it active.
+
+The content script immediately reflects the new active account — Edit badges appear only on posts by the newly active user.
+
+### Add another account
+
+1. Click the **skeeditor** toolbar icon.
+2. Click **Add account** (or **Sign In** if shown).
+3. Complete the OAuth flow for the new account.
+
+### Sign out a single account
+
+1. Click the **skeeditor** toolbar icon.
+2. Find the account you want to remove.
+3. Click the **Sign Out** button next to it.
+
+Only that account's session is deleted. Other accounts remain signed in.
+
+### Sign out of all accounts
+
+1. Click the **skeeditor** toolbar icon.
+2. Click **Sign Out All**.
+
+---
+
 ## Edit a post
 
 1. Browse to [bsky.app](https://bsky.app) while signed in via skeeditor.
-2. Any post written by your account will show a small **✏ Edit** badge in the bottom‑right corner.
+2. Any post written by your active account will show a small **✏ Edit** badge in the bottom‑right corner.
 3. Click **Edit** to open the editor modal.
 
 ### The edit modal
@@ -39,7 +71,32 @@ When you save, skeeditor scans the new text for links (URLs), @mentions, and #ha
 
 ### After saving
 
-After a successful save the modal closes and the post text on the page updates to reflect your edits. Other users will see the updated text the next time they load or refresh the page.
+After a successful save the modal closes and the post text on the page updates to reflect your edits. Other users will see the updated text the next time they load or refresh the page. If you have subscribed to the skeeditor labeler (see below), an "edited" label will also be applied to the post.
+
+---
+
+## Edit time limit
+
+You can configure a time window after which the Edit button is hidden on older posts. This is useful if you only want to allow fast corrections rather than open-ended editing.
+
+1. Click the **skeeditor** toolbar icon.
+2. Click **Options** (or the gear icon).
+3. Under **Edit time limit**, choose a window between 0.5 and 5 minutes, or select **No limit** to allow editing at any time.
+
+The setting is stored locally in the extension and takes effect immediately.
+
+---
+
+## Labeler consent
+
+After signing in for the first time, skeeditor will ask whether you want to subscribe to the **skeeditor labeler** (`@skeeditor.link`). Subscribing means:
+
+- Posts you have edited through skeeditor will be marked with an **"edited"** label visible to other Bluesky users who also subscribe to the labeler.
+- The label is informational only — it does not suppress or hide the post.
+
+You can choose **Subscribe** to opt in or **Not now** to decline. Declining has no effect on the editing functionality; you simply will not see "edited" labels on posts.
+
+You can manage your labeler subscriptions at any time from your [Bluesky moderation settings](https://bsky.app/moderation).
 
 ---
 
@@ -59,6 +116,6 @@ See [Conflict Handling](../dev/conflicts) in the developer docs for the full tec
 ## Sign out
 
 1. Click the **skeeditor** toolbar icon.
-2. Click **Sign Out**.
+2. Click **Sign Out** next to your account (or **Sign Out All**).
 
-skeeditor deletes all stored tokens immediately. The edit badges disappear from bsky.app until you sign in again.
+skeeditor immediately deletes the stored session. The edit badges disappear from bsky.app until you sign in again.

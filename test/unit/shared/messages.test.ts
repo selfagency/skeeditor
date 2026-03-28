@@ -122,4 +122,28 @@ describe('sendMessage', () => {
 
     await expect(sendMessage({ type: 'AUTH_SIGN_OUT' })).rejects.toThrow('Extension context invalidated');
   });
+
+  it('retries when the SW has not yet started (Receiving end does not exist)', async () => {
+    const swNotReady = new Error('Could not establish connection. Receiving end does not exist.');
+    const mockResponse = { ok: true as const };
+
+    vi.mocked(browser.runtime.sendMessage)
+      .mockRejectedValueOnce(swNotReady as never)
+      .mockRejectedValueOnce(swNotReady as never)
+      .mockResolvedValueOnce(mockResponse as never);
+
+    const result = await sendMessage({ type: 'AUTH_SIGN_IN' }, { maxAttempts: 8, retryDelayMs: 0 });
+
+    expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledTimes(3);
+    expect(result).toEqual(mockResponse);
+  });
+
+  it('throws the connection error after all retry attempts are exhausted', async () => {
+    const swNotReady = new Error('Could not establish connection. Receiving end does not exist.');
+    vi.mocked(browser.runtime.sendMessage).mockRejectedValue(swNotReady as never);
+
+    await expect(sendMessage({ type: 'AUTH_SIGN_IN' }, { maxAttempts: 3, retryDelayMs: 0 })).rejects.toThrow(
+      'Could not establish connection. Receiving end does not exist.',
+    );
+  });
 });

@@ -31,5 +31,5 @@ features:
     details: Pure TypeScript, no UI framework overhead. The extension adds a single content script and a small background worker.
   - icon: 🦋
     title: Official Bluesky account
-    details: Follow [@skeeditor.bsky.social](https://bsky.app/profile/skeeditor.bsky.social) for updates and support.
+    details: Follow [@skeeditor.link](https://bsky.app/profile/skeeditor.link) for updates and support.
 ---
