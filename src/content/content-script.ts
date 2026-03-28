@@ -48,7 +48,7 @@ function applyEditedPostsFromCache(): void {
     const cacheKey = normalizeCacheKey(postInfo.atUri, postInfo.repo);
     const entry = getCached(cacheKey);
     if (entry !== null) {
-      if (extractPostText(postInfo.element) !== entry.text) {
+      if (extractPostText(postInfo.element).trim() !== entry.text.trim()) {
         updatePostText(postInfo.element, entry.text);
       }
     }
@@ -95,7 +95,7 @@ function applyToThreadRoot(text?: string, rkey?: string): boolean {
   // blindly taking the first POST_TEXT_QUERY match (which could be a reply).
   for (const p of findPosts(document)) {
     if (p.rkey === urlRkey) {
-      if (extractPostText(p.element) !== resolvedText) {
+      if (extractPostText(p.element).trim() !== resolvedText.trim()) {
         updatePostText(p.element, resolvedText);
       }
       return true;
@@ -143,7 +143,7 @@ async function fetchPermalinkPost(): Promise<void> {
     const atCacheKey = normalizeCacheKey(atUri, repo);
     for (const p of findPosts(document)) {
       const cacheKey = normalizeCacheKey(p.atUri, p.repo);
-      if (cacheKey === atCacheKey && extractPostText(p.element) !== text) {
+      if (cacheKey === atCacheKey && extractPostText(p.element).trim() !== text.trim()) {
         updatePostText(p.element, text);
         break;
       }
@@ -187,7 +187,7 @@ async function fetchEditedPostsInView(): Promise<void> {
   for (const [cacheKey, text] of results) {
     for (const p of findPosts(document)) {
       if (normalizeCacheKey(p.atUri, p.repo) === cacheKey) {
-        if (extractPostText(p.element) !== text) {
+        if (extractPostText(p.element).trim() !== text.trim()) {
           updatePostText(p.element, text);
         }
         break;
@@ -217,7 +217,7 @@ async function handleLabelPush(uri: string): Promise<void> {
   const cacheKey = normalizeCacheKey(uri, repo);
   for (const p of findPosts(document)) {
     if (normalizeCacheKey(p.atUri, p.repo) === cacheKey) {
-      if (extractPostText(p.element) !== text) {
+      if (extractPostText(p.element).trim() !== text.trim()) {
         updatePostText(p.element, text);
       }
       break;
@@ -656,11 +656,6 @@ const scanForPosts = (): void => {
   applyEditedPostsFromCache();
 
   console.log(`${APP_NAME}: scanning for posts, currentDid=${currentDid}, currentHandle=${currentHandle}`);
-  // No authenticated DID → don't inject any edit buttons.
-  if (currentDid === null) {
-    console.log(`${APP_NAME}: no auth session, skipping edit button injection`);
-    return;
-  }
 
   // Trigger 2: detect "Edited" badges in the DOM and fetch from Slingshot.
   // This runs async — the MO path will apply the results once they land in cache.
@@ -668,6 +663,12 @@ const scanForPosts = (): void => {
 
   // Trigger 1: on permalink pages, always fetch the thread root.
   void fetchPermalinkPost();
+
+  // No authenticated DID → don't inject any edit buttons.
+  if (currentDid === null) {
+    console.log(`${APP_NAME}: no auth session, skipping edit button injection`);
+    return;
+  }
 
   for (const postInfo of findPosts(document)) {
     if (postInfo.repo !== currentDid && postInfo.repo !== currentHandle) {
