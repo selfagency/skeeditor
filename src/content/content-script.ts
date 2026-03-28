@@ -3,7 +3,7 @@ import { APP_NAME } from '../shared/constants';
 import type { AuthListAccountsAccount, PutRecordConflictResponse, PutRecordResponse } from '../shared/messages';
 import { sendMessage } from '../shared/messages';
 import { EditModal } from './edit-modal';
-import { extractPostInfo, extractPostText, findPosts, updatePostText } from './post-detector';
+import { extractPostInfo, extractPostText, findPosts, type PostInfo, updatePostText } from './post-detector';
 import { buildUpdatedPostRecord, type EditablePostRecord } from './post-editor';
 import './styles.css';
 
@@ -99,7 +99,63 @@ function applyEditedPostsFromCache(): void {
       if (extractPostText(postInfo.element) !== entry.text) {
         updatePostText(postInfo.element, entry.text);
       }
+      // Kick off a background PDS fetch to get the authoritative current text.
+      // bsky.app's AppView doesn't reflect edits from the firehose, so we read
+      // directly from the PDS on every page load/navigation to stay in sync.
+      void refreshPostTextFromPds(postInfo, cacheKey);
     }
+  }
+}
+
+/**
+ * In-flight set: prevents duplicate GET_RECORD calls for the same AT-URI
+ * while a fetch is already pending (e.g. when the MO fires repeatedly).
+ */
+const pdsFetchInFlight = new Set<string>();
+
+/**
+ * Fetch the authoritative post text from the PDS via GET_RECORD and update
+ * both the DOM and the local cache to match.
+ *
+ * bsky.app's AppView does not process edits replayed from the firehose —
+ * it continues showing the original text.  Other clients (Blacksky etc.)
+ * read the PDS directly.  Calling this after applying the local cache
+ * ensures skeeditor users always see what the PDS actually has.
+ */
+async function refreshPostTextFromPds(postInfo: PostInfo, cacheKey: string): Promise<void> {
+  if (pdsFetchInFlight.has(cacheKey)) return;
+  pdsFetchInFlight.add(cacheKey);
+  try {
+    const response = await sendMessage({
+      type: 'GET_RECORD',
+      repo: postInfo.repo,
+      collection: postInfo.collection,
+      rkey: postInfo.rkey,
+    });
+    if ('error' in response) return;
+
+    const freshText = (response.value as EditablePostRecord).text;
+    if (typeof freshText !== 'string') return;
+
+    // Update in-memory cache + storage so subsequent loads use fresh text.
+    const existing = editedPostsCache.get(cacheKey);
+    if (existing !== undefined && existing.text !== freshText) {
+      void saveEditedPost(cacheKey, freshText, existing.originalText);
+    }
+
+    // Re-query the post element (the original ref may be stale after React re-renders).
+    for (const p of findPosts(document)) {
+      if (normalizeCacheKey(p.atUri, p.repo) === cacheKey) {
+        if (extractPostText(p.element) !== freshText) {
+          updatePostText(p.element, freshText);
+        }
+        break;
+      }
+    }
+  } catch {
+    // Silent — network error, PDS unreachable, etc. Local cache stays.
+  } finally {
+    pdsFetchInFlight.delete(cacheKey);
   }
 }
 const ACTION_AREA_SELECTORS = [
