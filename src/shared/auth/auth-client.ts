@@ -125,6 +125,56 @@ export async function exchangeCodeForTokens(
 }
 
 /**
+ * Exchange a refresh token for a new access/refresh token pair at the token endpoint.
+ *
+ * Must be called from the background service worker. Content scripts must never
+ * call this directly to avoid exposing auth credentials to the page context.
+ */
+export async function refreshAccessToken(
+  tokenEndpoint: string,
+  refreshToken: string,
+  clientId: string,
+  dpopKeyPair?: CryptoKeyPair,
+): Promise<TokenResponse> {
+  const body = new URLSearchParams({
+    grant_type: 'refresh_token',
+    refresh_token: refreshToken,
+    client_id: clientId,
+  });
+
+  const doRequest = async (nonce?: string): Promise<Response> => {
+    const headers: Record<string, string> = { 'Content-Type': 'application/x-www-form-urlencoded' };
+    if (dpopKeyPair !== undefined) {
+      headers['DPoP'] = await createDpopProof(dpopKeyPair, 'POST', tokenEndpoint, undefined, nonce);
+    }
+    return fetch(tokenEndpoint, { method: 'POST', headers, body: body.toString() });
+  };
+
+  let response = await doRequest();
+
+  // RFC 9449 §8 — server may require a nonce on the first attempt.
+  if (!response.ok && dpopKeyPair !== undefined) {
+    const serverNonce = response.headers.get('DPoP-Nonce');
+    if (serverNonce !== null) {
+      const errorBody: unknown = await response.json().catch(() => ({}));
+      const errorCode =
+        errorBody !== null && typeof errorBody === 'object'
+          ? (errorBody as Record<string, unknown>)['error']
+          : undefined;
+      if (errorCode === 'use_dpop_nonce') {
+        response = await doRequest(serverNonce);
+      }
+    }
+  }
+
+  if (!response.ok) {
+    await throwParsedOAuthError(response, `Token refresh failed with HTTP ${response.status}`, 'token_refresh_failed');
+  }
+
+  return response.json() as Promise<TokenResponse>;
+}
+
+/**
  * Parse the callback URL received after an OAuth authorization redirect.
  *
  * Returns `{ code, state }` on success or `{ error, errorDescription }` on failure.

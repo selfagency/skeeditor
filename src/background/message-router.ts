@@ -12,7 +12,7 @@ import type {
 } from '../shared/api/xrpc-client';
 import { XrpcClient } from '../shared/api/xrpc-client';
 import type { AuthorizationRequest, TokenResponse } from '../shared/auth/auth-client';
-import { buildAuthorizationRequest, exchangeCodeForTokens } from '../shared/auth/auth-client';
+import { buildAuthorizationRequest, exchangeCodeForTokens, refreshAccessToken } from '../shared/auth/auth-client';
 import type { StoredSession } from '../shared/auth/session-store';
 import { sessionStore } from '../shared/auth/session-store';
 import {
@@ -207,6 +207,7 @@ export interface RouterDeps {
     clientId: string,
     redirectUri: string,
   ) => Promise<TokenResponse>;
+  refreshTokens: (tokenEndpoint: string, refreshToken: string, clientId: string) => Promise<TokenResponse>;
 }
 
 // ── Known message types ──────────────────────────────────────────────────────
@@ -445,8 +446,32 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
     }
 
     case 'AUTH_GET_STATUS': {
-      const stored = await deps.store.get();
-      const valid = await deps.store.isAccessTokenValid();
+      let stored = await deps.store.get();
+      let valid = await deps.store.isAccessTokenValid();
+
+      // If we have a stored session but the access token is expired, attempt
+      // a silent refresh using the stored refresh token before giving up.
+      if (stored !== null && !valid) {
+        try {
+          const pdsUrl = await getCurrentPdsUrl(stored.did);
+          const tokens = await deps.refreshTokens(getOAuthTokenUrl(pdsUrl), stored.refreshToken, BSKY_OAUTH_CLIENT_ID);
+          if (isNonEmptyString(tokens.access_token) && isNonEmptyString(tokens.refresh_token)) {
+            const refreshed: StoredSession = {
+              ...stored,
+              accessToken: tokens.access_token,
+              refreshToken: tokens.refresh_token,
+              expiresAt:
+                tokens.expires_in !== undefined ? Date.now() + tokens.expires_in * 1000 : Date.now() + 3_600_000,
+            };
+            await deps.store.set(refreshed);
+            stored = refreshed;
+            valid = true;
+          }
+        } catch (err) {
+          console.warn('[AUTH_GET_STATUS] silent token refresh failed:', err);
+        }
+      }
+
       if (stored !== null && valid) {
         // Lazily hydrate handle if it was missing (e.g. fetchHandle failed during AUTH_CALLBACK).
         // This heals existing sessions without requiring the user to sign out and back in.
@@ -744,6 +769,10 @@ export function createDefaultDeps(): RouterDeps {
     exchangeCode: async (tokenEndpoint, code, codeVerifier, clientId, redirectUri) => {
       const dpopKeyPair = await getDpopKeyPair();
       return exchangeCodeForTokens(tokenEndpoint, code, codeVerifier, clientId, redirectUri, dpopKeyPair);
+    },
+    refreshTokens: async (tokenEndpoint, refreshToken, clientId) => {
+      const dpopKeyPair = await getDpopKeyPair();
+      return refreshAccessToken(tokenEndpoint, refreshToken, clientId, dpopKeyPair);
     },
   };
 }

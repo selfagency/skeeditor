@@ -83,6 +83,13 @@ const makeDeps = (overrides: Partial<RouterDeps> = {}): RouterDeps => ({
     scope: 'atproto transition:generic',
     sub: 'did:plc:testuser',
   }),
+  refreshTokens: vi.fn().mockResolvedValue({
+    access_token: 'refreshed-access-token',
+    refresh_token: 'refreshed-refresh-token',
+    expires_in: 3600,
+    scope: 'atproto transition:generic',
+    sub: 'did:plc:testuser',
+  }),
   ...overrides,
 });
 
