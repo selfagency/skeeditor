@@ -23,6 +23,18 @@ interface EditedPostEntry {
 
 let editedPostsCache = new Map<string, EditedPostEntry>();
 
+// ── Recent record cache (avoids stale GET_RECORD after a fresh save) ──────────
+
+const RECORD_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+interface RecentRecordEntry {
+  record: EditablePostRecord;
+  cid: string;
+  savedAt: number;
+}
+
+const recentRecordsCache = new Map<string, RecentRecordEntry>();
+
 async function loadEditedPostsCache(): Promise<void> {
   try {
     const stored = await browser.storage.local.get(EDITED_POSTS_KEY);
@@ -227,20 +239,34 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
   const modal = getOrCreateEditModal();
   const initialText = extractPostText(postElement);
 
-  const recordResponse = await sendMessage({
-    type: 'GET_RECORD',
-    repo: info.repo,
-    collection: info.collection,
-    rkey: info.rkey,
-  });
+  // Use the in-memory record cache when a save just happened (avoids stale AppView data from GET_RECORD).
+  const nowMs = Date.now();
+  const cachedEntry = recentRecordsCache.get(info.atUri);
 
-  if ('error' in recordResponse) {
-    modal.open(initialText);
-    modal.setError(recordResponse.error);
-    return;
+  let currentRecord: EditablePostRecord;
+  let currentCid: string | undefined;
+
+  if (cachedEntry !== undefined && nowMs - cachedEntry.savedAt < RECORD_CACHE_TTL_MS) {
+    currentRecord = cachedEntry.record;
+    currentCid = cachedEntry.cid;
+  } else {
+    const recordResponse = await sendMessage({
+      type: 'GET_RECORD',
+      repo: info.repo,
+      collection: info.collection,
+      rkey: info.rkey,
+    });
+
+    if ('error' in recordResponse) {
+      modal.open(initialText);
+      modal.setError(recordResponse.error);
+      return;
+    }
+
+    currentRecord = recordResponse.value as EditablePostRecord;
+    currentCid = recordResponse.cid;
   }
 
-  const currentRecord = recordResponse.value as EditablePostRecord;
   const initialRecordText = typeof currentRecord.text === 'string' ? currentRecord.text : initialText;
 
   const settingsResponse = await sendMessage({ type: 'GET_SETTINGS' });
@@ -297,7 +323,7 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
       collection: info.collection,
       rkey: info.rkey,
       record: updatedRecord,
-      swapRecord: recordResponse.cid,
+      swapRecord: currentCid,
     });
 
     if (writeResponse.type === 'PUT_RECORD_ERROR') {
@@ -335,6 +361,7 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
     modal.markSaved(text);
     updatePostText(postElement, text);
     void saveEditedPost(info.atUri, text);
+    recentRecordsCache.set(info.atUri, { record: updatedRecord, cid: writeResponse.cid, savedAt: Date.now() });
     modal.setSuccess('Edit saved.');
     console.info(`${APP_NAME}: edit saved`, { atUri: info.atUri, uri: writeResponse.uri, cid: writeResponse.cid });
   });
@@ -539,6 +566,9 @@ const ensureObserver = (): void => {
   }
 
   mutationObserver = new MutationObserver(() => {
+    // Re-apply cached text immediately so React re-renders don't produce a visible flicker.
+    applyEditedPostsFromCache();
+    // Debounced scan for edit-button injection (more expensive).
     scheduleScanForPosts();
   });
 
