@@ -1,7 +1,7 @@
 import { EDIT_TIME_LIMIT_MAX, EDIT_TIME_LIMIT_MIN } from '../shared/constants';
+import '../shared/components/account-card';
 import type { AuthListAccountsAccount } from '../shared/messages';
 import { sendMessage } from '../shared/messages';
-import { accountCard } from '../shared/utils/account-ui';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 
@@ -32,17 +32,42 @@ function renderAccounts(accounts: AuthListAccountsAccount[]): void {
     return;
   }
 
-  accountsList.innerHTML = accounts
-    .map(account => accountCard(account, { switchLabel: 'Set active', removeLabel: 'Remove' }))
-    .join('');
+  accountsList.innerHTML = '';
 
-  accountsList.querySelectorAll<HTMLButtonElement>('.account-switch').forEach(btn => {
-    btn.addEventListener('click', () => void handleSwitchAccount(btn.dataset['did'] ?? ''));
+  for (const account of accounts) {
+    const card = document.createElement('account-card');
+    card.className = 'account-card';
+    card.setAttribute('did', account.did);
+    card.setAttribute('switch-label', 'Set active');
+    card.setAttribute('remove-label', 'Remove');
+
+    if (account.handle) {
+      card.setAttribute('handle', account.handle);
+    }
+    if (account.isActive) {
+      card.setAttribute('is-active', 'true');
+    }
+
+    accountsList.appendChild(card);
+  }
+}
+
+let accountEventHandlersAttached = false;
+
+function ensureAccountEventHandlers(): void {
+  if (!accountsList || accountEventHandlersAttached) return;
+
+  accountsList.addEventListener('account-switch', event => {
+    const did = (event as CustomEvent<{ did?: string }>).detail?.did ?? '';
+    void handleSwitchAccount(did);
   });
 
-  accountsList.querySelectorAll<HTMLButtonElement>('.account-remove').forEach(btn => {
-    btn.addEventListener('click', () => void handleRemoveAccount(btn.dataset['did'] ?? ''));
+  accountsList.addEventListener('account-remove', event => {
+    const did = (event as CustomEvent<{ did?: string }>).detail?.did ?? '';
+    void handleRemoveAccount(did);
   });
+
+  accountEventHandlersAttached = true;
 }
 
 async function loadAccounts(): Promise<void> {
@@ -157,3 +182,4 @@ addAccountButton?.addEventListener('click', () => {
 
 void loadAccounts();
 void loadSettings();
+ensureAccountEventHandlers();

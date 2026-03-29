@@ -157,6 +157,10 @@ export class AccountCard extends HTMLElement {
   }
 }
 
-if (!customElements.get('account-card')) {
-  customElements.define('account-card', AccountCard);
+const accountCardRegistry =
+  globalThis.customElements ??
+  (Object.getPrototypeOf(globalThis) as { customElements?: CustomElementRegistry | null })?.customElements ??
+  null;
+if (accountCardRegistry && !accountCardRegistry.get('account-card')) {
+  accountCardRegistry.define('account-card', AccountCard);
 }
