@@ -288,7 +288,7 @@ jobs:
       - name: Run Firefox devnet E2E tests
         run: pnpm test:e2e:firefox:devnet
         env:
-          FIREFOX_EXTENSION_E2E: '1'
+          FIREFOX_EXTENSION_E2E: "1"
 
       - name: Stop devnet stack
         if: always()

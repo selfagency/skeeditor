@@ -671,7 +671,12 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
       }
       try {
         const pdsUrl = await getCurrentPdsUrl(stored.did);
-        const client = deps.createXrpc({ service: pdsUrl, did: stored.did, accessJwt: stored.accessToken, dpopEnabled: stored.dpopEnabled });
+        const client = deps.createXrpc({
+          service: pdsUrl,
+          did: stored.did,
+          accessJwt: stored.accessToken,
+          dpopEnabled: stored.dpopEnabled,
+        });
 
         const params: any = {
           repo: message['repo'],
@@ -709,7 +714,12 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
       }
       try {
         const pdsUrl = await getCurrentPdsUrl(stored.did);
-        const client = deps.createXrpc({ service: pdsUrl, did: stored.did, accessJwt: stored.accessToken, dpopEnabled: stored.dpopEnabled });
+        const client = deps.createXrpc({
+          service: pdsUrl,
+          did: stored.did,
+          accessJwt: stored.accessToken,
+          dpopEnabled: stored.dpopEnabled,
+        });
         return await client.getRecord({
           repo: message['repo'],
           collection: message['collection'],
@@ -732,7 +742,12 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
       }
       try {
         const pdsUrl = await getCurrentPdsUrl(stored.did);
-        const client = deps.createXrpc({ service: pdsUrl, did: stored.did, accessJwt: stored.accessToken, dpopEnabled: stored.dpopEnabled });
+        const client = deps.createXrpc({
+          service: pdsUrl,
+          did: stored.did,
+          accessJwt: stored.accessToken,
+          dpopEnabled: stored.dpopEnabled,
+        });
         const record = message['record'];
         const params: Parameters<XrpcInterface['putRecord']>[0] = {
           repo: message['repo'],
@@ -818,7 +833,12 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
 
       try {
         const pdsUrl = await getCurrentPdsUrl(stored.did);
-        const client = deps.createXrpc({ service: pdsUrl, did: stored.did, accessJwt: stored.accessToken, dpopEnabled: stored.dpopEnabled });
+        const client = deps.createXrpc({
+          service: pdsUrl,
+          did: stored.did,
+          accessJwt: stored.accessToken,
+          dpopEnabled: stored.dpopEnabled,
+        });
         const result = await client.uploadBlob({
           data: message.data,
           repo: message.repo,
