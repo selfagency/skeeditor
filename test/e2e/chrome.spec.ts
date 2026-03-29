@@ -127,9 +127,10 @@ bskyTest(
     await expect(saveButton).toBeEnabled();
     await saveButton.click();
 
-    // Success feedback should appear.
-    await expect(modal.locator('.status-message.success')).toBeVisible({ timeout: 5_000 });
-    await expect(modal.locator('.status-message.success')).toContainText('Edit saved.');
+    // Modal should close and a toast notification should appear.
+    await expect(modal).not.toBeAttached({ timeout: 5_000 });
+    const toast = page.locator('skeeditor-toast');
+    await expect(toast).toBeAttached({ timeout: 5_000 });
   },
 );
 

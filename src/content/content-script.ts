@@ -32,6 +32,54 @@ const ACTION_AREA_WAIT_TIMEOUT = 3000;
 
 const log = createLogger('content');
 
+// ── Toast notification ────────────────────────────────────────────────────────
+
+function showToast(message: string): void {
+  const host = document.createElement('skeeditor-toast');
+  const shadow = host.attachShadow({ mode: 'open' });
+
+  host.style.cssText = [
+    'position:fixed',
+    'bottom:1.5rem',
+    'left:50%',
+    'transform:translateX(-50%) translateY(0.75rem)',
+    'z-index:10001',
+    'opacity:0',
+    'transition:opacity 0.2s ease,transform 0.2s ease',
+    'pointer-events:none',
+  ].join(';');
+
+  shadow.innerHTML = `<div style="
+    background:#18181b;
+    color:#fff;
+    padding:0.625rem 1rem;
+    border-radius:0.5rem;
+    font-size:0.875rem;
+    font-family:system-ui,-apple-system,sans-serif;
+    line-height:1.5;
+    box-shadow:0 4px 12px rgba(0,0,0,0.2);
+    display:flex;
+    align-items:center;
+    gap:0.5rem;
+    white-space:nowrap;
+  "><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style="width:1rem;height:1rem;flex-shrink:0;color:#4ade80;"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/></svg>${message}</div>`;
+
+  document.body.appendChild(host);
+
+  requestAnimationFrame(() => {
+    host.style.opacity = '1';
+    host.style.transform = 'translateX(-50%) translateY(0)';
+  });
+
+  setTimeout(() => {
+    host.style.opacity = '0';
+    host.style.transform = 'translateX(-50%) translateY(0.75rem)';
+    setTimeout(() => {
+      host.parentNode?.removeChild(host);
+    }, 250);
+  }, 3000);
+}
+
 // ── Recent record cache (avoids stale GET_RECORD after a fresh save) ──────────
 
 const RECORD_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
@@ -729,21 +777,10 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
     });
 
     if (writeResponse.type === 'PUT_RECORD_ERROR') {
-      // If re-authentication is required, show a more helpful message
       if (writeResponse.requiresReauth) {
         modal.setError(
           'Your session has expired or lacks permission. Please click the extension icon to sign in again.',
         );
-        // Refresh auth state in case the user signs in again
-        await refreshAuthState();
-        return;
-      }
-      // If re-authentication is required, show a more helpful message
-      if (writeResponse.requiresReauth) {
-        modal.setError(
-          'Your session has expired or lacks permission. Please click the extension icon to sign in again.',
-        );
-        // Refresh auth state in case the user signs in again
         await refreshAuthState();
         return;
       }
@@ -760,7 +797,7 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
       return;
     }
 
-    modal.markSaved(text);
+    modal.close();
     updatePostText(postElement, text);
     // Normalize to DID form so cache lookups succeed regardless of whether the
     // post was found via handle-form or DID-form URL.
@@ -769,7 +806,7 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
     // text on React re-renders. No setTimeout hack needed.
     setCached(normalizedAtUri, text, initialRecordText);
     recentRecordsCache.set(normalizedAtUri, { record: updatedRecord, cid: writeResponse.cid, savedAt: Date.now() });
-    modal.setSuccess('Edit saved.');
+    showToast('Edit saved.');
     console.info(`${APP_NAME}: edit saved`, { atUri: normalizedAtUri, uri: writeResponse.uri, cid: writeResponse.cid });
   });
 };
