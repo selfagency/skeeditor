@@ -76,14 +76,12 @@ export const skipIfFirefoxDevnetDisabled = (): void => {
 export const test = base.extend<FirefoxDevnetFixtures & { context: BrowserContext }>({
   // Override the context fixture with a Firefox persistent context that has the
   // extension pre-installed via a custom profile directory.
-  context: async ({ browserName: _browserName }, use) => {
+  context: async ({ browserName: _browserName }, use, testInfo) => {
     if (!firefoxDevnetEnabled) {
-      // Skip guard: yield a dummy context so the fixture chain doesn't explode
-      // before the individual test's `test.skip()` fires.
-      throw new Error(
-        'Firefox devnet context created without FIREFOX_EXTENSION_E2E=1. ' +
-          'Call skipIfFirefoxDevnetDisabled() at the start of each test.',
-      );
+      testInfo.skip(true, 'Firefox devnet E2E tests require FIREFOX_EXTENSION_E2E=1 and the devnet stack.');
+      // Provide a dummy value so TypeScript is satisfied — testInfo.skip() throws internally.
+      await use(null as unknown as BrowserContext);
+      return;
     }
 
     const extensionPath = await resolveBuiltExtensionPath('firefox');

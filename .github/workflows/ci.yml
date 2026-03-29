@@ -109,8 +109,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build extension
-        run: pnpm build
+      - name: Build extension (all browsers)
+        run: pnpm build:chrome && pnpm build:firefox
 
       - name: Copy browser manifests
         run: |
@@ -254,14 +254,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Install Firefox Developer Edition
-        run: |
-          curl -L --retry 3 --fail \
-               "https://download.mozilla.org/?product=firefox-devedition-latest-ssl&os=linux64&lang=en-US" \
-               -o /tmp/firefox-devedition.tar
-          sudo tar xf /tmp/firefox-devedition.tar -C /opt
-          sudo ln -sf /opt/firefox/firefox /usr/local/bin/firefox
 
       - name: Get Playwright version
         id: pw-version

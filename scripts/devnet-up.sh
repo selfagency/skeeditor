@@ -29,12 +29,14 @@ if [[ ! -f "${DEVNET_DIR}/.env" ]]; then
   fi
 fi
 
-echo "Starting devnet stack..."
+TIMEOUT="${DEVNET_TIMEOUT:-60}"
+
+echo "Starting devnet stack (timeout: ${TIMEOUT}s)..."
 docker compose \
   -f "${DEVNET_DIR}/docker-compose.yml" \
   -f "${DEVNET_DIR}/docker-compose.test.yml" \
   --project-directory "${DEVNET_DIR}" \
-  up -d --wait
+  up -d --wait --wait-timeout "${TIMEOUT}"
 
 echo "devnet stack is healthy."
 echo "PDS: http://localhost:${DEVNET_PDS_PORT:-3000}"

@@ -25,7 +25,8 @@ export default defineConfig({
       'https://docs.skeeditor.link/*',
       'https://slingshot.microcosm.blue/*',
       // Allow direct XRPC calls to the local devnet PDS during E2E tests.
-      'http://localhost/*',
+      // Omitted from production builds to avoid requesting unnecessary localhost access.
+      ...(ctx.mode !== 'production' ? ['http://localhost/*'] : []),
     ],
     action: {
       default_title: 'skeeditor',
