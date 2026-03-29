@@ -11,8 +11,10 @@
       "type": "chrome",
       "request": "launch",
       "url": "https://bsky.app",
+      "port": 9222,
       "runtimeExecutable": "/Applications/Chromium.app/Contents/MacOS/Chromium",
       "runtimeArgs": [
+        "--remote-debugging-port=9222",
         "--load-extension=${workspaceFolder}/dist/chrome",
         "--disable-extensions-except=${workspaceFolder}/dist/chrome",
         // Keeps a stable profile across sessions so you stay logged in.
@@ -57,7 +59,9 @@
       "type": "chrome",
       "request": "attach",
       "port": 9222,
-      "url": "https://bsky.app/*",
+      "preLaunchTask": "Open Chromium (remote debug on 9222)",
+      "targetSelection": "pick",
+      "urlFilter": "https://bsky.app/*",
       "sourceMaps": true,
       "webRoot": "${workspaceFolder}/src",
       "outFiles": [
@@ -147,7 +151,9 @@
       "type": "chrome",
       "request": "attach",
       "port": 9222,
-      "url": "https://bsky.app/*",
+      "preLaunchTask": "Open Chromium (remote debug on 9222)",
+      "targetSelection": "pick",
+      "urlFilter": "https://bsky.app/*",
       "sourceMaps": true,
       "webRoot": "${workspaceFolder}/src",
       "outFiles": [

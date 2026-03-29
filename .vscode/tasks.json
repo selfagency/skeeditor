@@ -25,17 +25,9 @@
         // completes. We treat that as the "background task is ready" signal.
         "background": {
           "activeOnStart": true,
-          "beginsPattern": "vite",
-          "endsPattern": "watching for file changes"
+          "beginsPattern": "^.*\\[vite\\].*building.*$",
+          "endsPattern": "^.*watching for file changes.*$"
         },
-        // Allow the task to be considered "done" immediately so the debugger
-        // can start while the watcher continues running in the background.
-        "watches": [
-          {
-            "regexp": "watching for file changes",
-            "isActive": true
-          }
-        ]
       },
       "presentation": {
         "reveal": "silent",
