@@ -18,4 +18,6 @@ Start implementation from unified plan with risk-first ordering.
 - [x] Refactor duplicated requiresReauth branch in content-script save path (verified already absent)
 - [x] Run targeted tests and fix regressions
 - [x] Update docs/plans with unified implementation plan file
+- [ ] Fix popup sign-out selector mismatch (`account-sign-out` vs `account-remove`)
+- [ ] Re-run failing popup unit tests
 - [ ] Run validation (type/lint/tests) and summarize next batch
