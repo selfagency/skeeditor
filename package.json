@@ -40,6 +40,8 @@
     "test:e2e:firefox": "playwright test --project=firefox-extension",
     "test:e2e:chromium:devnet": "playwright test --project=chromium-devnet",
     "test:e2e:firefox:devnet": "playwright test --project=firefox-devnet",
+    "webext:lint:firefox": "pnpm run build:firefox && web-ext lint --source-dir dist/firefox",
+    "webext:run:firefox": "pnpm run build:firefox && web-ext run --source-dir dist/firefox --firefox=nightly",
     "test:e2e:list": "playwright test --list",
     "test:integration": "vitest run --project integration",
     "test:unit": "pnpm run lex:build && vitest run --project unit",
