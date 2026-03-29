@@ -27,15 +27,15 @@
  * `http://localhost:3000` (the devnet PDS). Requires `http://localhost/*` in the
  * extension manifest `host_permissions`.
  */
-import { cp, mkdir, mkdtemp, rm, writeFile, readFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
-import { test as base, firefox, expect, type BrowserContext } from '@playwright/test';
+import { test as base, expect, firefox, type BrowserContext } from '@playwright/test';
 
-import { resolveBuiltExtensionPath } from './extension-path';
-import { createPdsSession, type PdsSession } from './devnet-session';
 import { createDevnetPost, deleteDevnetPost, type DevnetPost } from './devnet-records';
+import { createPdsSession, type PdsSession } from './devnet-session';
+import { resolveBuiltExtensionPath } from './extension-path';
 
 export const firefoxDevnetEnabled = process.env['FIREFOX_EXTENSION_E2E'] === '1';
 
@@ -70,10 +70,7 @@ interface FirefoxDevnetFixtures {
 }
 
 export const skipIfFirefoxDevnetDisabled = (): void => {
-  base.skip(
-    !firefoxDevnetEnabled,
-    'Firefox devnet E2E tests require FIREFOX_EXTENSION_E2E=1 and the devnet stack.',
-  );
+  base.skip(!firefoxDevnetEnabled, 'Firefox devnet E2E tests require FIREFOX_EXTENSION_E2E=1 and the devnet stack.');
 };
 
 export const test = base.extend<FirefoxDevnetFixtures & { context: BrowserContext }>({
@@ -187,10 +184,7 @@ export const test = base.extend<FirefoxDevnetFixtures & { context: BrowserContex
       const template = await readFile(MOCK_PAGE_TEMPLATE_PATH, 'utf8');
 
       const html = template
-        .replace(
-          /at:\/\/did:plc:testuser00000000000000\/app\.bsky\.feed\.post\/testpost123456/g,
-          devnetPost.uri,
-        )
+        .replace(/at:\/\/did:plc:testuser00000000000000\/app\.bsky\.feed\.post\/testpost123456/g, devnetPost.uri)
         .replace(/Hello from my own post\. #testing/g, devnetPost.text)
         .replace(
           /at:\/\/did:plc:otheruser0000000000000\/app\.bsky\.feed\.post\/otherpost987654/g,
