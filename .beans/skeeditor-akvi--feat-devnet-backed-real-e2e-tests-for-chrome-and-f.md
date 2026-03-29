@@ -5,7 +5,9 @@ status: completed
 type: task
 priority: high
 created_at: 2026-03-29T18:43:55Z
-updated_at: 2026-03-29T19:09:23Z
+updated_at: 2026-03-29T19:11:00Z
+branch: feat/akvi-devnet-e2e-tests
+pr: 69
 ---
 
 Set up atproto-devnet (https://github.com/OpenMeet-Team/atproto-devnet) as a real AT Protocol test network for E2E testing the extension against a live local PDS — no XRPC mocking. Works locally and in CI.
