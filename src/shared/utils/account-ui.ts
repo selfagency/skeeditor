@@ -49,7 +49,7 @@ export function reauthorizeButton(): string {
 }
 
 export function removeButton(did: string, label = 'Sign out'): string {
-  return `<button type="button" class="account-remove ${RED_BTN}" data-did="${escapeHTML(did)}">${label}</button>`;
+  return `<button type="button" class="account-sign-out account-remove ${RED_BTN}" data-did="${escapeHTML(did)}">${label}</button>`;
 }
 
 // ─── Full account card ────────────────────────────────────────────────────────

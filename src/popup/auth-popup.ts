@@ -165,7 +165,7 @@ class AuthPopup extends HTMLElement {
       });
     });
 
-    this.shadow.querySelectorAll<HTMLButtonElement>('.account-sign-out').forEach(btn => {
+    this.shadow.querySelectorAll<HTMLButtonElement>('.account-sign-out, .account-remove').forEach(btn => {
       btn.addEventListener('click', () => {
         const did = btn.dataset['did'];
         if (did) {
