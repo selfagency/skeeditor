@@ -14,7 +14,7 @@ Start implementation from unified plan with risk-first ordering.
 
 ## Todo
 - [x] Add failing tests for CREATE_RECORD routing behavior (RED)
-- [ ] Implement KNOWN_TYPES fix for CREATE_RECORD (GREEN)
+- [x] Implement KNOWN_TYPES fix for CREATE_RECORD (GREEN)
 - [ ] Refactor duplicated requiresReauth branch in content-script save path
 - [ ] Run targeted tests and fix regressions
 - [ ] Update docs/plans with unified implementation plan file
