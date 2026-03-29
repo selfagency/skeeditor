@@ -68,15 +68,24 @@ testing on Safari is manual.
 
 ## Polyfill Strategy
 
-The `webextension-polyfill` is loaded differently depending on the context:
+skeeditor uses [WXT](https://wxt.dev/), which handles the `webextension-polyfill` transparently. All extension contexts import `browser` from `wxt/browser`:
 
-- **Background service worker** (`service-worker.ts`): polyfill is imported as the first statement, ensuring `globalThis.browser` is available before any extension code runs.
-- **Content script**: polyfill is loaded as a separate script via the manifest's `content_scripts.js` array (`browser-polyfill.js` before `content-script.js`). The content script is built as an IIFE that references the global `browser` object set by the polyfill.
-- **Popup and options pages**: these are HTML pages that load their scripts as ES modules; their entry scripts (`src/popup/popup.ts` and `src/options/options.ts`) explicitly import `webextension-polyfill` as the first statement so that `browser` is available before any other extension code runs.
+```ts
+import { browser } from 'wxt/browser';
+```
 
-In test environments (Vitest), `webextension-polyfill` is aliased to a no-op
-stub (`test/mocks/webextension-polyfill.ts`). The `browser` global is provided
-instead by `test/mocks/browser-apis.ts` via `test/setup/unit.ts`.
+WXT re-exports `webextension-polyfill` under this import path and injects the polyfill into the Chromium bundle at build time. No manual polyfill setup is needed in any context — no first-statement imports, no separate IIFE builds, no manifest script ordering.
+
+Entrypoints live under `src/entrypoints/` and are discovered automatically by WXT:
+
+| Entrypoint                      | Context        |
+| :------------------------------ | :------------- |
+| `src/entrypoints/background.ts` | Service worker |
+| `src/entrypoints/content.ts`    | Content script |
+| `src/entrypoints/popup/`        | Action popup   |
+| `src/entrypoints/options/`      | Options page   |
+
+In test environments (Vitest), `wxt/browser` is aliased to `test/mocks/wxt-browser.ts`, which proxies through `globalThis.browser` set up by `test/mocks/browser-apis.ts` via `test/setup/unit.ts`.
 
 ## Platform Detection
 
