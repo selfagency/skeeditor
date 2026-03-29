@@ -82,25 +82,25 @@ switch (result.type) {
 
 ## Message catalogue
 
-| Request `type` | Payload fields | Response type |
-| --- | --- | --- |
-| `AUTH_SIGN_IN` | `pdsUrl?` | `{ ok: true }` |
-| `AUTH_SIGN_OUT` | — | `{ ok: true }` |
-| `AUTH_REAUTHORIZE` | `pdsUrl?` | `{ ok: true }` |
-| `AUTH_GET_STATUS` | — | `{ authenticated: false }` or `{ authenticated: true, did, handle?, expiresAt }` |
-| `AUTH_CALLBACK` | `code`, `state` | `{ ok: true }` or `{ error }` |
-| `AUTH_LIST_ACCOUNTS` | — | `{ accounts: AuthListAccountsAccount[] }` |
-| `AUTH_SWITCH_ACCOUNT` | `did` | `{ ok: true }` or `{ error }` |
-| `AUTH_SIGN_OUT_ACCOUNT` | `did` | `{ ok: true }` or `{ error }` |
-| `GET_SETTINGS` | — | `ExtensionSettings` or `{ error }` |
-| `SET_SETTINGS` | `settings: ExtensionSettings` | `{ ok: true }` or `{ error }` |
-| `GET_RECORD` | `repo`, `collection`, `rkey` | `{ value, cid }` or `{ error }` |
-| `CREATE_RECORD` | `repo`, `collection`, `record`, `rkey?`, `validate?` | See CREATE_RECORD responses below |
-| `PUT_RECORD` | `repo`, `collection`, `rkey`, `record`, `swapRecord?` | See PUT_RECORD responses below |
-| `UPLOAD_BLOB` | `data: Blob \| File`, `repo` | `{ blobRef, mimeType }` or `{ error }` |
-| `SET_PDS_URL` | `url` | `{ ok: true }` or `{ error }` |
-| `GET_PDS_URL` | — | `{ url: string }` or `{ error }` |
-| `CHECK_LABELER_SUBSCRIPTION` | — | `{ ok: true }` or `{ error }` |
+| Request `type`               | Payload fields                                        | Response type                                                                    |
+| ---------------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `AUTH_SIGN_IN`               | `pdsUrl?`                                             | `{ ok: true }`                                                                   |
+| `AUTH_SIGN_OUT`              | —                                                     | `{ ok: true }`                                                                   |
+| `AUTH_REAUTHORIZE`           | `pdsUrl?`                                             | `{ ok: true }`                                                                   |
+| `AUTH_GET_STATUS`            | —                                                     | `{ authenticated: false }` or `{ authenticated: true, did, handle?, expiresAt }` |
+| `AUTH_CALLBACK`              | `code`, `state`                                       | `{ ok: true }` or `{ error }`                                                    |
+| `AUTH_LIST_ACCOUNTS`         | —                                                     | `{ accounts: AuthListAccountsAccount[] }`                                        |
+| `AUTH_SWITCH_ACCOUNT`        | `did`                                                 | `{ ok: true }` or `{ error }`                                                    |
+| `AUTH_SIGN_OUT_ACCOUNT`      | `did`                                                 | `{ ok: true }` or `{ error }`                                                    |
+| `GET_SETTINGS`               | —                                                     | `ExtensionSettings` or `{ error }`                                               |
+| `SET_SETTINGS`               | `settings: ExtensionSettings`                         | `{ ok: true }` or `{ error }`                                                    |
+| `GET_RECORD`                 | `repo`, `collection`, `rkey`                          | `{ value, cid }` or `{ error }`                                                  |
+| `CREATE_RECORD`              | `repo`, `collection`, `record`, `rkey?`, `validate?`  | See CREATE_RECORD responses below                                                |
+| `PUT_RECORD`                 | `repo`, `collection`, `rkey`, `record`, `swapRecord?` | See PUT_RECORD responses below                                                   |
+| `UPLOAD_BLOB`                | `data: Blob \| File`, `repo`                          | `{ blobRef, mimeType }` or `{ error }`                                           |
+| `SET_PDS_URL`                | `url`                                                 | `{ ok: true }` or `{ error }`                                                    |
+| `GET_PDS_URL`                | —                                                     | `{ url: string }` or `{ error }`                                                 |
+| `CHECK_LABELER_SUBSCRIPTION` | —                                                     | `{ ok: true }` or `{ error }`                                                    |
 
 ### AUTH_LIST_ACCOUNTS response shape
 

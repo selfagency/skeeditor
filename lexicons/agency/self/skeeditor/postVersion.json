@@ -8,11 +8,7 @@
       "key": "tid",
       "record": {
         "type": "object",
-        "required": [
-          "postUri",
-          "createdAt",
-          "text"
-        ],
+        "required": ["postUri", "createdAt", "text"],
         "properties": {
           "postUri": {
             "type": "string",
