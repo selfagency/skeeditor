@@ -79,7 +79,7 @@ describe('XrpcClient', () => {
       const mockErr = new XrpcResponseError(
         { nsid: 'com.atproto.repo.getRecord' } as any,
         { status: 404, headers: new Headers() } as any,
-        { body: { error: 'RecordNotFound', message: 'Record not found' } } as any,
+        { encoding: 'application/json', body: { error: 'RecordNotFound', message: 'Record not found' } } as any,
       );
       const client = new XrpcClient({ service: 'https://bsky.social' });
       client._client.getRecord = vi.fn().mockRejectedValue(mockErr);
@@ -95,7 +95,7 @@ describe('XrpcClient', () => {
       const original = new XrpcResponseError(
         { nsid: 'com.atproto.repo.getRecord' } as any,
         { status: 404, headers: new Headers() } as any,
-        { body: { error: 'RecordNotFound', message: 'Record not found' } } as any,
+        { encoding: 'application/json', body: { error: 'RecordNotFound', message: 'Record not found' } } as any,
       );
       const client = new XrpcClient({ service: 'https://bsky.social' });
       client._client.getRecord = vi.fn().mockRejectedValue(original);
@@ -212,7 +212,10 @@ describe('XrpcClient', () => {
       const mockErr = new XrpcResponseError(
         { nsid: 'com.atproto.repo.putRecord' } as any,
         { status: 409, headers: new Headers() } as any,
-        { body: { error: 'InvalidSwap', message: 'Record was updated by another actor' } } as any,
+        {
+          encoding: 'application/json',
+          body: { error: 'InvalidSwap', message: 'Record was updated by another actor' },
+        } as any,
       );
       const client = new XrpcClient({ service: 'https://bsky.social' });
       client._client.putRecord = vi.fn().mockRejectedValue(mockErr);
@@ -260,7 +263,10 @@ describe('XrpcClient', () => {
       const conflictError = new XrpcResponseError(
         { nsid: 'com.atproto.repo.putRecord' } as any,
         { status: 409, headers: new Headers() } as any,
-        { body: { error: 'InvalidSwap', message: 'Record was updated by another actor' } } as any,
+        {
+          encoding: 'application/json',
+          body: { error: 'InvalidSwap', message: 'Record was updated by another actor' },
+        } as any,
       );
       const client = new XrpcClient({ service: 'https://bsky.social' });
       client._client.putRecord = vi.fn().mockRejectedValue(conflictError);
@@ -301,7 +307,7 @@ describe('XrpcClient', () => {
       const validationError = new XrpcResponseError(
         { nsid: 'com.atproto.repo.putRecord' } as any,
         { status: 400, headers: new Headers() } as any,
-        { body: { error: 'InvalidRecord', message: 'Record validation failed' } } as any,
+        { encoding: 'application/json', body: { error: 'InvalidRecord', message: 'Record validation failed' } } as any,
       );
       const client = new XrpcClient({ service: 'https://bsky.social' });
       client._client.putRecord = vi.fn().mockRejectedValue(validationError);
@@ -331,7 +337,7 @@ describe('XrpcClient', () => {
       const authError = new XrpcResponseError(
         { nsid: 'com.atproto.repo.putRecord' } as any,
         { status: 401, headers: new Headers() } as any,
-        { body: { error: 'AuthRequired', message: 'Authentication required' } } as any,
+        { encoding: 'application/json', body: { error: 'AuthRequired', message: 'Authentication required' } } as any,
       );
       const client = new XrpcClient({ service: 'https://bsky.social' });
       client._client.putRecord = vi.fn().mockRejectedValue(authError);
