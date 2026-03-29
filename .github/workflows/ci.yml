@@ -259,8 +259,8 @@ jobs:
         run: |
           curl -L --retry 3 --fail \
                "https://download.mozilla.org/?product=firefox-devedition-latest-ssl&os=linux64&lang=en-US" \
-               -o /tmp/firefox-devedition.tar.bz2
-          sudo tar xjf /tmp/firefox-devedition.tar.bz2 -C /opt
+               -o /tmp/firefox-devedition.tar
+          sudo tar xf /tmp/firefox-devedition.tar -C /opt
           sudo ln -sf /opt/firefox/firefox /usr/local/bin/firefox
 
       - name: Get Playwright version
