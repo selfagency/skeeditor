@@ -1,13 +1,13 @@
 ---
 # skeeditor-ww0d
 title: 'Phase 2 web components: implement account-card custom element'
-status: completed
+status: in-progress
 type: feature
 priority: high
 branch: feat/ww0d-account-card-custom-element
 pr: 64
 created_at: 2026-03-29T15:22:12Z
-updated_at: 2026-03-29T15:22:12Z
+updated_at: 2026-03-29T16:23:22Z
 ---
 
 ## Context
@@ -26,6 +26,9 @@ Implement all remaining Phase 2 work in a single branch: custom elements migrati
 - [x] Run focused unit tests (popup/options/content/edit-modal/account-card)
 - [x] Run full test suite and summarize Phase 2 completion
 - [x] Validate edit-modal runtime compatibility in Chrome E2E (kept wrapper implementation to avoid isolated-world `HTMLElement` constructor errors)
+- [ ] Add failing test for unsafe toast message HTML interpolation (RED)
+- [ ] Refactor toast render to avoid HTML interpolation and prefer Tailwind utility classes for inner markup
+- [ ] Run targeted toast/content tests and full test suite
 
 ## Summary of Changes
 - Added new shared `<account-card>` component and migrated popup/options account action handling to composed custom events.
