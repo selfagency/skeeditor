@@ -591,4 +591,54 @@ describe('content-script', () => {
     expect(saveButton?.disabled).toBe(true);
     expect(statusMessage?.textContent).toContain('older than your edit time limit of 5 minutes');
   });
+
+  // ── Phase 3: listener lifecycle ──────────────────────────────────────────
+
+  it('should remove the Edited label click listener from document on cleanupContentScript', async () => {
+    const removeEventListenerSpy = vi.spyOn(document, 'removeEventListener');
+
+    const sendMessage = vi.fn(async (request: { type: string }) => {
+      if (request.type === 'AUTH_GET_STATUS') return { authenticated: false };
+      return { ok: true };
+    });
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    const { cleanupContentScript } = await import('@src/content/content-script');
+    await flushMicrotasks();
+
+    cleanupContentScript();
+
+    const captureRemovals = removeEventListenerSpy.mock.calls.filter(
+      ([event, , capture]) => event === 'click' && capture === true,
+    );
+    expect(captureRemovals.length).toBeGreaterThan(0);
+  });
+
+  it('should re-attach the Edited label click listener after a cleanup-and-restart cycle', async () => {
+    const sendMessage = vi.fn(async (request: { type: string }) => {
+      if (request.type === 'AUTH_GET_STATUS') return { authenticated: false };
+      return { ok: true };
+    });
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    // First lifecycle: start → cleanup
+    const mod1 = await import('@src/content/content-script');
+    await flushMicrotasks();
+    mod1.cleanupContentScript();
+
+    // Reset modules so the next import is a fresh module instance
+    vi.resetModules();
+
+    const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
+
+    // Second lifecycle: start fresh
+    await import('@src/content/content-script');
+    await flushMicrotasks();
+
+    // The click capture listener should be registered again on the second start
+    const captureAdditions = addEventListenerSpy.mock.calls.filter(
+      ([event, , capture]) => event === 'click' && capture === true,
+    );
+    expect(captureAdditions.length).toBeGreaterThan(0);
+  });
 });

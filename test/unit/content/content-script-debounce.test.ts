@@ -58,6 +58,24 @@ describe('scheduleScanForPosts debounce', () => {
     expect(findPostsMock).toHaveBeenCalled();
   });
 
+  it('should call findPosts at most once synchronously per scanForPosts invocation', async () => {
+    await import('@src/content/content-script');
+
+    // Flush startup init (auth resolve + .then callback)
+    await Promise.resolve();
+    await Promise.resolve();
+
+    findPostsMock.mockClear();
+
+    const { scheduleScanForPosts } = await import('@src/content/content-script');
+    scheduleScanForPosts();
+    vi.advanceTimersByTime(100);
+
+    // Synchronous phase of scanForPosts should call findPosts exactly once;
+    // sharing the result with applyEditedPostsFromCache and button injection.
+    expect(findPostsMock).toHaveBeenCalledTimes(1);
+  });
+
   it('should cancel a pending scan timer when cleanupContentScript is called', async () => {
     const { scheduleScanForPosts, cleanupContentScript } = await import('@src/content/content-script');
 

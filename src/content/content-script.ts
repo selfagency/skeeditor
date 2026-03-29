@@ -23,9 +23,10 @@ import {
   setIdentity,
   setStorage,
 } from './edited-post-cache';
-import { extractPostInfo, extractPostText, findPosts, updatePostText } from './post-detector';
+import { extractPostInfo, extractPostText, findPosts, updatePostText, type PostInfo } from './post-detector';
 import { buildUpdatedPostRecord, type EditablePostRecord } from './post-editor';
 import './styles.css';
+import './toast';
 
 const POST_MARKER_ATTRIBUTE = 'data-skeeditor-processed';
 const EDIT_BUTTON_ATTRIBUTE = 'data-skeeditor-edit-button';
@@ -53,7 +54,7 @@ interface RecentRecordEntry {
 
 const recentRecordsCache = new Map<string, RecentRecordEntry>();
 
-function applyEditedPostsFromCache(): void {
+function applyEditedPostsFromCache(posts?: PostInfo[]): void {
   if (getCacheSize() === 0) return;
 
   let scanned = 0;
@@ -62,7 +63,10 @@ function applyEditedPostsFromCache(): void {
 
   // ── 1. Normal path: findPosts() covers feed items, replies, search results,
   //       list views, notifications — anything with a recognisable container.
-  for (const postInfo of findPosts(document)) {
+  //   Accept a pre-computed posts array from scanForPosts to avoid a redundant
+  //   DOM scan when called in the same synchronous frame.
+  const allPosts = posts ?? [...findPosts(document)];
+  for (const postInfo of allPosts) {
     scanned += 1;
     const cacheKey = normalizeCacheKey(postInfo.atUri, postInfo.repo);
     const entry = getCached(cacheKey);
@@ -167,7 +171,7 @@ function applyToThreadRoot(text?: string, rkey?: string): boolean {
  * Without this gate we'd fetch and cache every permalink post, overwriting
  * the DOM with Slingshot's text even for unedited posts.
  */
-async function fetchPermalinkPost(): Promise<void> {
+async function fetchPermalinkPost(gen: number, posts?: PostInfo[]): Promise<void> {
   const urlMatch = /\/profile\/([^/?#]+)\/post\/([^/?#]+)/.exec(window.location.pathname);
   if (!urlMatch) {
     log.debug('fetch-permalink-skip', { reason: 'not-permalink', pathname: window.location.pathname });
@@ -182,8 +186,10 @@ async function fetchPermalinkPost(): Promise<void> {
   // Scope the "Edited" badge check to the thread-root container for this permalink.
   // A broad document.querySelector would match an edited badge on a reply or embedded
   // quote, causing us to fetch the root post even when it isn't edited.
+  //   Use the pre-computed posts snapshot when available to avoid a redundant DOM scan.
   let rootPost: ReturnType<typeof extractPostInfo> | null = null;
-  for (const p of findPosts(document)) {
+  const initialPosts = posts ?? [...findPosts(document)];
+  for (const p of initialPosts) {
     if (normalizeCacheKey(p.atUri, p.repo) === atCacheKey) {
       rootPost = p;
       break;
@@ -203,6 +209,13 @@ async function fetchPermalinkPost(): Promise<void> {
   log.debug('fetch-permalink-start', { atUri, repo, rkey });
 
   const text = await resolveEditedText(atUri, repo, APP_BSKY_FEED_POST_COLLECTION, rkey);
+
+  // Discard result if a newer scan has already taken ownership of DOM updates.
+  if (gen !== scanGeneration) {
+    log.debug('fetch-permalink-stale', { gen, scanGeneration });
+    return;
+  }
+
   if (text !== null) {
     applyToThreadRoot(text, rkey);
     // Also try findPosts in case the DOM has rendered
@@ -223,7 +236,7 @@ async function fetchPermalinkPost(): Promise<void> {
  * Trigger 2: DOM scan for "Edited" badge — bsky.app renders
  * `button[aria-label="Edited"]` for posts labeled as edited.
  */
-async function fetchEditedPostsInView(): Promise<void> {
+async function fetchEditedPostsInView(gen: number): Promise<void> {
   const editedButtons = document.querySelectorAll<HTMLElement>('button[aria-label="Edited"]');
   if (editedButtons.length === 0) {
     log.debug('fetch-edited-skip', { reason: 'no-edited-buttons' });
@@ -264,17 +277,25 @@ async function fetchEditedPostsInView(): Promise<void> {
   const results = await resolveBatch(postsToFetch);
   log.debug('fetch-edited-resolved', { resultCount: results.size });
 
+  // Discard stale results — a newer scan has already taken ownership.
+  if (gen !== scanGeneration) {
+    log.debug('fetch-edited-stale', { gen, scanGeneration });
+    return;
+  }
+
+  // Build a one-pass index of current DOM posts to avoid O(results × posts) scans.
+  const postIndex = new Map<string, PostInfo>();
+  for (const p of findPosts(document)) {
+    postIndex.set(normalizeCacheKey(p.atUri, p.repo), p);
+  }
+
   // Apply resolved text to DOM
   let applied = 0;
   for (const [cacheKey, text] of results) {
-    for (const p of findPosts(document)) {
-      if (normalizeCacheKey(p.atUri, p.repo) === cacheKey) {
-        if (extractPostText(p.element).trim() !== text.trim()) {
-          updatePostText(p.element, text);
-          applied += 1;
-        }
-        break;
-      }
+    const p = postIndex.get(cacheKey);
+    if (p && extractPostText(p.element).trim() !== text.trim()) {
+      updatePostText(p.element, text);
+      applied += 1;
     }
   }
 
@@ -287,7 +308,7 @@ async function fetchEditedPostsInView(): Promise<void> {
  * Fallback trigger: resolve visible own posts even when the "Edited" badge is
  * not rendered in this surface (e.g. some search/profile variants).
  */
-async function fetchOwnPostsInView(): Promise<void> {
+async function fetchOwnPostsInView(gen: number, posts?: PostInfo[]): Promise<void> {
   if (currentDid === null) {
     log.debug('fetch-own-skip', { reason: 'no-auth' });
     return;
@@ -298,7 +319,10 @@ async function fetchOwnPostsInView(): Promise<void> {
   let ownVisible = 0;
   let alreadyCached = 0;
 
-  for (const postInfo of findPosts(document)) {
+  // Use a pre-computed posts snapshot from the caller when available to avoid
+  // a redundant DOM scan in the synchronous scan phase.
+  const scanPosts = posts ?? [...findPosts(document)];
+  for (const postInfo of scanPosts) {
     scanned += 1;
     if (!isElementOwnPost(postInfo.element, postInfo.repo)) {
       continue;
@@ -331,16 +355,24 @@ async function fetchOwnPostsInView(): Promise<void> {
   const results = await resolveBatch(postsToFetch);
   log.debug('fetch-own-resolved', { resultCount: results.size });
 
+  // Discard stale results — a newer scan has already taken ownership.
+  if (gen !== scanGeneration) {
+    log.debug('fetch-own-stale', { gen, scanGeneration });
+    return;
+  }
+
+  // Build a one-pass index of current DOM posts to avoid O(results × posts) scans.
+  const postIndex = new Map<string, PostInfo>();
+  for (const p of findPosts(document)) {
+    postIndex.set(normalizeCacheKey(p.atUri, p.repo), p);
+  }
+
   let applied = 0;
   for (const [cacheKey, text] of results) {
-    for (const p of findPosts(document)) {
-      if (normalizeCacheKey(p.atUri, p.repo) === cacheKey) {
-        if (extractPostText(p.element).trim() !== text.trim()) {
-          updatePostText(p.element, text);
-          applied += 1;
-        }
-        break;
-      }
+    const p = postIndex.get(cacheKey);
+    if (p && extractPostText(p.element).trim() !== text.trim()) {
+      updatePostText(p.element, text);
+      applied += 1;
     }
   }
 
@@ -470,6 +502,10 @@ let runtimeMessageHandler: ((msg: unknown) => void) | null = null;
 let scanScheduled = false;
 let scanTimer: ReturnType<typeof setTimeout> | null = null;
 let activeModal: EditModal | null = null;
+// Monotonically-increasing scan generation. Async fetch functions capture the
+// generation at dispatch time and abort their apply phase if a newer scan has
+// since fired, preventing stale results from overwriting fresher DOM state.
+let scanGeneration = 0;
 
 // ── Phase F: SPA navigation + account auto-switch ─────────────────────────────
 
@@ -874,21 +910,33 @@ const injectEditButton = (postElement: HTMLElement): void => {
 };
 
 const scanForPosts = (): void => {
+  // Increment generation so any in-flight async fetches from a previous scan
+  // will discard their results rather than apply stale text.
+  const gen = ++scanGeneration;
+
+  // Build the post list once. This single DOM scan is shared across:
+  //   - applyEditedPostsFromCache  (cache → DOM patch)
+  //   - fetchOwnPostsInView        (scan phase, before async fetch)
+  //   - fetchPermalinkPost         (root-post lookup, before async fetch)
+  //   - edit-button injection loop (below)
+  const posts = [...findPosts(document)];
+
   // Always re-apply persisted text edits — React may have re-rendered since last time.
-  applyEditedPostsFromCache();
+  applyEditedPostsFromCache(posts);
 
   console.log(`${APP_NAME}: scanning for posts, currentDid=${currentDid}, currentHandle=${currentHandle}`);
 
   // Trigger 2: detect "Edited" badges in the DOM and fetch from Slingshot.
   // This runs async — the MO path will apply the results once they land in cache.
-  void fetchEditedPostsInView();
+  void fetchEditedPostsInView(gen);
 
   // Fallback trigger: own posts should still resolve even when this surface
-  // does not render the Edited badge.
-  void fetchOwnPostsInView();
+  // does not render the Edited badge.  Pass the pre-computed posts list for
+  // the synchronous scan phase; the async apply phase will re-query the DOM.
+  void fetchOwnPostsInView(gen, posts);
 
   // Trigger 1: on permalink pages, always fetch the thread root.
-  void fetchPermalinkPost();
+  void fetchPermalinkPost(gen, posts);
 
   // No authenticated DID → don't inject any edit buttons.
   if (currentDid === null) {
@@ -900,7 +948,7 @@ const scanForPosts = (): void => {
   let visiblePosts = 0;
   let ownPosts = 0;
 
-  for (const postInfo of findPosts(document)) {
+  for (const postInfo of posts) {
     visiblePosts += 1;
     if (!isElementOwnPost(postInfo.element, postInfo.repo)) {
       continue;
@@ -1033,34 +1081,33 @@ const ensureStorageListener = (): void => {
 
 let pendingOriginalText: string | null = null;
 let editedLabelListenerAttached = false;
+let editedLabelClickHandler: ((event: MouseEvent) => void) | null = null;
 
 const ensureEditedLabelListener = (): void => {
   if (editedLabelListenerAttached) return;
   editedLabelListenerAttached = true;
 
   // Use capture phase so we fire before Bluesky's own React synthetic handlers.
-  document.addEventListener(
-    'click',
-    (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      const editedButton = target.closest('button[aria-label="Edited"]') as HTMLElement | null;
-      if (!editedButton) return;
+  editedLabelClickHandler = (event: MouseEvent) => {
+    const target = event.target as HTMLElement;
+    const editedButton = target.closest('button[aria-label="Edited"]') as HTMLElement | null;
+    if (!editedButton) return;
 
-      // Trace up to closest post container to find the AT-URI.
-      const postElement =
-        editedButton.closest<HTMLElement>('[data-at-uri]') ??
-        editedButton.closest<HTMLElement>('[data-uri]') ??
-        editedButton.closest<HTMLElement>('article');
-      if (!postElement) return;
+    // Trace up to closest post container to find the AT-URI.
+    const postElement =
+      editedButton.closest<HTMLElement>('[data-at-uri]') ??
+      editedButton.closest<HTMLElement>('[data-uri]') ??
+      editedButton.closest<HTMLElement>('article');
+    if (!postElement) return;
 
-      const info = extractPostInfo(postElement);
-      if (!info) return;
+    const info = extractPostInfo(postElement);
+    if (!info) return;
 
-      const cacheKey = normalizeCacheKey(info.atUri, info.repo);
-      pendingOriginalText = getCached(cacheKey)?.originalText ?? null;
-    },
-    true,
-  );
+    const cacheKey = normalizeCacheKey(info.atUri, info.repo);
+    pendingOriginalText = getCached(cacheKey)?.originalText ?? null;
+  };
+
+  document.addEventListener('click', editedLabelClickHandler, true);
 };
 
 const injectOriginalTextIntoDialog = (): void => {
@@ -1280,6 +1327,13 @@ export const cleanupContentScript = (): void => {
   setIdentity(null, null);
   knownAccounts = [];
   hasStarted = false;
+
+  if (editedLabelClickHandler !== null) {
+    document.removeEventListener('click', editedLabelClickHandler, true);
+    editedLabelClickHandler = null;
+  }
+  editedLabelListenerAttached = false;
+  pendingOriginalText = null;
 };
 
 // Auto-execute when the module is loaded directly (tests and non-WXT environments).
