@@ -148,6 +148,25 @@ describe('options page', () => {
       const removeBtns = queryAcrossAccountCardShadows('.account-remove');
       expect(removeBtns.length).toBe(2);
     });
+
+    it('shows error message without using innerHTML when account loading fails', async () => {
+      vi.mocked(browser.runtime.sendMessage).mockImplementation(async (msg: unknown) => {
+        const type = (msg as { type?: string })?.type;
+        if (type === 'AUTH_LIST_ACCOUNTS') throw new Error('Network error');
+        if (type === 'GET_SETTINGS') return { editTimeLimit: null };
+        return { ok: true };
+      });
+
+      const accountsList = document.getElementById('accounts-list')!;
+      const innerHTMLSpy = vi.spyOn(accountsList, 'innerHTML', 'set');
+
+      await import('@src/options/options');
+      await flushPromises();
+
+      expect(accountsList.textContent).toContain('Failed to load accounts');
+      expect(innerHTMLSpy).not.toHaveBeenCalled();
+      innerHTMLSpy.mockRestore();
+    });
   });
 
   // ── Account actions ────────────────────────────────────────────────────────

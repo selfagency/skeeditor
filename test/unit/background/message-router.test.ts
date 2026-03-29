@@ -759,6 +759,34 @@ describe('handleMessage', () => {
 
       expect(result).toEqual({ type: 'PUT_RECORD_ERROR', message: 'Invalid PUT_RECORD payload' });
     });
+
+    it('does not log DID, URI, or CID to console.log during a successful PUT_RECORD', async () => {
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const session = makeSession();
+      const xrpc = makeXrpcMock();
+      const deps = makeDeps({
+        store: makeStoreMock(session),
+        createXrpc: vi.fn().mockReturnValue(xrpc),
+      });
+
+      await handleMessage(
+        {
+          type: 'PUT_RECORD',
+          repo: 'did:plc:alice',
+          collection: 'app.bsky.feed.post',
+          rkey: 'abc',
+          record: { $type: 'app.bsky.feed.post', text: 'hello' },
+          swapRecord: 'bafyreiabc',
+        },
+        deps,
+      );
+
+      const sensitiveCall = consoleSpy.mock.calls.find(args =>
+        args.some(a => typeof a === 'object' && a !== null && 'did' in a),
+      );
+      expect(sensitiveCall).toBeUndefined();
+      consoleSpy.mockRestore();
+    });
   });
 
   describe('CREATE_RECORD', () => {

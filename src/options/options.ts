@@ -28,11 +28,14 @@ function renderAccounts(accounts: AuthListAccountsAccount[]): void {
   if (!accountsList) return;
 
   if (accounts.length === 0) {
-    accountsList.innerHTML = '<p class="text-sm text-gray-500 dark:text-gray-400">No accounts signed in.</p>';
+    const empty = document.createElement('p');
+    empty.className = 'text-sm text-gray-500 dark:text-gray-400';
+    empty.textContent = 'No accounts signed in.';
+    accountsList.replaceChildren(empty);
     return;
   }
 
-  accountsList.innerHTML = '';
+  accountsList.replaceChildren();
 
   for (const account of accounts) {
     const card = document.createElement('account-card');
@@ -77,7 +80,10 @@ async function loadAccounts(): Promise<void> {
   } catch (error) {
     console.error('Error loading accounts:', error);
     if (accountsList) {
-      accountsList.innerHTML = '<p class="text-sm text-red-400">Failed to load accounts.</p>';
+      const errMsg = document.createElement('p');
+      errMsg.className = 'text-sm text-red-400';
+      errMsg.textContent = 'Failed to load accounts.';
+      accountsList.replaceChildren(errMsg);
     }
   }
 }

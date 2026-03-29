@@ -19,9 +19,32 @@ function base64urlEncode(bytes: Uint8Array): string {
  * Load the persisted DPoP key pair from extension storage, or generate and
  * persist a fresh P-256 key pair.
  *
- * The key pair must survive service-worker restarts so every token request
- * uses the same public key — the authorization server ties issued tokens to
- * that specific key.
+ * **Why persistence is required**: The OAuth authorization server binds each
+ * issued access/refresh token to the public key in the DPoP proof that was
+ * presented at token issuance. Subsequent requests must present proofs signed
+ * by the same private key, so the key pair must survive service-worker
+ * restarts and browser restarts.
+ *
+ * **Threat model**: The private key is stored as a JWK in
+ * `browser.storage.local`. This area is protected by browser process
+ * isolation and OS user-account boundaries — it is NOT accessible to web
+ * page content or other browser profiles. Physical access to the device
+ * or a compromised browser extension with `storage` permission would allow
+ * exfiltration. This risk is equivalent to the risk of storing an OAuth
+ * refresh token, which the extension also does.
+ *
+ * **Scope**: A single key pair is shared across all signed-in accounts. This
+ * simplifies storage and avoids per-account key proliferation. Re-auth with
+ * a different key is always possible by clearing storage.
+ *
+ * **Rotation policy**: There is no automatic key rotation or TTL. The key is
+ * replaced only when the stored JWK fails to import (corruption recovery).
+ * Forcing rotation would invalidate all existing tokens and require the user
+ * to re-authenticate, which is an unacceptable UX cost for a low-risk key.
+ *
+ * **Background caching**: `message-router.ts` maintains a per-DID in-memory
+ * cache (`dpopKeyPairCache`) for the lifetime of the service worker so that
+ * storage is only read once per SW activation.
  */
 export async function loadOrCreateDpopKeyPair(): Promise<CryptoKeyPair> {
   const result = await browser.storage.local.get(DPOP_KEY_STORAGE);

@@ -2,9 +2,16 @@
  * Shared debug logger.
  *
  * Output is completely suppressed unless debug mode is enabled via one of:
+ *   - `globalThis.__SKEEDITOR_DEBUG__ = true` (works in all contexts, including MV3 service workers)
  *   - `localStorage.setItem('skeeditor:debug', '1')`
  *   - URL query param  `?skeeditor_debug=1`
  *   - `<html data-skeeditor-debug="1">`
+ *
+ * The `globalThis.__SKEEDITOR_DEBUG__` flag is the only mechanism available
+ * inside a MV3 service worker, where `document`, `localStorage`, and
+ * meaningful `location.search` values are unavailable. Set it from the
+ * service-worker devtools console before triggering the code path you want
+ * to observe.
  *
  * When enabled, log entries are batched for DEBOUNCE_MS milliseconds so that
  * rapid bursts (e.g. MutationObserver-triggered scans) appear as a single
@@ -21,6 +28,9 @@ const DEBUG_DATA_ATTRIBUTE = 'data-skeeditor-debug';
 const DEBOUNCE_MS = 150;
 
 function checkDebugEnabled(): boolean {
+  // Global flag — works in all contexts including MV3 service workers.
+  // Set via: globalThis.__SKEEDITOR_DEBUG__ = true
+  if ((globalThis as Record<string, unknown>)['__SKEEDITOR_DEBUG__'] === true) return true;
   try {
     if (typeof document !== 'undefined' && document.documentElement?.getAttribute(DEBUG_DATA_ATTRIBUTE) === '1')
       return true;
