@@ -68,13 +68,13 @@ testing on Safari is manual.
 
 ## Polyfill Strategy
 
-skeeditor uses [WXT](https://wxt.dev/), which handles the `webextension-polyfill` transparently. All extension contexts import `browser` from `wxt/browser`:
+skeeditor uses [WXT](https://wxt.dev/), which handles the `webextension-polyfill` transparently. Extension code imports `browser` from `wxt/browser` when needed:
 
 ```ts
 import { browser } from 'wxt/browser';
 ```
 
-WXT re-exports `webextension-polyfill` under this import path and injects the polyfill into the Chromium bundle at build time. No manual polyfill setup is needed in any context — no first-statement imports, no separate IIFE builds, no manifest script ordering.
+WXT re-exports `webextension-polyfill` under this import path and injects the polyfill into the Chromium bundle at build time. No manual polyfill setup is needed — you don't need to import it as the first statement, add a separate polyfill-only content script, or worry about manifest script ordering.
 
 Entrypoints live under `src/entrypoints/` and are discovered automatically by WXT:
 

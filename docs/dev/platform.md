@@ -24,7 +24,7 @@ All extension contexts import `browser` from `wxt/browser`:
 import { browser } from 'wxt/browser';
 ```
 
-WXT re-exports `webextension-polyfill` under this import path and automatically injects the polyfill for Chromium at build time. No manual polyfill setup is needed in any context — no first-statement imports, no separate content-script file, no manifest ordering concerns.
+WXT re-exports `webextension-polyfill` under this import path and automatically injects the polyfill for Chromium at build time. No manual polyfill setup is needed — you don't need to import it as the first statement, add a separate polyfill-only content script, or worry about manifest script ordering.
 
 Entrypoints live under `src/entrypoints/` and are discovered by WXT convention:
 
