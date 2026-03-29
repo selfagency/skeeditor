@@ -5,6 +5,7 @@ status: completed
 type: feature
 priority: high
 branch: feat/ww0d-account-card-custom-element
+pr: 64
 created_at: 2026-03-29T15:22:12Z
 updated_at: 2026-03-29T15:22:12Z
 ---
