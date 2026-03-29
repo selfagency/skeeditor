@@ -591,4 +591,64 @@ describe('content-script', () => {
     expect(saveButton?.disabled).toBe(true);
     expect(statusMessage?.textContent).toContain('older than your edit time limit of 5 minutes');
   });
+
+  // ── Phase 3: listener lifecycle ──────────────────────────────────────────
+
+  it('should remove the Edited label click listener from document on cleanupContentScript', async () => {
+    const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
+    const removeEventListenerSpy = vi.spyOn(document, 'removeEventListener');
+
+    const sendMessage = vi.fn(async (request: { type: string }) => {
+      if (request.type === 'AUTH_GET_STATUS') return { authenticated: false };
+      return { ok: true };
+    });
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    const { cleanupContentScript } = await import('@src/content/content-script');
+    await flushMicrotasks();
+
+    // Capture the exact handler reference that was registered.
+    const addCall = addEventListenerSpy.mock.calls.find(([event, , capture]) => event === 'click' && capture === true);
+    expect(addCall).toBeDefined();
+    const registeredHandler = addCall![1];
+
+    cleanupContentScript();
+
+    // removeEventListener must be called with the identical function reference.
+    const removeCall = removeEventListenerSpy.mock.calls.find(
+      ([event, handler, capture]) => event === 'click' && handler === registeredHandler && capture === true,
+    );
+    expect(removeCall).toBeDefined();
+  });
+
+  it('should re-attach the Edited label click listener after a cleanup-and-restart cycle', async () => {
+    const sendMessage = vi.fn(async (request: { type: string }) => {
+      if (request.type === 'AUTH_GET_STATUS') return { authenticated: false };
+      return { ok: true };
+    });
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    // Use the same module instance so the test exercises cleanupContentScript()
+    // actually resetting editedLabelListenerAttached / editedLabelClickHandler.
+    // A vi.resetModules() + re-import would mask regressions because a fresh
+    // module instance always starts with clean state regardless of cleanup.
+    const { cleanupContentScript, start } = await import('@src/content/content-script');
+    await flushMicrotasks();
+
+    // First lifecycle teardown.
+    cleanupContentScript();
+
+    // Spy AFTER cleanup so we only capture listener additions from the next start().
+    const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
+
+    // Second lifecycle: restart in the same module instance.
+    start();
+    await flushMicrotasks();
+
+    // The click capture listener must be registered again on the second start.
+    const captureAdditions = addEventListenerSpy.mock.calls.filter(
+      ([event, , capture]) => event === 'click' && capture === true,
+    );
+    expect(captureAdditions.length).toBeGreaterThan(0);
+  });
 });
