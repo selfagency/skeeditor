@@ -1,7 +1,7 @@
 ---
 # skeeditor-ww0d
 title: 'Phase 2 web components: implement account-card custom element'
-status: in-progress
+status: completed
 type: feature
 priority: high
 branch: feat/ww0d-account-card-custom-element
@@ -27,8 +27,8 @@ Implement all remaining Phase 2 work in a single branch: custom elements migrati
 - [x] Run full test suite and summarize Phase 2 completion
 - [x] Validate edit-modal runtime compatibility in Chrome E2E (kept wrapper implementation to avoid isolated-world `HTMLElement` constructor errors)
 - [x] Add failing test for unsafe toast message HTML interpolation (RED)
-- [ ] Refactor toast render to avoid HTML interpolation and prefer Tailwind utility classes for inner markup
-- [ ] Run targeted toast/content tests and full test suite
+- [x] Refactor toast render to avoid HTML interpolation and prefer Tailwind utility classes for inner markup
+- [x] Run targeted toast/content tests and full test suite
 
 ## Summary of Changes
 - Added new shared `<account-card>` component and migrated popup/options account action handling to composed custom events.
@@ -36,4 +36,6 @@ Implement all remaining Phase 2 work in a single branch: custom elements migrati
 - Updated Tailwind shadow source scanning to include shared component sources.
 - Removed legacy `src/shared/utils/account-ui.ts` helper after consumers migrated.
 - Updated popup/options tests for custom-element event delegation and added dedicated toast unit tests.
-- Verified behavior with focused unit suites plus full test suite (`418 passed, 0 failed`).
+- Hardened toast rendering against HTML injection by assigning message via `textContent` instead of interpolating into `innerHTML`.
+- Migrated toast body styling from inline raw CSS to Tailwind utility classes (host positioning/animation remains inline for runtime animation control).
+- Verified behavior with focused unit suites, Chrome E2E, and full test suite (`419 passed, 0 failed`).
