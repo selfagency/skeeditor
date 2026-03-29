@@ -26,7 +26,7 @@ Implement all remaining Phase 2 work in a single branch: custom elements migrati
 - [x] Run focused unit tests (popup/options/content/edit-modal/account-card)
 - [x] Run full test suite and summarize Phase 2 completion
 - [x] Validate edit-modal runtime compatibility in Chrome E2E (kept wrapper implementation to avoid isolated-world `HTMLElement` constructor errors)
-- [ ] Add failing test for unsafe toast message HTML interpolation (RED)
+- [x] Add failing test for unsafe toast message HTML interpolation (RED)
 - [ ] Refactor toast render to avoid HTML interpolation and prefer Tailwind utility classes for inner markup
 - [ ] Run targeted toast/content tests and full test suite
 
