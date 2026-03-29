@@ -257,8 +257,9 @@ jobs:
 
       - name: Install Firefox Developer Edition
         run: |
-          wget -q "https://download.mozilla.org/?product=firefox-devedition-latest-ssl&os=linux64&lang=en-US" \
-               -O /tmp/firefox-devedition.tar.bz2
+          curl -L --retry 3 --fail \
+               "https://download.mozilla.org/?product=firefox-devedition-latest-ssl&os=linux64&lang=en-US" \
+               -o /tmp/firefox-devedition.tar.bz2
           sudo tar xjf /tmp/firefox-devedition.tar.bz2 -C /opt
           sudo ln -sf /opt/firefox/firefox /usr/local/bin/firefox
 
