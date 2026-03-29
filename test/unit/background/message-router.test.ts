@@ -3,7 +3,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { RouterDeps } from '@src/background/message-router';
 import { createDefaultDeps, handleMessage } from '@src/background/message-router';
 import * as constants from '@src/shared/constants';
-import type { GetRecordResult, PutRecordResult, PutRecordWithSwapResult } from '@src/shared/api/xrpc-client';
+import type {
+  CreateRecordResult,
+  GetRecordResult,
+  PutRecordResult,
+  PutRecordWithSwapResult,
+} from '@src/shared/api/xrpc-client';
 import type { AuthorizationRequest } from '@src/shared/auth/auth-client';
 import type { StoredSession } from '@src/shared/auth/session-store';
 
@@ -56,6 +61,10 @@ const makeXrpcMock = () => ({
     value: { $type: 'app.bsky.feed.post', text: 'hello' },
     cid: 'bafyreiabc',
   }),
+  createRecord: vi.fn<() => Promise<CreateRecordResult>>().mockResolvedValue({
+    uri: 'at://did:plc:testuser/app.bsky.feed.post/new',
+    cid: 'bafyreinewrecord',
+  }),
   putRecord: vi.fn<() => Promise<PutRecordResult>>().mockResolvedValue({
     uri: 'at://did:plc:testuser/app.bsky.feed.post/abc',
     cid: 'bafyreinew',
@@ -64,6 +73,10 @@ const makeXrpcMock = () => ({
     success: true,
     uri: 'at://did:plc:testuser/app.bsky.feed.post/abc',
     cid: 'bafyreinew',
+  }),
+  uploadBlob: vi.fn().mockResolvedValue({
+    blobRef: { ref: { $link: 'bafyreiblob' }, mimeType: 'image/png', size: 123 } as unknown,
+    mimeType: 'image/png',
   }),
 });
 
@@ -745,6 +758,82 @@ describe('handleMessage', () => {
       );
 
       expect(result).toEqual({ type: 'PUT_RECORD_ERROR', message: 'Invalid PUT_RECORD payload' });
+    });
+  });
+
+  describe('CREATE_RECORD', () => {
+    it('returns PUT_RECORD_ERROR when payload is invalid', async () => {
+      const deps = makeDeps({ store: makeStoreMock(makeSession()) });
+
+      const result = await handleMessage(
+        {
+          type: 'CREATE_RECORD',
+          repo: 'did:plc:alice',
+          collection: 'app.bsky.feed.post',
+          // record missing
+        },
+        deps,
+      );
+
+      expect(result).toEqual({
+        type: 'PUT_RECORD_ERROR',
+        message: 'Invalid CREATE_RECORD payload',
+      });
+    });
+
+    it('returns PUT_RECORD_ERROR with requiresReauth when unauthenticated', async () => {
+      const deps = makeDeps({ store: makeStoreMock(null) });
+
+      const result = await handleMessage(
+        {
+          type: 'CREATE_RECORD',
+          repo: 'did:plc:alice',
+          collection: 'app.bsky.feed.post',
+          record: { $type: 'app.bsky.feed.post', text: 'hello' },
+        },
+        deps,
+      );
+
+      expect(result).toEqual({
+        type: 'PUT_RECORD_ERROR',
+        message: 'Not authenticated',
+        requiresReauth: true,
+      });
+    });
+
+    it('calls xrpc createRecord and returns CREATE_RECORD_SUCCESS when authenticated', async () => {
+      const session = makeSession();
+      const xrpc = makeXrpcMock();
+      const deps = makeDeps({
+        store: makeStoreMock(session),
+        createXrpc: vi.fn().mockReturnValue(xrpc),
+      });
+
+      const result = await handleMessage(
+        {
+          type: 'CREATE_RECORD',
+          repo: 'did:plc:alice',
+          collection: 'app.bsky.feed.post',
+          record: { $type: 'app.bsky.feed.post', text: 'hello new record' },
+          rkey: 'abc',
+          validate: true,
+        },
+        deps,
+      );
+
+      expect(vi.mocked(xrpc.createRecord)).toHaveBeenCalledWith({
+        repo: 'did:plc:alice',
+        collection: 'app.bsky.feed.post',
+        record: { $type: 'app.bsky.feed.post', text: 'hello new record' },
+        rkey: 'abc',
+        validate: true,
+      });
+
+      expect(result).toEqual({
+        type: 'CREATE_RECORD_SUCCESS',
+        uri: 'at://did:plc:testuser/app.bsky.feed.post/new',
+        cid: 'bafyreinewrecord',
+      });
     });
   });
 
