@@ -330,13 +330,28 @@ interface CreateRecordPayload {
 }
 
 function isValidCreateRecordPayload(msg: IncomingMessage): msg is IncomingMessage & CreateRecordPayload {
-  return (
-    isNonEmptyString(msg['repo']) &&
-    isNonEmptyString(msg['collection']) &&
-    typeof msg['record'] === 'object' &&
-    msg['record'] !== null &&
-    typeof (msg['record'] as any)['$type'] === 'string'
-  );
+  if (!isNonEmptyString(msg['repo']) || !isNonEmptyString(msg['collection'])) {
+    return false;
+  }
+  const record = msg['record'];
+  if (
+    record === null ||
+    typeof record !== 'object' ||
+    Array.isArray(record) ||
+    Object.getPrototypeOf(record) !== Object.prototype
+  ) {
+    return false;
+  }
+  if (!isNonEmptyString((record as Record<string, unknown>)['$type'])) {
+    return false;
+  }
+  if (msg['rkey'] !== undefined && !isNonEmptyString(msg['rkey'])) {
+    return false;
+  }
+  if (msg['validate'] !== undefined && typeof msg['validate'] !== 'boolean') {
+    return false;
+  }
+  return true;
 }
 
 interface PutRecordPayload {

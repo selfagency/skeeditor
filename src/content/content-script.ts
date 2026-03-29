@@ -165,23 +165,38 @@ async function fetchPermalinkPost(): Promise<void> {
     return;
   }
 
-  // Only fetch if the thread root has an "Edited" badge
-  const editedBadge = document.querySelector('button[aria-label="Edited"]');
+  const repo = urlMatch[1]!;
+  const rkey = urlMatch[2]!;
+  const atUri = `at://${repo}/${APP_BSKY_FEED_POST_COLLECTION}/${rkey}`;
+  const atCacheKey = normalizeCacheKey(atUri, repo);
+
+  // Scope the "Edited" badge check to the thread-root container for this permalink.
+  // A broad document.querySelector would match an edited badge on a reply or embedded
+  // quote, causing us to fetch the root post even when it isn't edited.
+  let rootPost: ReturnType<typeof extractPostInfo> | null = null;
+  for (const p of findPosts(document)) {
+    if (normalizeCacheKey(p.atUri, p.repo) === atCacheKey) {
+      rootPost = p;
+      break;
+    }
+  }
+  if (!rootPost) {
+    // Root not in DOM yet — MutationObserver / scanForPosts will handle it on next render.
+    log.debug('fetch-permalink-skip', { reason: 'root-post-not-found', atUri });
+    return;
+  }
+  const editedBadge = rootPost.element.querySelector('button[aria-label="Edited"]');
   if (!editedBadge) {
     log.debug('fetch-permalink-skip', { reason: 'no-edited-badge', pathname: window.location.pathname });
     return;
   }
 
-  const repo = urlMatch[1]!;
-  const rkey = urlMatch[2]!;
-  const atUri = `at://${repo}/${APP_BSKY_FEED_POST_COLLECTION}/${rkey}`;
   log.debug('fetch-permalink-start', { atUri, repo, rkey });
 
   const text = await resolveEditedText(atUri, repo, APP_BSKY_FEED_POST_COLLECTION, rkey);
   if (text !== null) {
     applyToThreadRoot(text, rkey);
     // Also try findPosts in case the DOM has rendered
-    const atCacheKey = normalizeCacheKey(atUri, repo);
     for (const p of findPosts(document)) {
       const cacheKey = normalizeCacheKey(p.atUri, p.repo);
       if (cacheKey === atCacheKey && extractPostText(p.element).trim() !== text.trim()) {
@@ -684,13 +699,16 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
 
     // Create a history record for the old version before modifying the post!
     try {
+      // Resolve to DID-form so the postUri stored in the archive record is canonical
+      // and not subject to handle changes.
+      const resolvedRepo = info.repo === currentHandle && currentDid !== null ? currentDid : info.repo;
       await sendMessage({
         type: 'CREATE_RECORD',
-        repo: info.repo,
+        repo: resolvedRepo,
         collection: 'agency.self.skeeditor.postVersion',
         record: {
           $type: 'agency.self.skeeditor.postVersion',
-          postUri: `at://${info.repo}/${info.collection}/${info.rkey}`,
+          postUri: `at://${resolvedRepo}/${info.collection}/${info.rkey}`,
           postCid: currentCid,
           text: currentRecord.text,
           createdAt: new Date().toISOString(),
@@ -909,9 +927,9 @@ const scanForPosts = (): void => {
       'article',
       '[data-testid]',
     ];
-    const selectorCounts: Record<string, number> = {};
+    const selectorCounts = new Map<string, number>();
     for (const sel of diagnosticSelectors) {
-      selectorCounts[sel] = document.querySelectorAll(sel).length;
+      selectorCounts.set(sel, document.querySelectorAll(sel).length);
     }
     // Grab all data-testid values on the page for inspection
     const allTestIds = Array.from(document.querySelectorAll('[data-testid]'))
@@ -921,12 +939,12 @@ const scanForPosts = (): void => {
     // Check for main/feed containers
     const mainEl = document.querySelector('main');
     const feedEl = document.querySelector('[data-testid="feed"]');
-    console.warn(`${APP_NAME}: no post containers detected on page`, {
+    log.debug('scan-no-containers', {
       pathname: location.pathname,
       href: location.href,
       currentDid,
       currentHandle,
-      selectorCounts,
+      selectorCounts: Object.fromEntries(selectorCounts),
       uniqueTestIds,
       hasMain: !!mainEl,
       mainChildCount: mainEl?.children.length ?? 0,

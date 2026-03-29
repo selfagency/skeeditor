@@ -213,17 +213,12 @@ export function* findPosts(root: Document | HTMLElement = document): Generator<P
   // Walk up from each postText leaf to the nearest ancestor that wraps the post permalink.
   for (const textNode of Array.from(root.querySelectorAll<HTMLElement>('[data-testid="postText"]'))) {
     // Skip if this postText is already inside a container yielded above.
-    let covered = false;
-    for (const yContainer of yielded) {
-      if (yContainer.contains(textNode)) {
-        covered = true;
-        break;
-      }
-    }
-    if (covered) continue;
+    // closest() is O(1) per node instead of the O(M) Set iteration it replaces.
+    const knownContainer = textNode.closest<HTMLElement>(POST_CONTAINER_SELECTORS);
+    if (knownContainer && yielded.has(knownContainer)) continue;
 
     // Find the nearest ancestor that contains a post permalink link.
-    let container: HTMLElement | null = textNode.parentElement as HTMLElement | null;
+    let container: HTMLElement | null = (knownContainer ?? textNode.parentElement) as HTMLElement | null;
     while (container && container !== document.body) {
       if (container.querySelector('a[href*="/post/"]')) break;
       container = container.parentElement as HTMLElement | null;

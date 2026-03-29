@@ -1,46 +1,6 @@
 import { browser } from 'wxt/browser';
 import { APP_NAME, BSKY_APP_ORIGIN, LABELER_SUBSCRIBE_WS_URL } from '../shared/constants';
 import type { LabelReceivedNotification } from '../shared/messages';
-import { registerMessageRouter } from './message-router';
-
-console.info(`${APP_NAME}: background worker loaded`);
-
-// Clear any stale PKCE auth state persisted in local storage from a previous service-worker
-// lifecycle. browser.storage.session is preferred (auto-cleared on SW restart), but Firefox
-// falls back to local storage which survives restarts. Clearing very old entries here ensures
-// a stale code_verifier from a previous session can never be matched against a new auth
-// attempt, while avoiding wiping legitimate in-progress auth state on service-worker restart.
-
-// Only attempt this cleanup when storage.session is unavailable (i.e., when PKCE state may
-// be backed by storage.local and persist across restarts).
-if (!('session' in browser.storage)) {
-  const PENDING_AUTH_TTL_MS = 5 * 60 * 1000; // 5 minutes
-
-  void (async () => {
-    try {
-      const { pendingAuth } = await browser.storage.local.get('pendingAuth');
-      if (!pendingAuth) {
-        return;
-      }
-
-      const record = pendingAuth as Record<string, unknown>;
-      const createdAt = typeof record['createdAt'] === 'number' ? record['createdAt'] : undefined;
-
-      if (createdAt === undefined) {
-        // Without a timestamp, we can't confidently treat this as stale; leave it in place.
-        return;
-      }
-
-      const now = Date.now();
-      if (now - createdAt > PENDING_AUTH_TTL_MS) {
-        await browser.storage.local.remove('pendingAuth');
-      }
-    } catch {
-      // Best-effort; failure is not critical.
-    }
-  })();
-}
-registerMessageRouter();
 
 // ── Labeler WebSocket subscription ────────────────────────────────────────────
 //
@@ -111,14 +71,14 @@ function cborDecode(buf: Uint8Array, pos: number): { value: unknown; pos: number
       return { value: arr, pos };
     }
     case 5: {
-      // map
-      const obj: Record<string, unknown> = {};
+      // map — use Map to prevent prototype-pollution via attacker-controlled keys
+      const obj = new Map<string, unknown>();
       for (let i = 0; i < len; i++) {
         const k = cborDecode(buf, pos);
         pos = k.pos;
         const v = cborDecode(buf, pos);
         pos = v.pos;
-        obj[String(k.value)] = v.value;
+        obj.set(String(k.value), v.value);
       }
       return { value: obj, pos };
     }
@@ -157,7 +117,7 @@ function connectLabelerWs(): void {
     labelerWs = ws;
 
     ws.onopen = () => {
-      console.log(`${APP_NAME}: labeler WS connected`);
+      console.log(APP_NAME + ': labeler WS connected');
       labelerWsBackoff = LABELER_WS_MIN_BACKOFF_MS; // reset on successful connect
     };
 
@@ -168,20 +128,22 @@ function connectLabelerWs(): void {
 
         // Each frame = CBOR(header) || CBOR(body), concatenated.
         const header = cborDecode(buf, 0);
-        const headerObj = header.value as Record<string, unknown>;
+        const headerObj = header.value as Map<string, unknown>;
         // Only handle #labels frames
-        if (headerObj['t'] !== '#labels') return;
+        if (headerObj.get('t') !== '#labels') return;
 
         const body = cborDecode(buf, header.pos);
-        const bodyObj = body.value as Record<string, unknown>;
-        const labels = bodyObj['labels'];
+        const bodyObj = body.value as Map<string, unknown>;
+        const labels = bodyObj.get('labels');
         if (!Array.isArray(labels)) return;
 
         for (const label of labels) {
-          const l = label as Record<string, unknown>;
-          if (l['val'] === 'edited' && typeof l['uri'] === 'string' && l['uri'].length > 0) {
-            console.log(`${APP_NAME}: label received for`, l['uri']);
-            broadcastLabelReceived(l['uri']);
+          const l = label as Map<string, unknown>;
+          const val = l.get('val');
+          const uri = l.get('uri');
+          if (val === 'edited' && typeof uri === 'string' && uri.length > 0) {
+            console.log(APP_NAME + ': label received for', uri);
+            broadcastLabelReceived(uri);
           }
         }
       } catch {
@@ -190,7 +152,7 @@ function connectLabelerWs(): void {
     };
 
     ws.onclose = () => {
-      console.log(`${APP_NAME}: labeler WS closed — reconnecting in ${labelerWsBackoff}ms`);
+      console.log(APP_NAME + ': labeler WS closed — reconnecting in', labelerWsBackoff + 'ms');
       labelerWs = null;
       labelerWsRetryTimer = setTimeout(() => {
         labelerWsBackoff = Math.min(labelerWsBackoff * 2, LABELER_WS_MAX_BACKOFF_MS);
@@ -203,15 +165,13 @@ function connectLabelerWs(): void {
       ws.close();
     };
   } catch (err) {
-    console.warn(`${APP_NAME}: labeler WS init failed:`, err);
+    console.warn(APP_NAME + ': labeler WS init failed:', err);
   }
 }
 
-// Kick off the subscription immediately when the SW starts.
-connectLabelerWs();
+export { connectLabelerWs };
 
-// Clean up timer if the SW is somehow terminated cleanly.
-self.addEventListener('unload', () => {
+export function cleanupLabelerWs(): void {
   if (labelerWsRetryTimer !== null) clearTimeout(labelerWsRetryTimer);
   labelerWs?.close();
-});
+}

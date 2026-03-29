@@ -1,7 +1,8 @@
 import { browser } from 'wxt/browser';
 import { defineBackground } from 'wxt/utils/define-background';
-import { APP_NAME } from '../shared/constants';
 import { registerMessageRouter } from '../background/message-router';
+import { cleanupLabelerWs, connectLabelerWs } from '../background/service-worker';
+import { APP_NAME } from '../shared/constants';
 
 // Tell TypeScript that `self` in this module is a ServiceWorkerGlobalScope,
 // not a Window. Both DOM and WebWorker are in the project's lib, so TypeScript
@@ -76,4 +77,8 @@ export default defineBackground(() => {
   }
 
   registerMessageRouter();
+  connectLabelerWs();
+  self.addEventListener('unload', () => {
+    cleanupLabelerWs();
+  });
 });

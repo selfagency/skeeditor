@@ -27,6 +27,11 @@ const inFlight = new Map<string, Promise<string | null>>();
 let currentDid: string | null = null;
 let currentHandle: string | null = null;
 
+// Debounce timer for storage persistence — prevents a burst of setCached() calls
+// (e.g. during resolveBatch) from each triggering a full cache serialization.
+let persistTimer: ReturnType<typeof setTimeout> | null = null;
+const PERSIST_DEBOUNCE_MS = 150;
+
 // ── Handle ↔ DID registry ─────────────────────────────────────────────────────
 //
 // Bluesky's DOM uses handle-based URLs (e.g. feedItem-by-handle.bsky.social)
@@ -136,7 +141,7 @@ export async function loadFromStorage(): Promise<void> {
       }
     }
   } catch (err) {
-    console.warn(`${APP_NAME}: could not load edit cache`, err);
+    console.warn(APP_NAME + ': could not load edit cache', err);
   }
 }
 
@@ -144,15 +149,10 @@ async function persistToStorage(): Promise<void> {
   if (!browserStorage) return;
   try {
     const now = Date.now();
-    const data: Record<string, CachedPost> = {};
-    for (const [key, entry] of cache) {
-      if (now - entry.fetchedAt < CACHE_TTL_MS) {
-        data[key] = entry;
-      }
-    }
+    const data = Object.fromEntries([...cache].filter(([, entry]) => now - entry.fetchedAt < CACHE_TTL_MS));
     await browserStorage.set({ [STORAGE_KEY]: data });
   } catch (err) {
-    console.warn(`${APP_NAME}: could not persist edit cache`, err);
+    console.warn(APP_NAME + ': could not persist edit cache', err);
   }
 }
 
@@ -192,7 +192,15 @@ export function setCached(cacheKey: string, text: string, originalText?: string)
     cache.set(altKey, entry);
   }
 
-  void persistToStorage();
+  schedulePersist();
+}
+
+function schedulePersist(): void {
+  if (persistTimer !== null) clearTimeout(persistTimer);
+  persistTimer = setTimeout(() => {
+    persistTimer = null;
+    void persistToStorage();
+  }, PERSIST_DEBOUNCE_MS);
 }
 
 export function getCacheSize(): number {
@@ -373,7 +381,7 @@ export async function resolveBatch(posts: PostRef[]): Promise<Map<string, string
     // Log any unexpected rejections (shouldn't happen since resolve never throws)
     for (const result of settled) {
       if (result.status === 'rejected') {
-        console.warn(`${APP_NAME}: batch resolve rejection:`, result.reason);
+        console.warn(APP_NAME + ': batch resolve rejection:', result.reason);
       }
     }
   }

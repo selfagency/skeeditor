@@ -352,9 +352,9 @@ export class XrpcClient {
    * Create a new record in the PDS.
    */
   public async createRecord(params: CreateRecordParams): Promise<CreateRecordResult> {
-    const { repo, collection: _collection, rkey, record, validate = true } = params;
+    const { repo, collection, rkey, record, validate = true } = params;
 
-    const options: Record<string, unknown> = { repo, validate };
+    const options: Record<string, unknown> = { repo, collection, validate };
 
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
