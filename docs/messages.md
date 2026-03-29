@@ -87,27 +87,81 @@ switch (result.type) {
 
 ## Message Catalogue
 
-| Request `type`     | Payload fields                                        | Response type                                                                  |
-| ------------------ | ----------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `AUTH_SIGN_IN`     | —                                                     | `{ ok: true }`                                                                 |
-| `AUTH_SIGN_OUT`    | —                                                     | `{ ok: true }`                                                                 |
-| `AUTH_REAUTHORIZE` | —                                                     | `{ ok: true }`                                                                 |
-| `AUTH_GET_STATUS`  | —                                                     | `{ authenticated: false }` or `{ authenticated: true, did, expiresAt }`        |
-| `AUTH_CALLBACK`    | `code`, `state`                                       | `{ ok: true }` or `{ error }`                                                  |
-| `GET_RECORD`       | `repo`, `collection`, `rkey`                          | `{ value, cid }` or `{ error }`                                                |
-| `PUT_RECORD`       | `repo`, `collection`, `rkey`, `record`, `swapRecord?` | `PUT_RECORD_SUCCESS`, `PUT_RECORD_CONFLICT`, or `PUT_RECORD_ERROR` (see below) |
+### Auth messages
 
-### PUT_RECORD response shapes
+| Request `type`          | Payload fields  | Response type                                                                    |
+| ----------------------- | --------------- | -------------------------------------------------------------------------------- |
+| `AUTH_SIGN_IN`          | `pdsUrl?`       | `{ ok: true }`                                                                   |
+| `AUTH_SIGN_OUT`         | —               | `{ ok: true }`                                                                   |
+| `AUTH_REAUTHORIZE`      | `pdsUrl?`       | `{ ok: true }`                                                                   |
+| `AUTH_GET_STATUS`       | —               | `{ authenticated: false }` or `{ authenticated: true, did, handle?, expiresAt }` |
+| `AUTH_CALLBACK`         | `code`, `state` | `{ ok: true }` or `{ error }`                                                    |
+| `AUTH_LIST_ACCOUNTS`    | —               | `{ accounts: AuthListAccountsAccount[] }`                                        |
+| `AUTH_SWITCH_ACCOUNT`   | `did`           | `{ ok: true }`                                                                   |
+| `AUTH_SIGN_OUT_ACCOUNT` | `did`           | `{ ok: true }`                                                                   |
+
+`AuthListAccountsAccount` is:
 
 ```typescript
-// Success — write accepted by the PDS
+interface AuthListAccountsAccount {
+  did: string;
+  handle?: string;
+  expiresAt: number;
+  isActive: boolean;
+}
+```
+
+### Settings messages
+
+| Request `type` | Payload fields | Response type                      |
+| -------------- | -------------- | ---------------------------------- |
+| `GET_SETTINGS` | —              | `ExtensionSettings` or `{ error }` |
+| `SET_SETTINGS` | `settings`     | `{ ok: true }` or `{ error }`      |
+
+`ExtensionSettings` is defined in `src/shared/constants.ts`. Currently: `{ editTimeLimit: number | null }`.
+
+### Record messages
+
+| Request `type`  | Payload fields                                        | Response type                                                                  |
+| --------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `CREATE_RECORD` | `repo`, `collection`, `record`, `rkey?`, `validate?`  | `CREATE_RECORD_SUCCESS` or `PUT_RECORD_ERROR` (see below)                      |
+| `GET_RECORD`    | `repo`, `collection`, `rkey`                          | `{ value, cid }` or `{ error }`                                                |
+| `PUT_RECORD`    | `repo`, `collection`, `rkey`, `record`, `swapRecord?` | `PUT_RECORD_SUCCESS`, `PUT_RECORD_CONFLICT`, or `PUT_RECORD_ERROR` (see below) |
+
+### Blob message
+
+| Request `type` | Payload fields | Response type                          |
+| -------------- | -------------- | -------------------------------------- |
+| `UPLOAD_BLOB`  | `data`, `repo` | `{ blobRef, mimeType }` or `{ error }` |
+
+### PDS URL messages
+
+| Request `type` | Payload fields | Response type                 |
+| -------------- | -------------- | ----------------------------- |
+| `GET_PDS_URL`  | —              | `{ url }` or `{ error }`      |
+| `SET_PDS_URL`  | `url`          | `{ ok: true }` or `{ error }` |
+
+### Labeler messages
+
+| Request `type`               | Payload fields | Response type                 |
+| ---------------------------- | -------------- | ----------------------------- |
+| `CHECK_LABELER_SUBSCRIPTION` | —              | `{ ok: true }` or `{ error }` |
+
+### PUT_RECORD / CREATE_RECORD response shapes
+
+```typescript
+// PUT_RECORD success — write accepted by the PDS
 { type: 'PUT_RECORD_SUCCESS'; uri: string; cid: string }
 
-// Conflict — swapRecord CID did not match the current server CID (HTTP 409)
+// PUT_RECORD conflict — swapRecord CID did not match current server CID (HTTP 409)
 { type: 'PUT_RECORD_CONFLICT'; error: PutRecordWithSwapError; conflict?: PutRecordConflictDetails }
 
-// Error — auth failure, validation failure, or unexpected XRPC error
-{ type: 'PUT_RECORD_ERROR'; message: string }
+// PUT_RECORD / CREATE_RECORD error — auth failure, validation failure, or unexpected XRPC error
+// requiresReauth is set when the error is an auth/permission failure requiring re-authentication
+{ type: 'PUT_RECORD_ERROR'; message: string; requiresReauth?: boolean }
+
+// CREATE_RECORD success
+{ type: 'CREATE_RECORD_SUCCESS'; uri: string; cid: string }
 ```
 
 `PutRecordConflictDetails` is only present on a conflict response when the server returns the current record in the error body:
@@ -118,6 +172,14 @@ interface PutRecordConflictDetails {
   currentValue: Record<string, unknown>;
 }
 ```
+
+## Push notifications (background → content scripts)
+
+The background service worker can also push messages to all `bsky.app` content scripts via `browser.tabs.sendMessage`. These are one-way notifications; no response is expected.
+
+| Notification `type` | Payload fields | Description                                                                                                                                                              |
+| ------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `LABEL_RECEIVED`    | `uri`          | An `edited` label was received from the labeler WebSocket. `uri` is the AT-URI of the edited post. Content scripts use this to fetch fresh post text and update the DOM. |
 
 ## Payload validation
 

@@ -29,6 +29,7 @@ export default defineConfig({
       'https://bsky.app/*',
       'https://*.bsky.network/*',
       'https://docs.skeeditor.link/*',
+      'https://slingshot.microcosm.blue/*',
     ],
     ...(ctx.browser === 'chrome' && { minimum_chrome_version: '120' }),
     ...(ctx.browser === 'firefox' && {
