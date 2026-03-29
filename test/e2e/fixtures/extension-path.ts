@@ -21,17 +21,11 @@ export const resolveBuiltExtensionPath = async (browserOverride?: Browser): Prom
 
   const extensionPath = resolve(process.cwd(), 'dist', browser);
 
-  // WXT produces different output structures per browser:
-  //   Chrome: background.js, popup.html (flat root)
-  //   Firefox: background/service-worker.js, popup/popup.html (nested)
-  const backgroundFile =
-    browser === 'firefox'
-      ? resolve(extensionPath, 'background', 'service-worker.js')
-      : resolve(extensionPath, 'background.js');
-  const popupFile =
-    browser === 'firefox' ? resolve(extensionPath, 'popup', 'popup.html') : resolve(extensionPath, 'popup.html');
-
-  await Promise.all([access(backgroundFile), access(resolve(extensionPath, 'manifest.json')), access(popupFile)]);
+  await Promise.all([
+    access(resolve(extensionPath, 'background.js')),
+    access(resolve(extensionPath, 'manifest.json')),
+    access(resolve(extensionPath, 'popup.html')),
+  ]);
 
   return extensionPath;
 };

@@ -6,28 +6,38 @@
  * Extends the base Playwright `test` with the same devnet fixtures as the
  * chromium-devnet variant — `devnetSession`, `devnetPost`, and
  * `routeDevnetBskyApp` — but launches Firefox with the skeeditor extension
- * loaded via a pre-populated Firefox profile.
+ * loaded via the Firefox Remote Debugging Protocol (RDP).
  *
  * ## Extension loading
  *
- * Firefox does not support `--load-extension` like Chromium. Instead we:
+ * Firefox 73+ actively removes sideloaded extension directories from the
+ * profile's `extensions/` folder on startup (anti-malware protection).  There
+ * is no pref that bypasses this.  The only reliable approach for temporary
+ * extension loading without AMO is the Firefox Remote Debugging Protocol:
+ *
  *   1. Create a temporary Firefox profile directory.
- *   2. Copy `dist/firefox/` into `{profile}/extensions/skeeditor@selfagency.dev/`.
- *   3. Write `user.js` with the permissive prefs required to load unsigned add-ons.
- *   4. Pin the internal moz-extension UUID via the `extensions.webextensions.uuids`
- *      preference so we can navigate to extension pages without discovery.
- *   5. Launch via `firefox.launchPersistentContext(profileDir, { firefoxUserPrefs })`.
+ *   2. Find a free TCP port for the RDP server.
+ *   3. Launch Firefox via `firefox.launchPersistentContext` with
+ *      `-start-debugger-server <port>` to expose the RDP server and
+ *      `firefoxUserPrefs` to allow unsigned add-ons.
+ *   4. Connect to the RDP server and send `installTemporaryAddon` with the
+ *      path to `dist/firefox/`.
+ *   5. Extract the assigned `moz-extension://<uuid>/` base URL from the
+ *      RDP response and store it for `devnetSession`.
+ *   6. Navigate to `moz-extension://<uuid>/popup.html` to inject session storage.
  *
  * ## Guard
  *
  * The full Firefox devnet flow is gated behind `FIREFOX_EXTENSION_E2E=1` because
- * it requires a locally installed Firefox Developer Edition and the devnet stack.
+ * it requires a locally installed Firefox and the devnet stack.
  *
  * XRPC calls flow directly from the extension background page to
  * `http://localhost:3000` (the devnet PDS). Requires `http://localhost/*` in the
  * extension manifest `host_permissions`.
  */
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { createConnection, createServer } from 'node:net';
+import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -39,14 +49,13 @@ import { resolveBuiltExtensionPath } from './extension-path';
 
 export const firefoxDevnetEnabled = process.env['FIREFOX_EXTENSION_E2E'] === '1';
 
-/** Firefox add-on ID as specified in the manifest's gecko.id. */
-const FIREFOX_EXTENSION_GECKO_ID = 'skeeditor@selfagency.dev';
 
 /**
- * A fixed moz-extension UUID pre-seeded into the Firefox profile.
- * This lets us navigate to extension pages without UUID discovery at runtime.
+ * Map from a launched BrowserContext to the discovered `moz-extension://<uuid>`
+ * base URL for the loaded extension.  Set in the `context` fixture, read in
+ * `devnetSession`.  WeakMap ensures entries are GC'd when the context closes.
  */
-const FIREFOX_EXTENSION_UUID = 'e2a7c8f1-3d5b-4a9e-b6c2-8f0d1e2a3b4c';
+const _extensionBaseUrls = new WeakMap<BrowserContext, string>();
 
 const MOCK_PAGE_TEMPLATE_PATH = resolve(process.cwd(), 'test/e2e/fixtures/mock-bsky-page.html');
 
@@ -69,13 +78,109 @@ interface FirefoxDevnetFixtures {
   routeDevnetBskyApp: () => Promise<void>;
 }
 
+/** Find a free TCP port by briefly binding to port 0. */
+async function findFreePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const srv = createServer();
+    srv.listen(0, '127.0.0.1', () => {
+      const { port } = srv.address() as AddressInfo;
+      srv.close(() => resolve(port));
+    });
+    srv.on('error', reject);
+  });
+}
+
+/**
+ * Install an extension as a temporary add-on via Firefox's Remote Debugging Protocol.
+ *
+ * Flow: connect → receive greeting → send getRoot → get addonsActor →
+ *       send installTemporaryAddon → extract UUID from addon.url in response.
+ *
+ * @returns the bare UUID portion of the `moz-extension://<uuid>/` URL.
+ */
+async function installFirefoxTempAddon(rdpPort: number, addonPath: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const client = createConnection({ port: rdpPort, host: '127.0.0.1' });
+    client.setTimeout(30_000);
+    let buf = '';
+    let step: 'greeting' | 'getRoot' | 'install' = 'greeting';
+    let addonsActorId: string | undefined;
+
+    const send = (msg: Record<string, unknown>): void => {
+      const json = JSON.stringify(msg);
+      client.write(`${Buffer.byteLength(json, 'utf8')}:${json}`);
+    };
+
+    const processMessages = (): void => {
+      for (;;) {
+        const colonIdx = buf.indexOf(':');
+        if (colonIdx === -1) break;
+        const len = Number(buf.substring(0, colonIdx));
+        if (!Number.isFinite(len) || len <= 0) {
+          buf = '';
+          break;
+        }
+        if (buf.length < colonIdx + 1 + len) break;
+        const msgStr = buf.substring(colonIdx + 1, colonIdx + 1 + len);
+        buf = buf.substring(colonIdx + 1 + len);
+        let msg: Record<string, unknown>;
+        try {
+          msg = JSON.parse(msgStr) as Record<string, unknown>;
+        } catch {
+          continue;
+        }
+
+        if (step === 'greeting') {
+          step = 'getRoot';
+          send({ to: 'root', type: 'getRoot' });
+        } else if (step === 'getRoot') {
+          addonsActorId = msg['addonsActor'] as string | undefined;
+          if (!addonsActorId) {
+            client.destroy();
+            reject(new Error(`addonsActor not found in getRoot response: ${JSON.stringify(msg)}`));
+            return;
+          }
+          step = 'install';
+          send({ to: addonsActorId, type: 'installTemporaryAddon', addonPath });
+        } else if (step === 'install') {
+          if ('error' in msg) {
+            client.destroy();
+            reject(new Error(`installTemporaryAddon error: ${JSON.stringify(msg)}`));
+            return;
+          }
+          const addon = msg['addon'] as Record<string, string> | undefined;
+          const url = addon?.['url'] ?? '';
+          const uuidMatch = url.match(/^moz-extension:\/\/([^/]+)\//);
+          if (uuidMatch?.[1]) {
+            client.destroy();
+            resolve(uuidMatch[1]);
+          } else {
+            client.destroy();
+            reject(new Error(`Could not extract UUID from RDP response. url=${url} msg=${JSON.stringify(msg)}`));
+          }
+        }
+      }
+    };
+
+    client.on('data', (data: Buffer) => {
+      buf += data.toString('utf8');
+      processMessages();
+    });
+    client.on('error', reject);
+    client.on('timeout', () => {
+      client.destroy();
+      reject(new Error(`Firefox RDP timed out on port ${rdpPort}`));
+    });
+  });
+}
+
 export const skipIfFirefoxDevnetDisabled = (): void => {
   base.skip(!firefoxDevnetEnabled, 'Firefox devnet E2E tests require FIREFOX_EXTENSION_E2E=1 and the devnet stack.');
 };
 
 export const test = base.extend<FirefoxDevnetFixtures & { context: BrowserContext }>({
   // Override the context fixture with a Firefox persistent context that has the
-  // extension pre-installed via a custom profile directory.
+  // extension installed as a temporary add-on via the Firefox RDP protocol.
   context: async ({ browserName: _browserName }, use, testInfo) => {
     if (!firefoxDevnetEnabled) {
       testInfo.skip(true, 'Firefox devnet E2E tests require FIREFOX_EXTENSION_E2E=1 and the devnet stack.');
@@ -88,32 +193,26 @@ export const test = base.extend<FirefoxDevnetFixtures & { context: BrowserContex
     const profileDir = await mkdtemp(join(tmpdir(), 'skeeditor-firefox-devnet-'));
 
     try {
-      // 1. Copy the unpacked extension into the profile's extensions directory.
-      const extensionsDir = join(profileDir, 'extensions');
-      await mkdir(extensionsDir, { recursive: true });
-      await cp(extensionPath, join(extensionsDir, FIREFOX_EXTENSION_GECKO_ID), { recursive: true });
+      // 1. Find a free port for Firefox's RDP server.
+      const rdpPort = await findFreePort();
 
-      // 2. Write user.js to set the required preferences before launch.
-      //    `extensions.webextensions.uuids` pins the internal moz-extension UUID
-      //    so we can navigate to extension pages without runtime UUID discovery.
-      const uuidsJson = JSON.stringify({ [FIREFOX_EXTENSION_GECKO_ID]: FIREFOX_EXTENSION_UUID });
-      const userPrefs = [
-        `user_pref("xpinstall.signatures.required", false);`,
-        `user_pref("extensions.autoDisableScopes", 0);`,
-        `user_pref("extensions.enabledScopes", 15);`,
-        `user_pref("extensions.webextensions.uuids", ${JSON.stringify(uuidsJson)});`,
-      ].join('\n');
-      await writeFile(join(profileDir, 'user.js'), userPrefs, 'utf8');
-
-      // 3. Launch Firefox with the pre-populated profile.
+      // 2. Launch Firefox with the RDP debugger server enabled.
+      //    firefoxUserPrefs allows unsigned extensions (required for installTemporaryAddon).
       const context = await firefox.launchPersistentContext(profileDir, {
+        args: ['-start-debugger-server', String(rdpPort)],
         firefoxUserPrefs: {
           'xpinstall.signatures.required': false,
           'extensions.autoDisableScopes': 0,
           'extensions.enabledScopes': 15,
-          'extensions.webextensions.uuids': uuidsJson,
         },
       });
+
+      // 3. Wait for Firefox's RDP server to start accepting connections.
+      await new Promise(r => setTimeout(r, 2000));
+
+      // 4. Install the extension as a temporary add-on via RDP and get its UUID.
+      const uuid = await installFirefoxTempAddon(rdpPort, extensionPath);
+      _extensionBaseUrls.set(context, `moz-extension://${uuid}`);
 
       await use(context);
       await context.close();
@@ -129,10 +228,13 @@ export const test = base.extend<FirefoxDevnetFixtures & { context: BrowserContex
 
     const session = await createPdsSession(handle, password, pdsUrl);
 
-    // Inject the real session into the extension's storage by navigating to the
-    // extension popup page (possible because we pinned the UUID in user.js).
+    // Inject the session into the extension's storage by navigating to the
+    // popup page. The popup URL uses the UUID discovered from prefs.js above.
+    const baseUrl = _extensionBaseUrls.get(context);
+    if (!baseUrl) throw new Error('Firefox extension base URL not found — context fixture may not have run');
+
     const popupPage = await context.newPage();
-    await popupPage.goto(`moz-extension://${FIREFOX_EXTENSION_UUID}/popup.html`);
+    await popupPage.goto(`${baseUrl}/popup.html`);
     await popupPage.waitForLoadState('domcontentloaded');
 
     await popupPage.evaluate(
