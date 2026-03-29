@@ -6,6 +6,7 @@
 @source '../content/**/*.ts';
 @source '../popup/**/*.ts';
 @source '../options/**/*.ts';
+@source '../shared/components/**/*.ts';
 
 /* Modal styles for shadow DOM */
 .edit-modal-overlay {

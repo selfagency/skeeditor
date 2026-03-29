@@ -1,10 +1,10 @@
 import { browser } from 'wxt/browser';
 
 import globalStyles from '../shadow-styles.css?inline';
+import '../shared/components/account-card';
 import { LABELER_DID } from '../shared/constants';
 import type { AuthListAccountsAccount } from '../shared/messages';
 import { sendMessage } from '../shared/messages';
-import { accountCard } from '../shared/utils/account-ui';
 import { escapeHTML } from '../shared/utils/escape-html';
 
 type PopupState = 'loading' | 'unauthenticated' | 'authenticated';
@@ -22,6 +22,25 @@ class AuthPopup extends HTMLElement {
   private state: PopupState = 'loading';
   private accounts: AuthListAccountsAccount[] = [];
   private showLabelerPrompt = false;
+  private readonly onAccountSwitch = (event: Event): void => {
+    const did = (event as CustomEvent<{ did?: string }>).detail?.did;
+    if (!did) return;
+    void sendMessage({ type: 'AUTH_SWITCH_ACCOUNT', did }).then(() => {
+      void this.loadAccounts();
+    });
+  };
+
+  private readonly onAccountRemove = (event: Event): void => {
+    const did = (event as CustomEvent<{ did?: string }>).detail?.did;
+    if (!did) return;
+    void sendMessage({ type: 'AUTH_SIGN_OUT_ACCOUNT', did }).then(() => {
+      void this.loadAccounts();
+    });
+  };
+
+  private readonly onAccountReauthorize = (): void => {
+    void sendMessage({ type: 'AUTH_REAUTHORIZE' });
+  };
 
   constructor() {
     super();
@@ -103,7 +122,7 @@ class AuthPopup extends HTMLElement {
             </div>`
           : '';
 
-        const accountCards = this.accounts.map(account => accountCard(account, { showReauthorize: true })).join('');
+        const accountCards = this.accounts.map(account => this.renderAccountCard(account)).join('');
 
         return `
           ${style}
@@ -124,15 +143,25 @@ class AuthPopup extends HTMLElement {
     }
   }
 
+  private renderAccountCard(account: AuthListAccountsAccount): string {
+    const attrs: string[] = ['class="account-card"', `did="${escapeHTML(account.did)}"`, 'show-reauthorize="true"'];
+
+    if (account.handle) {
+      attrs.push(`handle="${escapeHTML(account.handle)}"`);
+    }
+
+    if (account.isActive) {
+      attrs.push('is-active="true"');
+    }
+
+    return `<account-card ${attrs.join(' ')}></account-card>`;
+  }
+
   private attachHandlers(): void {
     this.shadow.getElementById('sign-in')?.addEventListener('click', () => {
       const pdsUrlInput = this.shadow.getElementById('pds-url') as HTMLInputElement | null;
       const pdsUrl = pdsUrlInput?.value?.trim() || 'https://bsky.social';
       void sendMessage({ type: 'AUTH_SIGN_IN', pdsUrl });
-    });
-
-    this.shadow.getElementById('reauthorize')?.addEventListener('click', () => {
-      void sendMessage({ type: 'AUTH_REAUTHORIZE' });
     });
 
     this.shadow.getElementById('open-settings')?.addEventListener('click', () => {
@@ -154,27 +183,13 @@ class AuthPopup extends HTMLElement {
       });
     });
 
-    this.shadow.querySelectorAll<HTMLButtonElement>('.account-switch').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const did = btn.dataset['did'];
-        if (did) {
-          void sendMessage({ type: 'AUTH_SWITCH_ACCOUNT', did }).then(() => {
-            void this.loadAccounts();
-          });
-        }
-      });
-    });
+    this.shadow.removeEventListener('account-switch', this.onAccountSwitch as EventListener);
+    this.shadow.removeEventListener('account-remove', this.onAccountRemove as EventListener);
+    this.shadow.removeEventListener('account-reauthorize', this.onAccountReauthorize as EventListener);
 
-    this.shadow.querySelectorAll<HTMLButtonElement>('.account-sign-out, .account-remove').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const did = btn.dataset['did'];
-        if (did) {
-          void sendMessage({ type: 'AUTH_SIGN_OUT_ACCOUNT', did }).then(() => {
-            void this.loadAccounts();
-          });
-        }
-      });
-    });
+    this.shadow.addEventListener('account-switch', this.onAccountSwitch as EventListener);
+    this.shadow.addEventListener('account-remove', this.onAccountRemove as EventListener);
+    this.shadow.addEventListener('account-reauthorize', this.onAccountReauthorize as EventListener);
   }
 }
 

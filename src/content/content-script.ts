@@ -10,6 +10,7 @@ import type {
 } from '../shared/messages';
 import { sendMessage } from '../shared/messages';
 import { EditModal } from './edit-modal';
+import './toast';
 import {
   getCached,
   getCacheSize,
@@ -36,48 +37,8 @@ const log = createLogger('content');
 
 function showToast(message: string): void {
   const host = document.createElement('skeeditor-toast');
-  const shadow = host.attachShadow({ mode: 'open' });
-
-  host.style.cssText = [
-    'position:fixed',
-    'bottom:1.5rem',
-    'left:50%',
-    'transform:translateX(-50%) translateY(0.75rem)',
-    'z-index:10001',
-    'opacity:0',
-    'transition:opacity 0.2s ease,transform 0.2s ease',
-    'pointer-events:none',
-  ].join(';');
-
-  shadow.innerHTML = `<div style="
-    background:#18181b;
-    color:#fff;
-    padding:0.625rem 1rem;
-    border-radius:0.5rem;
-    font-size:0.875rem;
-    font-family:system-ui,-apple-system,sans-serif;
-    line-height:1.5;
-    box-shadow:0 4px 12px rgba(0,0,0,0.2);
-    display:flex;
-    align-items:center;
-    gap:0.5rem;
-    white-space:nowrap;
-  "><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style="width:1rem;height:1rem;flex-shrink:0;color:#4ade80;"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/></svg>${message}</div>`;
-
+  host.setAttribute('message', message);
   document.body.appendChild(host);
-
-  requestAnimationFrame(() => {
-    host.style.opacity = '1';
-    host.style.transform = 'translateX(-50%) translateY(0)';
-  });
-
-  setTimeout(() => {
-    host.style.opacity = '0';
-    host.style.transform = 'translateX(-50%) translateY(0.75rem)';
-    setTimeout(() => {
-      host.parentNode?.removeChild(host);
-    }, 250);
-  }, 3000);
 }
 
 // ── Recent record cache (avoids stale GET_RECORD after a fresh save) ──────────

@@ -4,6 +4,13 @@ import type { AuthListAccountsAccount } from '@src/shared/messages';
 
 const flushPromises = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
 
+const getAccountCards = (): HTMLElement[] =>
+  Array.from(document.querySelectorAll<HTMLElement>('account-card.account-card'));
+
+const queryAcrossAccountCardShadows = <T extends Element>(selector: string): T[] => {
+  return getAccountCards().flatMap(card => Array.from(card.shadowRoot?.querySelectorAll<T>(selector) ?? []));
+};
+
 // ── DOM helpers ───────────────────────────────────────────────────────────────
 
 function setupDOM(): void {
@@ -95,7 +102,8 @@ describe('options page', () => {
       await import('@src/options/options');
       await flushPromises();
 
-      expect(document.getElementById('accounts-list')?.textContent).toContain('alice.bsky.social');
+      const [card] = getAccountCards();
+      expect(card?.shadowRoot?.textContent).toContain('alice.bsky.social');
     });
 
     it('shows "Set active" button only for non-active accounts', async () => {
@@ -115,7 +123,7 @@ describe('options page', () => {
       await import('@src/options/options');
       await flushPromises();
 
-      const switchBtns = document.querySelectorAll<HTMLButtonElement>('.account-switch');
+      const switchBtns = queryAcrossAccountCardShadows<HTMLButtonElement>('.account-switch');
       expect(switchBtns.length).toBe(1);
       expect(switchBtns[0]?.dataset['did']).toBe('did:plc:user2');
     });
@@ -137,7 +145,7 @@ describe('options page', () => {
       await import('@src/options/options');
       await flushPromises();
 
-      const removeBtns = document.querySelectorAll('.account-remove');
+      const removeBtns = queryAcrossAccountCardShadows('.account-remove');
       expect(removeBtns.length).toBe(2);
     });
   });
@@ -162,7 +170,14 @@ describe('options page', () => {
       await import('@src/options/options');
       await flushPromises();
 
-      document.querySelector<HTMLButtonElement>('.account-switch')?.click();
+      const [card] = getAccountCards().filter(accountCard => accountCard.getAttribute('did') === 'did:plc:user2');
+      card?.dispatchEvent(
+        new CustomEvent('account-switch', {
+          detail: { did: 'did:plc:user2' },
+          bubbles: true,
+          composed: true,
+        }),
+      );
       await flushPromises();
 
       expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({
@@ -182,7 +197,14 @@ describe('options page', () => {
       await import('@src/options/options');
       await flushPromises();
 
-      document.querySelector<HTMLButtonElement>('.account-remove')?.click();
+      const [card] = getAccountCards();
+      card?.dispatchEvent(
+        new CustomEvent('account-remove', {
+          detail: { did: 'did:plc:testuser123' },
+          bubbles: true,
+          composed: true,
+        }),
+      );
       await flushPromises();
 
       expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({
@@ -206,7 +228,14 @@ describe('options page', () => {
       await import('@src/options/options');
       await flushPromises();
 
-      document.querySelector<HTMLButtonElement>('.account-remove')?.click();
+      const [card] = getAccountCards();
+      card?.dispatchEvent(
+        new CustomEvent('account-remove', {
+          detail: { did: 'did:plc:testuser123' },
+          bubbles: true,
+          composed: true,
+        }),
+      );
       await flushPromises();
       await flushPromises();
 

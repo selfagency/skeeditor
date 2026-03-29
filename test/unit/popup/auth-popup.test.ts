@@ -29,6 +29,13 @@ const attach = async (el: HTMLElement): Promise<void> => {
   await flushPromises();
 };
 
+const getAccountCards = (el: HTMLElement): HTMLElement[] =>
+  Array.from(el.shadowRoot?.querySelectorAll<HTMLElement>('account-card.account-card') ?? []);
+
+const queryAcrossAccountCardShadows = <T extends Element>(el: HTMLElement, selector: string): T[] => {
+  return getAccountCards(el).flatMap(card => Array.from(card.shadowRoot?.querySelectorAll<T>(selector) ?? []));
+};
+
 describe('auth-popup Web Component', () => {
   beforeEach(() => {
     mockSendMessage([]);
@@ -83,7 +90,8 @@ describe('auth-popup Web Component', () => {
       const el = createElement();
       await attach(el);
 
-      expect(el.shadowRoot?.textContent).toContain('did:plc:testuser123');
+      const [card] = getAccountCards(el);
+      expect(card?.shadowRoot?.textContent).toContain('did:plc:testuser123');
     });
 
     it('shows handle instead of DID when handle is available', async () => {
@@ -92,7 +100,8 @@ describe('auth-popup Web Component', () => {
       const el = createElement();
       await attach(el);
 
-      expect(el.shadowRoot?.textContent).toContain('alice.bsky.social');
+      const [card] = getAccountCards(el);
+      expect(card?.shadowRoot?.textContent).toContain('alice.bsky.social');
     });
 
     it('shows reauthorize and sign-out buttons for active account', async () => {
@@ -101,8 +110,9 @@ describe('auth-popup Web Component', () => {
       const el = createElement();
       await attach(el);
 
-      expect(el.shadowRoot?.querySelector('#reauthorize')).not.toBeNull();
-      expect(el.shadowRoot?.querySelector('.account-sign-out')).not.toBeNull();
+      const [card] = getAccountCards(el);
+      expect(card?.shadowRoot?.querySelector('#reauthorize')).not.toBeNull();
+      expect(card?.shadowRoot?.querySelector('.account-sign-out')).not.toBeNull();
       expect(el.shadowRoot?.querySelector('#sign-in')).toBeNull();
     });
 
@@ -112,7 +122,8 @@ describe('auth-popup Web Component', () => {
       const el = createElement();
       await attach(el);
 
-      expect(el.shadowRoot?.querySelector('.account-switch')).toBeNull();
+      const [card] = getAccountCards(el);
+      expect(card?.shadowRoot?.querySelector('.account-switch')).toBeNull();
     });
 
     it('does not show an add-account button (moved to settings page)', async () => {
@@ -144,8 +155,7 @@ describe('auth-popup Web Component', () => {
       const el = createElement();
       await attach(el);
 
-      const cards = el.shadowRoot?.querySelectorAll('.account-card');
-      expect(cards?.length).toBe(2);
+      expect(getAccountCards(el).length).toBe(2);
     });
 
     it('shows a switch button only for the non-active account', async () => {
@@ -157,9 +167,9 @@ describe('auth-popup Web Component', () => {
       const el = createElement();
       await attach(el);
 
-      const switchBtns = el.shadowRoot?.querySelectorAll<HTMLButtonElement>('.account-switch');
-      expect(switchBtns?.length).toBe(1);
-      expect(switchBtns?.[0]?.dataset['did']).toBe('did:plc:user2');
+      const switchBtns = queryAcrossAccountCardShadows<HTMLButtonElement>(el, '.account-switch');
+      expect(switchBtns.length).toBe(1);
+      expect(switchBtns[0]?.dataset['did']).toBe('did:plc:user2');
     });
 
     it('shows per-account sign-out buttons for all accounts', async () => {
@@ -171,8 +181,8 @@ describe('auth-popup Web Component', () => {
       const el = createElement();
       await attach(el);
 
-      const signOutBtns = el.shadowRoot?.querySelectorAll('.account-sign-out');
-      expect(signOutBtns?.length).toBe(2);
+      const signOutBtns = queryAcrossAccountCardShadows(el, '.account-sign-out');
+      expect(signOutBtns.length).toBe(2);
     });
   });
 
@@ -206,7 +216,14 @@ describe('auth-popup Web Component', () => {
       const el = createElement();
       await attach(el);
 
-      el.shadowRoot?.querySelector<HTMLButtonElement>('.account-sign-out')?.click();
+      const [card] = getAccountCards(el);
+      card?.dispatchEvent(
+        new CustomEvent('account-remove', {
+          detail: { did: 'did:plc:testuser123' },
+          bubbles: true,
+          composed: true,
+        }),
+      );
       await flushPromises();
 
       expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({
@@ -224,7 +241,14 @@ describe('auth-popup Web Component', () => {
       // After sign-out, return empty accounts
       mockSendMessage([]);
 
-      el.shadowRoot?.querySelector<HTMLButtonElement>('.account-sign-out')?.click();
+      const [card] = getAccountCards(el);
+      card?.dispatchEvent(
+        new CustomEvent('account-remove', {
+          detail: { did: 'did:plc:testuser123' },
+          bubbles: true,
+          composed: true,
+        }),
+      );
       await flushPromises();
       await flushPromises();
 
@@ -240,8 +264,14 @@ describe('auth-popup Web Component', () => {
       const el = createElement();
       await attach(el);
 
-      const switchBtn = el.shadowRoot?.querySelector<HTMLButtonElement>('.account-switch');
-      switchBtn?.click();
+      const [card] = getAccountCards(el).filter(accountCard => accountCard.getAttribute('did') === 'did:plc:user2');
+      card?.dispatchEvent(
+        new CustomEvent('account-switch', {
+          detail: { did: 'did:plc:user2' },
+          bubbles: true,
+          composed: true,
+        }),
+      );
       await flushPromises();
 
       expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({
@@ -256,7 +286,8 @@ describe('auth-popup Web Component', () => {
       const el = createElement();
       await attach(el);
 
-      el.shadowRoot?.querySelector<HTMLButtonElement>('#reauthorize')?.click();
+      const [card] = getAccountCards(el);
+      card?.dispatchEvent(new CustomEvent('account-reauthorize', { bubbles: true, composed: true }));
 
       expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({
         type: 'AUTH_REAUTHORIZE',
