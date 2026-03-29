@@ -164,7 +164,7 @@ describe('options page', () => {
       await flushPromises();
 
       expect(accountsList.textContent).toContain('Failed to load accounts');
-      expect(innerHTMLSpy).not.toHaveBeenCalledWith(expect.stringContaining('<p'));
+      expect(innerHTMLSpy).not.toHaveBeenCalled();
       innerHTMLSpy.mockRestore();
     });
   });
