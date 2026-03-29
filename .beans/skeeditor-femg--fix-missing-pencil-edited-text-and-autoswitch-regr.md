@@ -1,12 +1,11 @@
 ---
 # skeeditor-femg
 title: fix missing pencil edited text and autoswitch regression
-status: in-progress
+status: completed
 type: fix
 priority: critical
 created_at: 2026-03-28T22:34:19Z
-updated_at: 2026-03-28T22:36:30Z
-branch: fix/femg-debug-edited-content
+updated_at: 2026-03-29T19:09:04Z
 ---
 
 Investigate regression where content script logs authenticated state but shows no pencil, no edited text replacement, and auto-switch does not activate on current profile. Patch selector/matching and account-switch triggers; validate with tests and E2E.

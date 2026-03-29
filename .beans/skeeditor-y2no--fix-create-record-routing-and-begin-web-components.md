@@ -1,12 +1,11 @@
 ---
 # skeeditor-y2no
 title: Fix CREATE_RECORD routing and begin web-components refactor
-status: in-progress
+status: completed
 type: bug
 priority: high
-branch: fix/y2no-create-record-routing-web-components
 created_at: 2026-03-29T04:45:43Z
-updated_at: 2026-03-29T04:45:43Z
+updated_at: 2026-03-29T19:09:11Z
 ---
 
 ## Context

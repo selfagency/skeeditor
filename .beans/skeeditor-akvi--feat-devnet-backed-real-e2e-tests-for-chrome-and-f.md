@@ -1,11 +1,11 @@
 ---
 # skeeditor-akvi
 title: 'feat: devnet-backed real E2E tests for Chrome and Firefox'
-status: in-progress
+status: completed
 type: task
 priority: high
 created_at: 2026-03-29T18:43:55Z
-updated_at: 2026-03-29T18:44:10Z
+updated_at: 2026-03-29T19:09:23Z
 ---
 
 Set up atproto-devnet (https://github.com/OpenMeet-Team/atproto-devnet) as a real AT Protocol test network for E2E testing the extension against a live local PDS — no XRPC mocking. Works locally and in CI.
