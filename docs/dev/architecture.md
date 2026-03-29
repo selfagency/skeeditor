@@ -42,9 +42,11 @@ skeeditor is a standard Manifest V3 browser extension built with [WXT](https://w
 
 Runs in the context of every `https://bsky.app/*` page. It has access to the DOM but not to extension APIs like `chrome.storage`. Responsibilities:
 
-- **Post detection** — scans the page for posts authored by the signed-in user and injects the Edit badge.
+- **Post detection** — scans the page for posts authored by the signed-in user and injects the Edit badge. `post-detector.ts` uses a prioritised strategy: known `data-testid`/`data-at-uri` selectors first; then a fallback that walks up from `[data-testid="postText"]` leaves to the nearest ancestor with a post permalink link. This fallback covers pages like search results where bsky.app renders posts in plain `<div>`s with no data attributes.
 - **Edit modal** — renders the in-page text editor (`<edit-modal>` Web Component) when Edit is clicked.
 - **Post editor** — orchestrates fetching the record, showing the modal, and saving.
+- **Edited-text cache** — `edited-post-cache.ts` holds an in-memory cache of resolved post text and a handle↔DID registry. Cached text is re-applied on every MutationObserver tick (guarded against re-entrancy) so React re-renders don't flash stale content.
+- **Label push handling** — listens for `LABEL_RECEIVED` notifications from the background and immediately updates matching DOM elements so the edit is visible without a page reload.
 
 Because the content script cannot make authenticated XRPC calls directly, it sends typed messages to the background worker for all network operations.
 
@@ -54,7 +56,7 @@ Runs as a Manifest V3 service worker (Chrome) or persistent background script (F
 
 - **Session storage** — reads/writes OAuth sessions in `browser.storage.local` via `sessionStore`, keyed by DID (multi-account).
 - **Token refresh** — automatically refreshes expiring tokens via `TokenRefreshManager`.
-- **XRPC calls** — receives `GET_RECORD` and `PUT_RECORD` messages from content/popup, makes the authenticated HTTP request, and returns the result.
+- **XRPC calls** — receives `GET_RECORD`, `CREATE_RECORD`, and `PUT_RECORD` messages from content/popup, makes the authenticated HTTP request, and returns the result.
 - **OAuth flow** — handles `AUTH_SIGN_IN`, `AUTH_SIGN_OUT`, `AUTH_CALLBACK`, `AUTH_REAUTHORIZE`, `AUTH_LIST_ACCOUNTS`, `AUTH_SWITCH_ACCOUNT`, `AUTH_SIGN_OUT_ACCOUNT`.
 - **Settings** — serves `GET_SETTINGS` / `SET_SETTINGS` to the options page.
 - **Labeler** — after sign-in, runs `CHECK_LABELER_SUBSCRIPTION` to decide whether to show the consent dialog.
@@ -159,6 +161,16 @@ Sessions are stored as a map keyed by DID in `browser.storage.local`. The active
 ### Typed messages
 
 All inter-context communication uses the typed `MessageRequest` union defined in `src/shared/messages.ts`. Each message type has a corresponding `ResponseFor<T>` type so TypeScript enforces the call/response contract at compile time.
+
+### Debug logging
+
+Debug output is controlled by `src/shared/logger.ts`. A module-level flag is evaluated once at import time; all `log.debug()` calls compile to a no-op when debug mode is off. To enable:
+
+- `localStorage.setItem('skeeditor:debug', '1')` in the bsky.app console
+- Append `?skeeditor_debug=1` to any bsky.app URL
+- Set `<html data-skeeditor-debug="1">` in the page DOM
+
+When enabled, rapid bursts of events (e.g. MutationObserver scans) are batched into a 150 ms window and printed as a single collapsed `console.groupCollapsed` entry.
 
 ### Platform shims
 

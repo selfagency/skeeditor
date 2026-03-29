@@ -95,6 +95,7 @@ switch (result.type) {
 | `GET_SETTINGS` | — | `ExtensionSettings` or `{ error }` |
 | `SET_SETTINGS` | `settings: ExtensionSettings` | `{ ok: true }` or `{ error }` |
 | `GET_RECORD` | `repo`, `collection`, `rkey` | `{ value, cid }` or `{ error }` |
+| `CREATE_RECORD` | `repo`, `collection`, `record`, `rkey?`, `validate?` | See CREATE_RECORD responses below |
 | `PUT_RECORD` | `repo`, `collection`, `rkey`, `record`, `swapRecord?` | See PUT_RECORD responses below |
 | `UPLOAD_BLOB` | `data: Blob \| File`, `repo` | `{ blobRef, mimeType }` or `{ error }` |
 | `SET_PDS_URL` | `url` | `{ ok: true }` or `{ error }` |
@@ -119,6 +120,18 @@ interface ExtensionSettings {
   editTimeLimit: number | null;  // minutes (0.5–5), or null to disable the time limit
 }
 ```
+
+### CREATE_RECORD response shapes
+
+```ts
+// Record created successfully
+{ type: 'CREATE_RECORD_SUCCESS'; uri: string; cid: string }
+
+// Auth failure, validation error, or unexpected XRPC error
+{ type: 'PUT_RECORD_ERROR'; message: string; requiresReauth?: boolean }
+```
+
+`rkey` is optional; when omitted the PDS assigns a TID automatically. `validate` (default `true`) controls whether the PDS validates the record against the Lexicon schema.
 
 ### PUT_RECORD response shapes
 
@@ -149,7 +162,8 @@ interface PutRecordConflictDetails {
 The background message router validates all incoming payloads before any XRPC or auth logic runs:
 
 - `GET_RECORD`: `repo`, `collection`, and `rkey` must be non-empty strings.
-- `PUT_RECORD`: same string checks, plus `record` must be a non-null object with a non-empty `$type` string.
+- `CREATE_RECORD`: `repo` and `collection` must be non-empty strings; `record` must be a non-null object with a non-empty `$type` string.
+- `PUT_RECORD`: same string checks as GET_RECORD, plus `record` must be a non-null object with a non-empty `$type` string.
 
 Invalid payloads return an error response immediately without touching the network.
 

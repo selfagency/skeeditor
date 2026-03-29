@@ -9,6 +9,7 @@ skeeditor/
 │   └── dev/                     # Developer documentation
 │
 ├── lexicons/                    # AT Protocol Lexicon JSON files
+│   ├── agency/self/skeeditor/   # Custom skeeditor lexicons (e.g. postVersion record)
 │   ├── app/bsky/                # Bluesky app lexicons
 │   └── com/atproto/             # Core AT Protocol lexicons
 │
@@ -47,13 +48,16 @@ skeeditor/
 │   │       └── main.ts          # Options page entry point
 │   │
 │   ├── content/
-│   │   ├── post-detector.ts     # DOM scanning: finds your posts; extracts PostInfo
+│   │   ├── content-script.ts    # Main content script: auth, scanning, label push, DOM patching
+│   │   ├── post-detector.ts     # DOM scanning: finds posts across all bsky.app views; extracts PostInfo
 │   │   ├── post-badges.ts       # Injects Edit badge elements next to your posts
 │   │   ├── post-editor.ts       # Orchestrates GET_RECORD → edit modal → PUT_RECORD
 │   │   ├── edit-modal.ts        # In-page editor modal Web Component
+│   │   ├── edited-post-cache.ts # In-memory cache of edited post text; handle↔DID registry
 │   │   └── styles.css           # Content-script styles
 │   │
 │   ├── lexicons/                # Generated TypeScript types from AT Protocol lexicons
+│   │   ├── agency.ts            # Re-exports from agency/self/skeeditor (postVersion etc.)
 │   │   ├── app.ts               # Re-exports from app/bsky.ts
 │   │   ├── com.ts               # Re-exports from com/atproto.ts
 │   │   └── tools.ts             # Re-exports from tools/ozone.ts
@@ -68,10 +72,11 @@ skeeditor/
 │   │
 │   └── shared/                  # Code shared across all extension contexts
 │       ├── constants.ts         # APP_NAME, BSKY origins, OAuth endpoints, settings helpers
+│       ├── logger.ts            # Shared debug logger (createLogger); no-op unless debug mode on
 │       ├── messages.ts          # Typed message union + ResponseFor<T> + sendMessage()
 │       ├── api/
 │       │   ├── at-uri.ts        # AT-URI parser and builder (AtUri class)
-│       │   └── xrpc-client.ts   # XrpcClient: getRecord, putRecord, putRecordWithSwap
+│       │   └── xrpc-client.ts   # XrpcClient: getRecord, createRecord, putRecord, putRecordWithSwap
 │       ├── auth/
 │       │   ├── auth-client.ts   # OAuth PKCE client (initiate flow, exchange code, revoke)
 │       │   ├── pkce.ts          # generateCodeVerifier / generateCodeChallenge utilities
