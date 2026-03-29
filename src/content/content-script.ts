@@ -1,5 +1,7 @@
 import { browser, type Browser } from 'wxt/browser';
+import { getHandleForDid } from '../shared/api/resolve-did';
 import { APP_BSKY_FEED_POST_COLLECTION, APP_NAME } from '../shared/constants';
+import { createLogger } from '../shared/logger';
 import type {
   AuthListAccountsAccount,
   LabelReceivedNotification,
@@ -22,42 +24,13 @@ import {
 } from './edited-post-cache';
 import { extractPostInfo, extractPostText, findPosts, updatePostText } from './post-detector';
 import { buildUpdatedPostRecord, type EditablePostRecord } from './post-editor';
-import { getHandleForDid } from '../shared/api/resolve-did';
 import './styles.css';
 
 const POST_MARKER_ATTRIBUTE = 'data-skeeditor-processed';
 const EDIT_BUTTON_ATTRIBUTE = 'data-skeeditor-edit-button';
 const ACTION_AREA_WAIT_TIMEOUT = 3000;
-const DEBUG_LOCAL_STORAGE_KEY = 'skeeditor:debug';
-const DEBUG_QUERY_PARAM = 'skeeditor_debug';
-const DEBUG_DATA_ATTRIBUTE = 'data-skeeditor-debug';
 
-const isDebugEnabled = (): boolean => {
-  try {
-    if (document.documentElement.getAttribute(DEBUG_DATA_ATTRIBUTE) === '1') return true;
-  } catch {
-    // noop
-  }
-
-  try {
-    if (window.localStorage.getItem(DEBUG_LOCAL_STORAGE_KEY) === '1') return true;
-  } catch {
-    // localStorage may be unavailable in some privacy modes.
-  }
-
-  const value = new URLSearchParams(location.search).get(DEBUG_QUERY_PARAM);
-  return value === '1' || value === 'true';
-};
-
-const debugLog = (event: string, data?: Record<string, unknown>): void => {
-  if (!isDebugEnabled()) return;
-  const prefix = `${APP_NAME}:debug:${event}`;
-  if (data === undefined) {
-    console.debug(prefix);
-    return;
-  }
-  console.debug(prefix, data);
-};
+const log = createLogger('content');
 
 // ── Recent record cache (avoids stale GET_RECORD after a fresh save) ──────────
 
@@ -86,7 +59,8 @@ function applyEditedPostsFromCache(): void {
     const entry = getCached(cacheKey);
     if (entry !== null) {
       cacheHits += 1;
-      if (extractPostText(postInfo.element).trim() !== entry.text.trim()) {
+      const currentText = extractPostText(postInfo.element).trim();
+      if (currentText !== entry.text.trim()) {
         updatePostText(postInfo.element, entry.text);
         applied += 1;
       }
@@ -95,7 +69,7 @@ function applyEditedPostsFromCache(): void {
 
   // ── 2. Thread-root fallback for post permalink pages.
   const threadApplied = applyToThreadRoot();
-  debugLog('apply-cache', { cacheSize: getCacheSize(), scanned, cacheHits, applied, threadApplied });
+  log.debug('apply-cache', { cacheSize: getCacheSize(), scanned, cacheHits, applied, threadApplied });
 }
 
 /**
@@ -144,24 +118,30 @@ function applyToThreadRoot(text?: string, rkey?: string): boolean {
 
   if (resolvedText === null) return false;
 
-  // Find the thread root's text element specifically — the first post in
-  // a thread view is the root. Use findPosts to match by rkey rather than
-  // blindly taking the first POST_TEXT_QUERY match (which could be a reply).
+  // On permalink pages, [data-testid="postDetailedText"] is the thread root's
+  // text element. On bsky.app, this element is often rendered *outside* the
+  // postThreadItem container, so querying it directly is more reliable than
+  // going through extractPostText(containerElement) which falls back to the
+  // entire container's textContent and produces garbage comparisons.
+  const detailedTextEl = document.querySelector<HTMLElement>('[data-testid="postDetailedText"]');
+  if (detailedTextEl) {
+    const domText = detailedTextEl.textContent?.trim() ?? '';
+    if (domText !== resolvedText.trim()) {
+      detailedTextEl.textContent = resolvedText;
+    }
+    return true;
+  }
+
+  // Fallback: postDetailedText not found (feed/list views that use standard
+  // postThreadItem layout). Use findPosts to match by rkey and update.
   for (const p of findPosts(document)) {
     if (p.rkey === urlRkey) {
-      if (extractPostText(p.element).trim() !== resolvedText.trim()) {
+      const domText = extractPostText(p.element).trim();
+      if (domText !== resolvedText.trim()) {
         updatePostText(p.element, resolvedText);
       }
       return true;
     }
-  }
-
-  // Fallback: if findPosts doesn't find the thread root (DOM not fully rendered),
-  // try the first detailed-text element (permalink pages have a distinct testid).
-  const detailedTextEl = document.querySelector<HTMLElement>('[data-testid="postDetailedText"]');
-  if (detailedTextEl && detailedTextEl.textContent?.trim() !== resolvedText) {
-    detailedTextEl.textContent = resolvedText;
-    return true;
   }
 
   return false;
@@ -181,21 +161,21 @@ function applyToThreadRoot(text?: string, rkey?: string): boolean {
 async function fetchPermalinkPost(): Promise<void> {
   const urlMatch = /\/profile\/([^/?#]+)\/post\/([^/?#]+)/.exec(window.location.pathname);
   if (!urlMatch) {
-    debugLog('fetch-permalink-skip', { reason: 'not-permalink', pathname: window.location.pathname });
+    log.debug('fetch-permalink-skip', { reason: 'not-permalink', pathname: window.location.pathname });
     return;
   }
 
   // Only fetch if the thread root has an "Edited" badge
   const editedBadge = document.querySelector('button[aria-label="Edited"]');
   if (!editedBadge) {
-    debugLog('fetch-permalink-skip', { reason: 'no-edited-badge', pathname: window.location.pathname });
+    log.debug('fetch-permalink-skip', { reason: 'no-edited-badge', pathname: window.location.pathname });
     return;
   }
 
   const repo = urlMatch[1]!;
   const rkey = urlMatch[2]!;
   const atUri = `at://${repo}/${APP_BSKY_FEED_POST_COLLECTION}/${rkey}`;
-  debugLog('fetch-permalink-start', { atUri, repo, rkey });
+  log.debug('fetch-permalink-start', { atUri, repo, rkey });
 
   const text = await resolveEditedText(atUri, repo, APP_BSKY_FEED_POST_COLLECTION, rkey);
   if (text !== null) {
@@ -209,9 +189,9 @@ async function fetchPermalinkPost(): Promise<void> {
         break;
       }
     }
-    debugLog('fetch-permalink-applied', { atUri, textLength: text.length });
+    log.debug('fetch-permalink-applied', { atUri, textLength: text.length });
   } else {
-    debugLog('fetch-permalink-miss', { atUri });
+    log.debug('fetch-permalink-miss', { atUri });
   }
 }
 
@@ -222,7 +202,7 @@ async function fetchPermalinkPost(): Promise<void> {
 async function fetchEditedPostsInView(): Promise<void> {
   const editedButtons = document.querySelectorAll<HTMLElement>('button[aria-label="Edited"]');
   if (editedButtons.length === 0) {
-    debugLog('fetch-edited-skip', { reason: 'no-edited-buttons' });
+    log.debug('fetch-edited-skip', { reason: 'no-edited-buttons' });
     return;
   }
 
@@ -233,6 +213,8 @@ async function fetchEditedPostsInView(): Promise<void> {
     const postElement =
       btn.closest<HTMLElement>('[data-at-uri]') ??
       btn.closest<HTMLElement>('[data-uri]') ??
+      btn.closest<HTMLElement>('[data-testid^="postThreadItem"]') ??
+      btn.closest<HTMLElement>('[data-testid^="feedItem"]') ??
       btn.closest<HTMLElement>('article');
     if (!postElement) continue;
 
@@ -240,24 +222,23 @@ async function fetchEditedPostsInView(): Promise<void> {
     if (!info) continue;
 
     const cacheKey = normalizeCacheKey(info.atUri, info.repo);
-    // Skip if already cached (cache module handles TTL)
     if (getCached(cacheKey) !== null) continue;
 
     postsToFetch.push({ atUri: info.atUri, repo: info.repo, rkey: info.rkey });
   }
 
   if (postsToFetch.length === 0) {
-    debugLog('fetch-edited-skip', { reason: 'no-uncached-posts', editedButtonCount: editedButtons.length });
+    log.debug('fetch-edited-skip', { reason: 'no-uncached-posts', editedButtonCount: editedButtons.length });
     return;
   }
 
-  debugLog('fetch-edited-start', {
+  log.debug('fetch-edited-start', {
     editedButtonCount: editedButtons.length,
     postsToFetch: postsToFetch.map(p => ({ atUri: p.atUri, repo: p.repo, rkey: p.rkey })),
   });
 
   const results = await resolveBatch(postsToFetch);
-  debugLog('fetch-edited-resolved', { resultCount: results.size });
+  log.debug('fetch-edited-resolved', { resultCount: results.size });
 
   // Apply resolved text to DOM
   let applied = 0;
@@ -275,7 +256,7 @@ async function fetchEditedPostsInView(): Promise<void> {
 
   // Also try thread-root
   applyToThreadRoot();
-  debugLog('fetch-edited-applied', { applied });
+  log.debug('fetch-edited-applied', { applied });
 }
 
 /**
@@ -284,7 +265,7 @@ async function fetchEditedPostsInView(): Promise<void> {
  */
 async function fetchOwnPostsInView(): Promise<void> {
   if (currentDid === null) {
-    debugLog('fetch-own-skip', { reason: 'no-auth' });
+    log.debug('fetch-own-skip', { reason: 'no-auth' });
     return;
   }
 
@@ -311,11 +292,11 @@ async function fetchOwnPostsInView(): Promise<void> {
   }
 
   if (postsToFetch.length === 0) {
-    debugLog('fetch-own-skip', { reason: 'no-uncached-own-posts', scanned, ownVisible, alreadyCached });
+    log.debug('fetch-own-skip', { reason: 'no-uncached-own-posts', scanned, ownVisible, alreadyCached });
     return;
   }
 
-  debugLog('fetch-own-start', {
+  log.debug('fetch-own-start', {
     currentDid,
     scanned,
     ownVisible,
@@ -324,7 +305,7 @@ async function fetchOwnPostsInView(): Promise<void> {
   });
 
   const results = await resolveBatch(postsToFetch);
-  debugLog('fetch-own-resolved', { resultCount: results.size });
+  log.debug('fetch-own-resolved', { resultCount: results.size });
 
   let applied = 0;
   for (const [cacheKey, text] of results) {
@@ -340,7 +321,7 @@ async function fetchOwnPostsInView(): Promise<void> {
   }
 
   const threadApplied = applyToThreadRoot();
-  debugLog('fetch-own-applied', { applied, threadApplied });
+  log.debug('fetch-own-applied', { applied, threadApplied });
 }
 
 /**
@@ -355,7 +336,10 @@ async function fetchOwnPostsInView(): Promise<void> {
  */
 async function handleLabelPush(uri: string): Promise<void> {
   const match = /^at:\/\/([^/]+)\/([^/]+)\/([^/]+)$/.exec(uri);
-  if (!match) return;
+  if (!match) {
+    log.debug('label-push-parse-failed', { uri });
+    return;
+  }
 
   const repo = match[1]!;
   const collection = match[2]!;
@@ -368,11 +352,11 @@ async function handleLabelPush(uri: string): Promise<void> {
       const handle = await getHandleForDid(repo);
       if (handle) {
         registerIdentity(handle, repo);
-        debugLog('label-push-resolved-identity', { did: repo, handle });
+        log.debug('label-push-resolved-identity', { did: repo, handle });
       }
     } catch {
       // Best-effort — continue without the mapping.
-      debugLog('label-push-resolve-failed', { did: repo });
+      log.debug('label-push-resolve-failed', { did: repo });
     }
   }
 
@@ -381,17 +365,21 @@ async function handleLabelPush(uri: string): Promise<void> {
 
   // Apply to DOM — match by rkey since the URI form in the DOM may differ
   // from the DID-based URI in the label notification.
+  let applied = false;
   for (const p of findPosts(document)) {
     if (p.rkey === rkey && p.collection === collection) {
-      if (extractPostText(p.element).trim() !== text.trim()) {
+      const currentText = extractPostText(p.element).trim();
+      if (currentText !== text.trim()) {
         updatePostText(p.element, text);
+        applied = true;
       }
       break;
     }
   }
 
   // Thread-root fallback
-  applyToThreadRoot(text, rkey);
+  const threadApplied = applyToThreadRoot(text, rkey);
+  log.debug('label-push-applied', { uri, applied, threadApplied });
 }
 
 const ensureRuntimeMessageListener = (): void => {
@@ -449,6 +437,7 @@ const isElementOwnPost = (postElement: HTMLElement, postRepo: string): boolean =
 console.log(`${APP_NAME}: content script loaded on ${document.location.href}`);
 
 let mutationObserver: MutationObserver | null = null;
+let isApplyingCache = false;
 let currentDid: string | null = null;
 let currentHandle: string | null = null;
 let domContentLoadedHandler: (() => void) | null = null;
@@ -888,7 +877,7 @@ const scanForPosts = (): void => {
   // No authenticated DID → don't inject any edit buttons.
   if (currentDid === null) {
     console.log(`${APP_NAME}: no auth session, skipping edit button injection`);
-    debugLog('scan-no-auth');
+    log.debug('scan-no-auth');
     return;
   }
 
@@ -906,14 +895,49 @@ const scanForPosts = (): void => {
   }
 
   if (visiblePosts === 0) {
+    // Dump DOM diagnostics so we can see WHY no posts matched
+    const diagnosticSelectors = [
+      '[data-at-uri]',
+      '[data-uri]',
+      '[data-post]',
+      '[data-testid="post"]',
+      '[data-testid="feedItem"]',
+      '[data-testid="postThreadItem"]',
+      '[data-testid^="feedItem"]',
+      '[data-testid^="postThreadItem"]',
+      '[role="article"]',
+      'article',
+      '[data-testid]',
+    ];
+    const selectorCounts: Record<string, number> = {};
+    for (const sel of diagnosticSelectors) {
+      selectorCounts[sel] = document.querySelectorAll(sel).length;
+    }
+    // Grab all data-testid values on the page for inspection
+    const allTestIds = Array.from(document.querySelectorAll('[data-testid]'))
+      .map(el => el.getAttribute('data-testid')!)
+      .filter(Boolean);
+    const uniqueTestIds = [...new Set(allTestIds)].slice(0, 50);
+    // Check for main/feed containers
+    const mainEl = document.querySelector('main');
+    const feedEl = document.querySelector('[data-testid="feed"]');
     console.warn(`${APP_NAME}: no post containers detected on page`, {
       pathname: location.pathname,
+      href: location.href,
       currentDid,
       currentHandle,
+      selectorCounts,
+      uniqueTestIds,
+      hasMain: !!mainEl,
+      mainChildCount: mainEl?.children.length ?? 0,
+      hasFeed: !!feedEl,
+      feedChildCount: feedEl?.children.length ?? 0,
+      bodyChildCount: document.body.children.length,
+      articleCount: document.querySelectorAll('article').length,
     });
   }
 
-  debugLog('scan-summary', { currentDid, currentHandle, visiblePosts, ownPosts });
+  log.debug('scan-summary', { currentDid, currentHandle, visiblePosts, ownPosts });
 };
 
 export const scheduleScanForPosts = (): void => {
@@ -1065,10 +1089,18 @@ const ensureObserver = (): void => {
   }
 
   mutationObserver = new MutationObserver(() => {
-    // Re-apply cached text immediately so React re-renders don't produce a visible flicker.
-    applyEditedPostsFromCache();
-    // Inject original text into Bluesky's "Edited" moderation dialog if one just appeared.
-    injectOriginalTextIntoDialog();
+    // Guard against re-entrant calls: applyEditedPostsFromCache() calls updatePostText()
+    // which causes DOM mutations that would otherwise retrigger this observer infinitely.
+    if (isApplyingCache) return;
+    isApplyingCache = true;
+    try {
+      // Re-apply cached text immediately so React re-renders don't produce a visible flicker.
+      applyEditedPostsFromCache();
+      // Inject original text into Bluesky's "Edited" moderation dialog if one just appeared.
+      injectOriginalTextIntoDialog();
+    } finally {
+      isApplyingCache = false;
+    }
     // Debounced scan for edit-button injection (more expensive).
     scheduleScanForPosts();
   });
@@ -1160,7 +1192,7 @@ export const start = (): void => {
   void waitForSwReady()
     .then(() => Promise.all([refreshAuthState(), loadKnownAccounts(), loadFromStorage()]))
     .then(async () => {
-      debugLog('start-ready', { pathname: location.pathname, search: location.search });
+      log.debug('start-ready', { pathname: location.pathname, search: location.search });
       // On first page load (not just SPA navigation), ensure active account
       // matches the profile currently being viewed.
       await checkProfileSwitch(location.href);
@@ -1175,7 +1207,7 @@ export const start = (): void => {
     })
     .catch(error => {
       console.error(`${APP_NAME}: failed to load auth state`, error);
-      debugLog('start-fallback-anonymous', {
+      log.debug('start-fallback-anonymous', {
         pathname: location.pathname,
         message: error instanceof Error ? error.message : String(error),
       });

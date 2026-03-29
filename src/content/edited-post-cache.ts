@@ -1,4 +1,5 @@
 import { APP_BSKY_FEED_POST_COLLECTION, APP_NAME } from '../shared/constants';
+import { createLogger } from '../shared/logger';
 import { sendMessage } from '../shared/messages';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -16,29 +17,7 @@ const STORAGE_KEY = 'editedPosts';
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const SLINGSHOT_TIMEOUT_MS = 5_000;
 const MAX_CONCURRENT_FETCHES = 5;
-const DEBUG_LOCAL_STORAGE_KEY = 'skeeditor:debug';
-const DEBUG_QUERY_PARAM = 'skeeditor_debug';
-
-const isDebugEnabled = (): boolean => {
-  try {
-    if (globalThis.localStorage?.getItem(DEBUG_LOCAL_STORAGE_KEY) === '1') return true;
-  } catch {
-    // localStorage may be unavailable in some contexts.
-  }
-
-  const value = new URLSearchParams(globalThis.location?.search ?? '').get(DEBUG_QUERY_PARAM);
-  return value === '1' || value === 'true';
-};
-
-const debugLog = (event: string, data?: Record<string, unknown>): void => {
-  if (!isDebugEnabled()) return;
-  const prefix = `${APP_NAME}:debug:cache:${event}`;
-  if (data === undefined) {
-    console.debug(prefix);
-    return;
-  }
-  console.debug(prefix, data);
-};
+const log = createLogger('cache');
 
 // ── Cache ─────────────────────────────────────────────────────────────────────
 
@@ -67,7 +46,7 @@ export function registerIdentity(handle: string, did: string): void {
   const d = did.toLowerCase();
   handleToDidMap.set(h, d);
   didToHandleMap.set(d, h);
-  debugLog('registry-add', { handle: h, did: d });
+  log.debug('registry-add', { handle: h, did: d });
 }
 
 function lookupDid(identifier: string): string | null {
@@ -234,20 +213,20 @@ async function fetchFromSlingshot(repo: string, collection: string, rkey: string
   const timeout = setTimeout(() => controller.abort(), SLINGSHOT_TIMEOUT_MS);
 
   try {
-    debugLog('slingshot-start', { repo: resolvedRepo, collection, rkey });
+    log.debug('slingshot-start', { repo: resolvedRepo, collection, rkey });
     const response = await fetch(url.toString(), { signal: controller.signal });
     if (!response.ok) {
-      debugLog('slingshot-non-ok', { repo: resolvedRepo, collection, rkey, status: response.status });
+      log.debug('slingshot-non-ok', { repo: resolvedRepo, collection, rkey, status: response.status });
       return null;
     }
 
     const data = (await response.json()) as { value?: { text?: unknown } };
     const text = data.value?.text;
     const resolvedText = typeof text === 'string' ? text : null;
-    debugLog('slingshot-done', { repo: resolvedRepo, collection, rkey, textLength: resolvedText?.length ?? 0 });
+    log.debug('slingshot-done', { repo: resolvedRepo, collection, rkey, textLength: resolvedText?.length ?? 0 });
     return resolvedText;
   } catch {
-    debugLog('slingshot-error', { repo: resolvedRepo, collection, rkey });
+    log.debug('slingshot-error', { repo: resolvedRepo, collection, rkey });
     return null;
   } finally {
     clearTimeout(timeout);
@@ -258,7 +237,7 @@ async function fetchFromSlingshot(repo: string, collection: string, rkey: string
 
 async function fetchFromPds(repo: string, collection: string, rkey: string): Promise<string | null> {
   try {
-    debugLog('pds-start', { repo, collection, rkey });
+    log.debug('pds-start', { repo, collection, rkey });
     const response = await sendMessage({
       type: 'GET_RECORD',
       repo,
@@ -266,15 +245,15 @@ async function fetchFromPds(repo: string, collection: string, rkey: string): Pro
       rkey,
     });
     if ('error' in response) {
-      debugLog('pds-error-response', { repo, collection, rkey, error: response.error });
+      log.debug('pds-error-response', { repo, collection, rkey, error: response.error });
       return null;
     }
     const text = (response as { value?: { text?: unknown } }).value?.text;
     const resolvedText = typeof text === 'string' ? text : null;
-    debugLog('pds-done', { repo, collection, rkey, textLength: resolvedText?.length ?? 0 });
+    log.debug('pds-done', { repo, collection, rkey, textLength: resolvedText?.length ?? 0 });
     return resolvedText;
   } catch {
-    debugLog('pds-throw', { repo, collection, rkey });
+    log.debug('pds-throw', { repo, collection, rkey });
     return null;
   }
 }
@@ -293,18 +272,18 @@ export async function resolve(atUri: string, repo: string, collection: string, r
   // Cache hit — return immediately
   const cached = getCached(cacheKey);
   if (cached) {
-    debugLog('resolve-cache-hit', { cacheKey, textLength: cached.text.length });
+    log.debug('resolve-cache-hit', { cacheKey, textLength: cached.text.length });
     return cached.text;
   }
 
   // Already fetching — return existing promise result (dedup)
   const existing = inFlight.get(cacheKey);
   if (existing) {
-    debugLog('resolve-inflight-hit', { cacheKey });
+    log.debug('resolve-inflight-hit', { cacheKey });
     return existing;
   }
 
-  debugLog('resolve-miss', { atUri, repo, collection, rkey, cacheKey });
+  log.debug('resolve-miss', { atUri, repo, collection, rkey, cacheKey });
 
   const fetchPromise = doFetch(cacheKey, repo, collection, rkey);
   inFlight.set(cacheKey, fetchPromise);
@@ -319,7 +298,7 @@ export async function resolve(atUri: string, repo: string, collection: string, r
 async function doFetch(cacheKey: string, repo: string, collection: string, rkey: string): Promise<string | null> {
   const resolvedRepo = repo === currentHandle && currentDid !== null ? currentDid : repo;
   const isOwnPost = resolvedRepo === currentDid && currentDid !== null;
-  debugLog('doFetch-start', { cacheKey, repo, resolvedRepo, collection, rkey, isOwnPost });
+  log.debug('doFetch-start', { cacheKey, repo, resolvedRepo, collection, rkey, isOwnPost });
 
   // For own posts, prefer authenticated PDS reads first. Slingshot can lag by
   // a few seconds and temporarily return the pre-edit text, which causes the UI
@@ -328,7 +307,7 @@ async function doFetch(cacheKey: string, repo: string, collection: string, rkey:
   if (isOwnPost) {
     text = await fetchFromPds(resolvedRepo, collection, rkey);
     if (text === null) {
-      debugLog('doFetch-own-pds-miss-fallback-slingshot', { cacheKey, resolvedRepo, rkey });
+      log.debug('doFetch-own-pds-miss-fallback-slingshot', { cacheKey, resolvedRepo, rkey });
       text = await fetchFromSlingshot(repo, collection, rkey);
     }
   } else {
@@ -340,14 +319,14 @@ async function doFetch(cacheKey: string, repo: string, collection: string, rkey:
   // Slingshot hasn't processed the edit yet — treat as miss
   const cached = cache.get(cacheKey);
   if (text !== null && cached?.originalText !== undefined && text === cached.originalText) {
-    debugLog('doFetch-reject-original-text-match', { cacheKey, rkey });
+    log.debug('doFetch-reject-original-text-match', { cacheKey, rkey });
     text = null;
   }
 
   // Fallback: PDS for current user's own posts
   if (text === null) {
     if (isOwnPost) {
-      debugLog('doFetch-own-fallback-pds-retry', { cacheKey, resolvedRepo, rkey });
+      log.debug('doFetch-own-fallback-pds-retry', { cacheKey, resolvedRepo, rkey });
       text = await fetchFromPds(resolvedRepo, collection, rkey);
     }
   }
@@ -355,9 +334,9 @@ async function doFetch(cacheKey: string, repo: string, collection: string, rkey:
   if (text !== null) {
     const existingEntry = cache.get(cacheKey);
     setCached(cacheKey, text, existingEntry?.originalText);
-    debugLog('doFetch-cache-store', { cacheKey, textLength: text.length });
+    log.debug('doFetch-cache-store', { cacheKey, textLength: text.length });
   } else {
-    debugLog('doFetch-null', { cacheKey, repo: resolvedRepo, rkey });
+    log.debug('doFetch-null', { cacheKey, repo: resolvedRepo, rkey });
   }
 
   return text;
@@ -378,7 +357,7 @@ interface PostRef {
 export async function resolveBatch(posts: PostRef[]): Promise<Map<string, string>> {
   const results = new Map<string, string>();
   const pending = [...posts];
-  debugLog('resolveBatch-start', { count: posts.length, maxConcurrent: MAX_CONCURRENT_FETCHES });
+  log.debug('resolveBatch-start', { count: posts.length, maxConcurrent: MAX_CONCURRENT_FETCHES });
 
   while (pending.length > 0) {
     const batch = pending.splice(0, MAX_CONCURRENT_FETCHES);
@@ -399,7 +378,7 @@ export async function resolveBatch(posts: PostRef[]): Promise<Map<string, string
     }
   }
 
-  debugLog('resolveBatch-done', { resolvedCount: results.size });
+  log.debug('resolveBatch-done', { resolvedCount: results.size });
 
   return results;
 }

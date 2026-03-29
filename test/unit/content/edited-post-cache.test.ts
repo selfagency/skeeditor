@@ -103,10 +103,7 @@ describe('edited-post-cache', () => {
       cache.setIdentity('did:plc:me123', 'me.bsky.social');
       cache.registerIdentity('other.bsky.social', 'did:plc:other123');
 
-      const normalized = cache.normalizeCacheKey(
-        'at://other.bsky.social/app.bsky.feed.post/3abc',
-        'other.bsky.social',
-      );
+      const normalized = cache.normalizeCacheKey('at://other.bsky.social/app.bsky.feed.post/3abc', 'other.bsky.social');
 
       expect(normalized).toBe('at://did:plc:other123/app.bsky.feed.post/3abc');
     });
