@@ -24,6 +24,8 @@ export default defineConfig({
       'https://*.bsky.network/*',
       'https://docs.skeeditor.link/*',
       'https://slingshot.microcosm.blue/*',
+      // Allow direct XRPC calls to the local devnet PDS during E2E tests.
+      'http://localhost/*',
     ],
     action: {
       default_title: 'skeeditor',

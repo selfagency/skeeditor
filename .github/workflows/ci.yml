@@ -170,3 +170,126 @@ jobs:
 
       - name: Run Chromium extension smoke tests
         run: pnpm test:e2e:chromium
+
+  e2e-chromium-devnet:
+    name: Playwright Chromium E2E (devnet)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs:
+      - quality
+      - unit-tests
+      - integration-tests
+      - build
+    steps:
+      - name: Checkout repository (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Get Playwright version
+        id: pw-version
+        run: echo "version=$(pnpm list @playwright/test --json | jq -r '.[0].dependencies["@playwright/test"].version')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-v${{ steps.pw-version.outputs.version }}
+          restore-keys: playwright-chromium-${{ runner.os }}-
+
+      - name: Install Playwright Chromium with system dependencies
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Download built extension artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: extension-dist
+          path: dist
+
+      - name: Start devnet stack
+        run: bash scripts/devnet-up.sh
+
+      - name: Run Chromium devnet E2E tests
+        run: pnpm test:e2e:chromium:devnet
+
+      - name: Stop devnet stack
+        if: always()
+        run: bash scripts/devnet-down.sh
+
+  e2e-firefox-devnet:
+    name: Playwright Firefox E2E (devnet)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs:
+      - quality
+      - unit-tests
+      - integration-tests
+      - build
+    steps:
+      - name: Checkout repository (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Firefox Developer Edition
+        run: |
+          wget -q "https://download.mozilla.org/?product=firefox-devedition-latest-ssl&os=linux64&lang=en-US" \
+               -O /tmp/firefox-devedition.tar.bz2
+          sudo tar xjf /tmp/firefox-devedition.tar.bz2 -C /opt
+          sudo ln -sf /opt/firefox/firefox /usr/local/bin/firefox
+
+      - name: Get Playwright version
+        id: pw-version
+        run: echo "version=$(pnpm list @playwright/test --json | jq -r '.[0].dependencies["@playwright/test"].version')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-firefox-${{ runner.os }}-v${{ steps.pw-version.outputs.version }}
+          restore-keys: playwright-firefox-${{ runner.os }}-
+
+      - name: Install Playwright Firefox with system dependencies
+        run: pnpm exec playwright install --with-deps firefox
+
+      - name: Download built extension artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: extension-dist
+          path: dist
+
+      - name: Start devnet stack
+        run: bash scripts/devnet-up.sh
+
+      - name: Run Firefox devnet E2E tests
+        run: pnpm test:e2e:firefox:devnet
+        env:
+          FIREFOX_EXTENSION_E2E: '1'
+
+      - name: Stop devnet stack
+        if: always()
+        run: bash scripts/devnet-down.sh

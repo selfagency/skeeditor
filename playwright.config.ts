@@ -19,5 +19,20 @@ export default defineConfig({
       name: 'firefox-extension',
       testMatch: /firefox\.spec\.ts/,
     },
+    {
+      // Real-network devnet tests for Chrome. Requires devnet stack running.
+      // Run: pnpm test:e2e:chromium:devnet
+      name: 'chromium-devnet',
+      testMatch: /chrome-devnet\.spec\.ts/,
+      globalSetup: './test/e2e/setup/devnet-global-setup.ts',
+    },
+    {
+      // Real-network devnet tests for Firefox. Requires FIREFOX_EXTENSION_E2E=1
+      // and the devnet stack running.
+      // Run: FIREFOX_EXTENSION_E2E=1 pnpm test:e2e:firefox:devnet
+      name: 'firefox-devnet',
+      testMatch: /firefox-devnet\.spec\.ts/,
+      globalSetup: './test/e2e/setup/devnet-global-setup.ts',
+    },
   ],
 });

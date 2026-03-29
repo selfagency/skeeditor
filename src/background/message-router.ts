@@ -15,7 +15,6 @@ import type { AuthorizationRequest, TokenResponse } from '../shared/auth/auth-cl
 import { buildAuthorizationRequest, exchangeCodeForTokens, refreshAccessToken } from '../shared/auth/auth-client';
 import type { StoredSession } from '../shared/auth/session-store';
 import { sessionStore } from '../shared/auth/session-store';
-import { createLogger } from '../shared/logger';
 import {
   BSKY_OAUTH_CLIENT_ID,
   BSKY_OAUTH_REDIRECT_URI,
@@ -31,6 +30,7 @@ import {
   setGlobalPdsUrl,
   setSettings,
 } from '../shared/constants';
+import { createLogger } from '../shared/logger';
 import type {
   PutRecordConflictResponse,
   PutRecordErrorResponse,
