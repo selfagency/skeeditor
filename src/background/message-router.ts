@@ -15,6 +15,7 @@ import type { AuthorizationRequest, TokenResponse } from '../shared/auth/auth-cl
 import { buildAuthorizationRequest, exchangeCodeForTokens, refreshAccessToken } from '../shared/auth/auth-client';
 import type { StoredSession } from '../shared/auth/session-store';
 import { sessionStore } from '../shared/auth/session-store';
+import { createLogger } from '../shared/logger';
 import {
   BSKY_OAUTH_CLIENT_ID,
   BSKY_OAUTH_REDIRECT_URI,
@@ -45,6 +46,8 @@ import type {
 // The cache is reset when the SW is terminated.
 const dpopKeyPairCache = new Map<string, CryptoKeyPair>();
 
+const log = createLogger('background');
+
 async function getDpopKeyPair(did?: string): Promise<CryptoKeyPair> {
   const cacheKey = did ?? '__default__';
   const cached = dpopKeyPairCache.get(cacheKey);
@@ -65,7 +68,7 @@ async function getDpopKeyPair(did?: string): Promise<CryptoKeyPair> {
  * Errors are swallowed — the real-time update is best-effort only.
  */
 function emitLabelTrigger(uri: string, cid: string, did: string, accessToken: string): void {
-  console.log('[skeeditor] emitting label trigger', { uri, cid, did });
+  log.debug('emit-label-trigger', { uri, cid, did });
   void fetch(LABELER_EMIT_URL, {
     method: 'POST',
     headers: {
@@ -79,7 +82,7 @@ function emitLabelTrigger(uri: string, cid: string, did: string, accessToken: st
       if (!res.ok) {
         console.warn(`[skeeditor] labeler emit HTTP ${res.status}:`, body);
       } else {
-        console.log('[skeeditor] labeler emit ok:', body);
+        log.debug('emit-label-ok', { body });
       }
     })
     .catch(err => {
