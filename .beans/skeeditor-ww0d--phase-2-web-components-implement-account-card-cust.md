@@ -13,7 +13,7 @@ updated_at: 2026-03-29T15:22:12Z
 Begin Phase 2 from unified implementation plan with a safe first slice.
 
 ## Todo
-- [ ] Add failing unit tests for `<account-card>` custom element events/attributes (RED)
+- [x] Add failing unit tests for `<account-card>` custom element events/attributes (RED)
 - [ ] Implement `src/shared/components/account-card.ts` with guarded registration (GREEN)
 - [ ] Run targeted unit tests for account-card
 - [ ] Integrate popup/options with `<account-card>` incrementally (next slice)
