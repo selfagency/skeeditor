@@ -8,6 +8,12 @@ export interface XrpcClientConfig {
   accessJwt?: string;
   /** Returns the DPoP key pair for proof-of-possession token binding (RFC 9449). */
   dpopKeyPairLoader?: () => Promise<CryptoKeyPair>;
+  /**
+   * Whether to attach DPoP proofs to XRPC requests.
+   * When false, plain Bearer tokens are used instead.
+   * Defaults to true when absent (production behaviour).
+   */
+  dpopEnabled?: boolean;
 }
 
 export interface GetRecordParams {
@@ -138,6 +144,15 @@ const mapStructuredPutRecordError = (error: XrpcClientError): PutRecordWithSwapE
 
   if (error.status === 409) {
     return withOptionalStatus('conflict');
+  }
+
+  // Devnet PDS (0.4.x) returns HTTP 400 InvalidSwap instead of 409 for stale swapRecord.
+  // The error code "InvalidSwap" lives in XrpcResponseError.error (the cause), not in message.
+  if (error.status === 400 && error.cause instanceof XrpcResponseError) {
+    const errorCode = error.cause.error?.toLowerCase() ?? '';
+    if (errorCode.includes('invalidswap')) {
+      return withOptionalStatus('conflict');
+    }
   }
 
   if (error.status === 400) {

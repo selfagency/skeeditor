@@ -74,6 +74,7 @@ export const test = chromiumBase.extend<DevnetExtensionFixtures>({
           refreshToken: session.refreshJwt,
           expiresAt: Date.now() + 3_600_000,
           scope: 'atproto transition:generic',
+          dpopEnabled: false,
         },
         pdsUrls: { [session.did]: pdsUrl },
       },
@@ -83,16 +84,21 @@ export const test = chromiumBase.extend<DevnetExtensionFixtures>({
     await use(session);
   },
 
-  devnetPost: async ({ devnetSession }, use) => {
+  // eslint-disable-next-line no-empty-pattern
+  devnetPost: async ({}, use) => {
+    const pdsUrl = process.env['DEVNET_PDS_URL'] ?? 'http://localhost:3000';
+    const handle = process.env['DEVNET_ALICE_HANDLE'] ?? 'alice.devnet.test';
+    const password = process.env['DEVNET_ALICE_PASSWORD'] ?? 'alice-devnet-pass';
+    const rawSession = await createPdsSession(handle, password, pdsUrl);
     const postText = `skeeditor devnet E2E test post ${Date.now()}`;
-    const post = await createDevnetPost(devnetSession, postText);
+    const post = await createDevnetPost(rawSession, postText);
 
     await use(post);
 
     // Teardown: try to delete the post from the PDS. Best-effort (the test may
     // have already deleted it, or the record may not exist due to a failed create).
     try {
-      await deleteDevnetPost(devnetSession, post.did, post.rkey);
+      await deleteDevnetPost(rawSession, post.did, post.rkey);
     } catch {
       // Non-fatal: test cleanup failure is logged but does not fail the suite.
       console.warn(`[devnet] cleanup: failed to delete post ${post.rkey}`);

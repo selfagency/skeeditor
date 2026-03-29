@@ -671,7 +671,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
       }
       try {
         const pdsUrl = await getCurrentPdsUrl(stored.did);
-        const client = deps.createXrpc({ service: pdsUrl, did: stored.did, accessJwt: stored.accessToken });
+        const client = deps.createXrpc({ service: pdsUrl, did: stored.did, accessJwt: stored.accessToken, dpopEnabled: stored.dpopEnabled });
 
         const params: any = {
           repo: message['repo'],
@@ -709,7 +709,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
       }
       try {
         const pdsUrl = await getCurrentPdsUrl(stored.did);
-        const client = deps.createXrpc({ service: pdsUrl, did: stored.did, accessJwt: stored.accessToken });
+        const client = deps.createXrpc({ service: pdsUrl, did: stored.did, accessJwt: stored.accessToken, dpopEnabled: stored.dpopEnabled });
         return await client.getRecord({
           repo: message['repo'],
           collection: message['collection'],
@@ -732,7 +732,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
       }
       try {
         const pdsUrl = await getCurrentPdsUrl(stored.did);
-        const client = deps.createXrpc({ service: pdsUrl, did: stored.did, accessJwt: stored.accessToken });
+        const client = deps.createXrpc({ service: pdsUrl, did: stored.did, accessJwt: stored.accessToken, dpopEnabled: stored.dpopEnabled });
         const record = message['record'];
         const params: Parameters<XrpcInterface['putRecord']>[0] = {
           repo: message['repo'],
@@ -818,7 +818,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
 
       try {
         const pdsUrl = await getCurrentPdsUrl(stored.did);
-        const client = deps.createXrpc({ service: pdsUrl, did: stored.did, accessJwt: stored.accessToken });
+        const client = deps.createXrpc({ service: pdsUrl, did: stored.did, accessJwt: stored.accessToken, dpopEnabled: stored.dpopEnabled });
         const result = await client.uploadBlob({
           data: message.data,
           repo: message.repo,
@@ -888,7 +888,9 @@ export function createDefaultDeps(): RouterDeps {
     },
     buildAuthReq: buildAuthorizationRequest,
     createXrpc: (config: XrpcClientConfig) =>
-      new XrpcClient({ ...config, dpopKeyPairLoader: () => getDpopKeyPair(config.did) }),
+      config.dpopEnabled === false
+        ? new XrpcClient(config)
+        : new XrpcClient({ ...config, dpopKeyPairLoader: () => getDpopKeyPair(config.did) }),
     storeAuthState: async (state: string, codeVerifier: string, pdsUrl?: string): Promise<void> => {
       // Prefer browser.storage.session (cleared automatically on browser restart/SW termination).
       // Fall back to browser.storage.local on Firefox where storage.session may be unavailable.
