@@ -1,4 +1,4 @@
-import browser from 'webextension-polyfill';
+import { browser } from 'wxt/browser';
 import { APP_NAME, BSKY_APP_ORIGIN, LABELER_SUBSCRIBE_WS_URL } from '../shared/constants';
 import type { LabelReceivedNotification } from '../shared/messages';
 import { registerMessageRouter } from './message-router';

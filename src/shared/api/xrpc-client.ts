@@ -21,6 +21,19 @@ export interface GetRecordResult {
   cid: string;
 }
 
+export interface CreateRecordParams {
+  repo: string;
+  collection: string;
+  record: Record<string, unknown> & { $type: string };
+  rkey?: string;
+  validate?: boolean;
+}
+
+export interface CreateRecordResult {
+  uri: string;
+  cid: string;
+}
+
 export interface PutRecordParams {
   repo: string;
   collection: string;
@@ -332,6 +345,25 @@ export class XrpcClient {
       return { value, cid };
     } catch (err) {
       throw mapXrpcError(err, 'getRecord');
+    }
+  }
+
+  /**
+   * Create a new record in the PDS.
+   */
+  public async createRecord(params: CreateRecordParams): Promise<CreateRecordResult> {
+    const { repo, collection: _collection, rkey, record, validate = true } = params;
+
+    const options: Record<string, unknown> = { repo, validate };
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const response = await this._client.createRecord(record as any, rkey, options as any);
+      const { uri, cid } = response.body as { uri: string; cid: string };
+
+      return { uri, cid };
+    } catch (err) {
+      throw mapXrpcError(err, 'createRecord');
     }
   }
 

@@ -82,6 +82,23 @@ export type SetSettingsResponse = OkResponse | { error: string };
 
 // ── Record messages ───────────────────────────────────────────────────────────
 
+export interface CreateRecordRequest {
+  type: 'CREATE_RECORD';
+  repo: string;
+  collection: string;
+  record: Record<string, unknown> & { $type: string };
+  rkey?: string;
+  validate?: boolean;
+}
+
+export interface CreateRecordSuccessResponse {
+  type: 'CREATE_RECORD_SUCCESS';
+  uri: string;
+  cid: string;
+}
+
+export type CreateRecordResponse = CreateRecordSuccessResponse | PutRecordErrorResponse;
+
 export interface GetRecordRequest {
   type: 'GET_RECORD';
   repo: string;
@@ -179,6 +196,7 @@ export type MessageRequest =
   | AuthSignOutAccountRequest
   | GetSettingsRequest
   | SetSettingsRequest
+  | CreateRecordRequest
   | GetRecordRequest
   | PutRecordRequest
   | UploadBlobRequest
@@ -219,19 +237,21 @@ export type ResponseFor<T extends MessageRequest> = T extends AuthGetStatusReque
                 | AuthSwitchAccountRequest
                 | AuthSignOutAccountRequest
             ? OkResponse
-            : T extends GetRecordRequest
-              ? GetRecordResponse
-              : T extends PutRecordRequest
-                ? PutRecordResponse
-                : T extends UploadBlobRequest
-                  ? UploadBlobResponse
-                  : T extends SetPdsUrlRequest
-                    ? SetPdsUrlResponse
-                    : T extends GetPdsUrlRequest
-                      ? GetPdsUrlResponse
-                      : T extends CheckLabelerSubscriptionRequest
-                        ? CheckLabelerSubscriptionResponse
-                        : never;
+            : T extends CreateRecordRequest
+              ? CreateRecordResponse
+              : T extends GetRecordRequest
+                ? GetRecordResponse
+                : T extends PutRecordRequest
+                  ? PutRecordResponse
+                  : T extends UploadBlobRequest
+                    ? UploadBlobResponse
+                    : T extends SetPdsUrlRequest
+                      ? SetPdsUrlResponse
+                      : T extends GetPdsUrlRequest
+                        ? GetPdsUrlResponse
+                        : T extends CheckLabelerSubscriptionRequest
+                          ? CheckLabelerSubscriptionResponse
+                          : never;
 
 /**
  * Type-safe wrapper around `browser.runtime.sendMessage`.
