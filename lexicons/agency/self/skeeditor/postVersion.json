@@ -1,0 +1,35 @@
+{
+  "lexicon": 1,
+  "id": "agency.self.skeeditor.postVersion",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "An archived, previous version of an edited bsky post.",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["postUri", "createdAt", "text"],
+        "properties": {
+          "postUri": {
+            "type": "string",
+            "format": "at-uri",
+            "description": "The AT-URI of the original post being edited."
+          },
+          "postCid": {
+            "type": "string",
+            "format": "cid",
+            "description": "The specific CID revision of the post before this edit."
+          },
+          "text": {
+            "type": "string",
+            "description": "The text of the post at this version."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
+          }
+        }
+      }
+    }
+  }
+}

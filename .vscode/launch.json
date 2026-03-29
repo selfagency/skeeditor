@@ -11,8 +11,10 @@
       "type": "chrome",
       "request": "launch",
       "url": "https://bsky.app",
+      "port": 9222,
       "runtimeExecutable": "/Applications/Chromium.app/Contents/MacOS/Chromium",
       "runtimeArgs": [
+        "--remote-debugging-port=9222",
         "--load-extension=${workspaceFolder}/dist/chrome",
         "--disable-extensions-except=${workspaceFolder}/dist/chrome",
         // Keeps a stable profile across sessions so you stay logged in.
@@ -57,7 +59,9 @@
       "type": "chrome",
       "request": "attach",
       "port": 9222,
-      "url": "https://bsky.app/*",
+      "preLaunchTask": "Open Chromium (remote debug on 9222)",
+      "targetSelection": "pick",
+      "urlFilter": "https://bsky.app/*",
       "sourceMaps": true,
       "webRoot": "${workspaceFolder}/src",
       "outFiles": [
@@ -147,7 +151,9 @@
       "type": "chrome",
       "request": "attach",
       "port": 9222,
-      "url": "https://bsky.app/*",
+      "preLaunchTask": "Open Chromium (remote debug on 9222)",
+      "targetSelection": "pick",
+      "urlFilter": "https://bsky.app/*",
       "sourceMaps": true,
       "webRoot": "${workspaceFolder}/src",
       "outFiles": [
@@ -171,7 +177,44 @@
       }
     },
     // ─────────────────────────────────────────────────────────────────────────
-    // 6. Vitest unit tests — debug a single test file.
+    // 6. General web debugger — attach to bsky.app tab in the running Chromium
+    //    (port 9222) and open the VS Code debug console immediately.
+    //    Use this to evaluate JS expressions in the page context, inspect the
+    //    DOM, and call window.__skeeditor* helpers without needing DevTools.
+    //    Start the session by pressing F5 while this config is selected; type
+    //    expressions in the "Debug Console" panel (Ctrl+Shift+Y / ⇧⌘Y).
+    // ─────────────────────────────────────────────────────────────────────────
+    {
+      "name": "Debug: bsky.app Web Console (attach)",
+      "type": "chrome",
+      "request": "attach",
+      "port": 9222,
+      // No url filter — attaches to the first available page target.
+      // Use targetSelection: "pick" if you want to choose a specific tab.
+      "targetSelection": "pick",
+      "preLaunchTask": "Open Chromium (remote debug on 9222)",
+      "sourceMaps": true,
+      "webRoot": "${workspaceFolder}/src",
+      "outFiles": [
+        "${workspaceFolder}/dist/chrome/**/*.js"
+      ],
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/dist/chrome/**",
+        "!**/node_modules/**"
+      ],
+      "internalConsoleOptions": "openOnSessionStart",
+      "skipFiles": [
+        "<node_internals>/**",
+        "${workspaceFolder}/node_modules/**",
+        "${workspaceFolder}/src/lexicons/**"
+      ],
+      "presentation": {
+        "group": "chrome-extension",
+        "order": 6
+      }
+    },
+    // ─────────────────────────────────────────────────────────────────────────
+    // 7. Vitest unit tests — debug a single test file.
     // ─────────────────────────────────────────────────────────────────────────
     {
       "name": "Debug: Vitest (unit)",
@@ -228,6 +271,20 @@
       "presentation": {
         "group": "chrome-extension",
         "order": 0
+      }
+    },
+    // Attach web console + content-script debugger to already-running Chromium.
+    // Requires Chromium launched with --remote-debugging-port=9222.
+    {
+      "name": "Debug: Attach to Running Extension",
+      "configurations": [
+        "Debug: bsky.app Web Console (attach)",
+        "Debug: Content Script on bsky.app (attach)"
+      ],
+      "stopAll": true,
+      "presentation": {
+        "group": "chrome-extension",
+        "order": 1
       }
     }
   ]

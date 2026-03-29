@@ -48,12 +48,12 @@ export default defineConfig({
 
 WXT discovers entrypoints by convention in `src/entrypoints/`:
 
-| File / Directory | Extension context | Output file |
-| --- | --- | --- |
-| `src/entrypoints/background.ts` | Service worker | `background.js` |
-| `src/entrypoints/content.ts` | Content script | `content-scripts/content.js` |
-| `src/entrypoints/popup/` | Action popup | `popup.html` |
-| `src/entrypoints/options/` | Options page | `options.html` |
+| File / Directory                | Extension context | Output file                  |
+| ------------------------------- | ----------------- | ---------------------------- |
+| `src/entrypoints/background.ts` | Service worker    | `background.js`              |
+| `src/entrypoints/content.ts`    | Content script    | `content-scripts/content.js` |
+| `src/entrypoints/popup/`        | Action popup      | `popup.html`                 |
+| `src/entrypoints/options/`      | Options page      | `options.html`               |
 
 ### Output layout
 
@@ -79,18 +79,18 @@ dist/chrome/
 
 ## Build commands
 
-| Command | Description |
-| ------- | ----------- |
-| `pnpm build` | Build for Chrome (production, one-shot) |
-| `pnpm build:chrome` | Same as above |
-| `pnpm build:firefox` | Build for Firefox |
-| `pnpm build:safari` | Build for Safari |
-| `pnpm build:repo` | Build all three browser targets in sequence |
-| `pnpm dev` | Start WXT dev server for Chrome (watch + hot-reload) |
-| `pnpm build:watch` | Watch mode for Chrome |
-| `pnpm build:watch:chrome` | Watch mode for Chrome |
-| `pnpm build:watch:firefox` | Watch mode for Firefox |
-| `pnpm clean` | Remove `dist/` and `.wxt/` |
+| Command                    | Description                                          |
+| -------------------------- | ---------------------------------------------------- |
+| `pnpm build`               | Build for Chrome (production, one-shot)              |
+| `pnpm build:chrome`        | Same as above                                        |
+| `pnpm build:firefox`       | Build for Firefox                                    |
+| `pnpm build:safari`        | Build for Safari                                     |
+| `pnpm build:repo`          | Build all three browser targets in sequence          |
+| `pnpm dev`                 | Start WXT dev server for Chrome (watch + hot-reload) |
+| `pnpm build:watch`         | Watch mode for Chrome                                |
+| `pnpm build:watch:chrome`  | Watch mode for Chrome                                |
+| `pnpm build:watch:firefox` | Watch mode for Firefox                               |
+| `pnpm clean`               | Remove `dist/` and `.wxt/`                           |
 
 Each build command first runs `pnpm lex:build` to keep generated Lexicon types up to date before invoking WXT.
 
@@ -114,12 +114,12 @@ Generated types are committed. `lex:build` runs automatically before `pnpm build
 
 Extension icons are generated automatically from a single SVG source file via the [`@wxt-dev/auto-icons`](https://wxt.dev/guide/auto-icons) WXT module. The source image is `src/assets/icon.svg`. WXT renders it to the required PNG sizes at build time and references them from the generated manifest.
 
-| Output file       | Size    |
-| ----------------- | ------- |
-| `icons/16.png`    | 16×16   |
-| `icons/32.png`    | 32×32   |
-| `icons/48.png`    | 48×48   |
-| `icons/128.png`   | 128×128 |
+| Output file     | Size    |
+| --------------- | ------- |
+| `icons/16.png`  | 16×16   |
+| `icons/32.png`  | 32×32   |
+| `icons/48.png`  | 48×48   |
+| `icons/128.png` | 128×128 |
 
 ---
 

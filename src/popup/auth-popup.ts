@@ -105,10 +105,10 @@ class AuthPopup extends HTMLElement {
         const accountCards = this.accounts
           .map(account => {
             const label = account.handle
-              ? `<span class="text-sm font-medium text-gray-900 dark:text-gray-100">${escapeHTML(account.handle)}</span>`
-              : `<span class="break-all font-mono text-xs text-gray-600 dark:text-gray-400">${escapeHTML(account.did)}</span>`;
+              ? `<span class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">${escapeHTML(account.handle)}</span>`
+              : `<span class="truncate font-mono text-xs text-gray-600 dark:text-gray-400">${escapeHTML(account.did)}</span>`;
             const activeIndicator = account.isActive
-              ? '<span class="ml-1 text-xs text-indigo-600 dark:text-indigo-400">(active)</span>'
+              ? `<svg class="ml-1 size-3.5 shrink-0 text-indigo-500 dark:text-indigo-400" clip-rule="evenodd" fill-rule="evenodd" stroke-linejoin="round" stroke-miterlimit="2" viewBox="0 0 297 297" xmlns="http://www.w3.org/2000/svg" aria-label="Active account" role="img"><path d="m148.438 0c-39.368 0-77.125 15.639-104.96 43.477-27.838 27.838-43.477 65.594-43.477 104.96 0 39.367 15.639 77.125 43.477 104.96 27.838 27.838 65.594 43.477 104.96 43.477 39.367 0 77.125-15.639 104.96-43.477 27.838-27.838 43.477-65.594 43.477-104.96 0-39.367-15.639-77.125-43.477-104.96-27.838-27.838-65.594-43.477-104.96-43.477zm79.401 92.046-82.468 115.45v.003c-2.819 3.946-7.231 6.456-12.063 6.859-.461.033-.911.05-1.361.05-4.376.003-8.571-1.737-11.66-4.832l-49.48-49.48c-4.106-4.178-5.685-10.219-4.153-15.871 1.535-5.652 5.95-10.067 11.602-11.599s11.693.047 15.871 4.15l35.715 35.707 71.145-99.603c3.424-4.796 9.145-7.403 15.012-6.834 5.865.566 10.984 4.219 13.425 9.581 2.444 5.365 1.839 11.621-1.585 16.418h.001z" fill="currentColor" fill-rule="nonzero"/></svg>`
               : '';
             const switchBtn = account.isActive
               ? ''
@@ -119,7 +119,7 @@ class AuthPopup extends HTMLElement {
             return `
             <div class="account-card rounded-lg border border-gray-200 p-3 dark:border-white/10">
               <div class="flex items-center justify-between gap-2">
-                <div class="min-w-0 flex-1">${label}${activeIndicator}</div>
+                <div class="min-w-0 flex-1 flex items-center gap-1">${label}${activeIndicator}</div>
                 <div class="flex shrink-0 items-center gap-1">
                   ${switchBtn}
                   ${reauthorizeBtn}
@@ -135,17 +135,6 @@ class AuthPopup extends HTMLElement {
           <div class="space-y-3 p-4">
             ${labelerBanner}
             ${accountCards}
-            <div>
-              <label for="add-pds-url" class="block text-sm/6 font-medium text-gray-900 dark:text-gray-100">PDS URL</label>
-              <div class="mt-2">
-                <input type="url" id="add-pds-url" value="https://bsky.social" placeholder="https://bsky.social"
-                  class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-indigo-500" />
-              </div>
-            </div>
-            <button id="add-account" type="button"
-              class="flex w-full justify-center rounded-md bg-white px-3 py-1.5 text-sm/6 font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20">
-              Add another account
-            </button>
             <div class="border-t border-gray-200 pt-3 dark:border-white/10">
               <button id="open-settings" type="button"
                 class="flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
@@ -164,12 +153,6 @@ class AuthPopup extends HTMLElement {
     this.shadow.getElementById('sign-in')?.addEventListener('click', () => {
       const pdsUrlInput = this.shadow.getElementById('pds-url') as HTMLInputElement | null;
       const pdsUrl = pdsUrlInput?.value?.trim() || 'https://bsky.social';
-      void sendMessage({ type: 'AUTH_SIGN_IN', pdsUrl });
-    });
-
-    this.shadow.getElementById('add-account')?.addEventListener('click', () => {
-      const addPdsUrlInput = this.shadow.getElementById('add-pds-url') as HTMLInputElement | null;
-      const pdsUrl = addPdsUrlInput?.value?.trim() || 'https://bsky.social';
       void sendMessage({ type: 'AUTH_SIGN_IN', pdsUrl });
     });
 

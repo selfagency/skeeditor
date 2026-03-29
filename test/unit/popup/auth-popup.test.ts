@@ -115,22 +115,22 @@ describe('auth-popup Web Component', () => {
       expect(el.shadowRoot?.querySelector('.account-switch')).toBeNull();
     });
 
-    it('shows an add-account button', async () => {
+    it('does not show an add-account button (moved to settings page)', async () => {
       mockSendMessage([makeAccount()]);
 
       const el = createElement();
       await attach(el);
 
-      expect(el.shadowRoot?.querySelector('#add-account')).not.toBeNull();
+      expect(el.shadowRoot?.querySelector('#add-account')).toBeNull();
     });
 
-    it('shows a PDS URL input in authenticated state for adding another account', async () => {
+    it('does not show a PDS URL input in authenticated state (moved to settings page)', async () => {
       mockSendMessage([makeAccount()]);
 
       const el = createElement();
       await attach(el);
 
-      expect(el.shadowRoot?.querySelector('#add-pds-url')).not.toBeNull();
+      expect(el.shadowRoot?.querySelector('#add-pds-url')).toBeNull();
     });
   });
 
@@ -191,18 +191,13 @@ describe('auth-popup Web Component', () => {
       });
     });
 
-    it('sends AUTH_SIGN_IN when add-account button is clicked', async () => {
+    it('shows a settings button that opens the options page from authenticated state', async () => {
       mockSendMessage([makeAccount()]);
 
       const el = createElement();
       await attach(el);
 
-      el.shadowRoot?.querySelector<HTMLButtonElement>('#add-account')?.click();
-
-      expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({
-        type: 'AUTH_SIGN_IN',
-        pdsUrl: expect.any(String),
-      });
+      expect(el.shadowRoot?.querySelector('#open-settings')).not.toBeNull();
     });
 
     it('sends AUTH_SIGN_OUT_ACCOUNT with the correct DID when per-account sign-out is clicked', async () => {

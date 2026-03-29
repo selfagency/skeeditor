@@ -131,6 +131,38 @@ describe('content-script', () => {
     expect(document.querySelector('[data-skeeditor-edit-button]')).toBeTruthy();
   });
 
+  it('should inject edit button via profile-link fallback when repo extraction does not match exactly', async () => {
+    document.body.innerHTML = `
+      <article role="article" data-testid="feedItem-random">
+        <a href="https://bsky.app/profile/self.agency">self.agency</a>
+        <a href="https://bsky.app/profile/other.bsky.social/post/3abc">
+          <p data-testid="post-text">Hello Bluesky</p>
+        </a>
+        <div data-testid="postButtonInline"></div>
+      </article>
+    `;
+
+    const sendMessage = vi.fn(async request => {
+      if (request.type === 'AUTH_GET_STATUS') {
+        return {
+          authenticated: true,
+          did: 'did:plc:zju7gpf2woz5vwegmzdg2acl',
+          handle: 'self.agency',
+          expiresAt: Date.now() + 60_000,
+        };
+      }
+
+      return { ok: true };
+    });
+
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    await import('@src/content/content-script');
+    await flushMicrotasks(3);
+
+    expect(document.querySelector('[data-skeeditor-edit-button]')).toBeTruthy();
+  });
+
   it('should remove injected edit button when session is cleared via storage change', async () => {
     const sendMessage = vi.fn(async request => {
       if (request.type === 'AUTH_GET_STATUS') {
@@ -281,6 +313,70 @@ describe('content-script', () => {
 
     history.pushState({}, '', '/profile/bob.bsky.social');
     await flushMicrotasks(3);
+
+    expect(sendMessage).toHaveBeenCalledWith({ type: 'AUTH_SWITCH_ACCOUNT', did: 'did:plc:bob456' });
+  });
+
+  it('should refresh known accounts lazily in checkProfileSwitch when none loaded', async () => {
+    const sendMessage = vi.fn(async request => {
+      if (request.type === 'AUTH_GET_STATUS') {
+        return {
+          authenticated: true,
+          did: 'did:plc:alice123',
+          handle: 'alice.bsky.social',
+          expiresAt: Date.now() + 60_000,
+        };
+      }
+      if (request.type === 'AUTH_LIST_ACCOUNTS') {
+        // First startup load fails, subsequent lazy load succeeds.
+        const callCount = sendMessage.mock.calls.filter(c => c[0]?.type === 'AUTH_LIST_ACCOUNTS').length;
+        if (callCount <= 1) {
+          throw new Error('temporary failure');
+        }
+        return {
+          accounts: [
+            { did: 'did:plc:alice123', handle: 'alice.bsky.social', expiresAt: Date.now() + 60_000, isActive: true },
+            { did: 'did:plc:bob456', handle: 'bob.bsky.social', expiresAt: Date.now() + 60_000, isActive: false },
+          ],
+        };
+      }
+      return { ok: true };
+    });
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    await import('@src/content/content-script');
+    await flushMicrotasks(3);
+
+    history.pushState({}, '', '/profile/bob.bsky.social');
+    await flushMicrotasks(4);
+
+    expect(sendMessage).toHaveBeenCalledWith({ type: 'AUTH_SWITCH_ACCOUNT', did: 'did:plc:bob456' });
+  });
+
+  it('should auto-switch on initial page load when URL profile is a non-active known account', async () => {
+    history.replaceState({}, '', '/profile/bob.bsky.social/post/3abc');
+
+    const sendMessage = vi.fn(async request => {
+      if (request.type === 'AUTH_GET_STATUS')
+        return {
+          authenticated: true,
+          did: 'did:plc:alice123',
+          handle: 'alice.bsky.social',
+          expiresAt: Date.now() + 60_000,
+        };
+      if (request.type === 'AUTH_LIST_ACCOUNTS')
+        return {
+          accounts: [
+            { did: 'did:plc:alice123', handle: 'alice.bsky.social', expiresAt: Date.now() + 60_000, isActive: true },
+            { did: 'did:plc:bob456', handle: 'bob.bsky.social', expiresAt: Date.now() + 60_000, isActive: false },
+          ],
+        };
+      return { ok: true };
+    });
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    await import('@src/content/content-script');
+    await flushMicrotasks(4);
 
     expect(sendMessage).toHaveBeenCalledWith({ type: 'AUTH_SWITCH_ACCOUNT', did: 'did:plc:bob456' });
   });

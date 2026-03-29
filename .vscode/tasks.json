@@ -25,17 +25,9 @@
         // completes. We treat that as the "background task is ready" signal.
         "background": {
           "activeOnStart": true,
-          "beginsPattern": "vite",
-          "endsPattern": "watching for file changes"
+          "beginsPattern": "^.*\\[vite\\].*building.*$",
+          "endsPattern": "^.*watching for file changes.*$"
         },
-        // Allow the task to be considered "done" immediately so the debugger
-        // can start while the watcher continues running in the background.
-        "watches": [
-          {
-            "regexp": "watching for file changes",
-            "isActive": true
-          }
-        ]
       },
       "presentation": {
         "reveal": "silent",
@@ -63,15 +55,16 @@
     },
     // ─────────────────────────────────────────────────────────────────────────
     // Launch Chromium with remote debugging on port 9222 + the unpacked extension.
-    // Use this when you prefer "attach" configs over "launch" configs
-    // (keeps your normal Chromium profile intact, you just add a new window).
+    // Use this when you prefer "attach" configs over "launch" configs.
+    // The command backgrounds Chromium then polls until port 9222 is accepting
+    // connections — VS Code waits for this task to finish before attaching.
     //
     // macOS only — adjust the path for Linux/Windows if needed.
     // ─────────────────────────────────────────────────────────────────────────
     {
       "label": "Open Chromium (remote debug on 9222)",
       "type": "shell",
-      "command": "'/Applications/Chromium.app/Contents/MacOS/Chromium' --remote-debugging-port=9222 --user-data-dir='${workspaceFolder}/.chromium-debug-profile' --load-extension='${workspaceFolder}/dist/chrome' --disable-extensions-except='${workspaceFolder}/dist/chrome' 'https://bsky.app' &",
+      "command": "'/Applications/Chromium.app/Contents/MacOS/Chromium' --remote-debugging-port=9222 --user-data-dir='${workspaceFolder}/.chromium-debug-profile' --load-extension='${workspaceFolder}/dist/chrome' --disable-extensions-except='${workspaceFolder}/dist/chrome' 'https://bsky.app' & until curl -s http://localhost:9222/json/version >/dev/null 2>&1; do sleep 0.2; done; echo 'Chromium ready on :9222'",
       "dependsOn": [
         "Build Chrome (once)"
       ],

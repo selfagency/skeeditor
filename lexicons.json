@@ -9,7 +9,8 @@
     "com.atproto.repo.getRecord",
     "com.atproto.repo.listRecords",
     "com.atproto.repo.putRecord",
-    "com.atproto.repo.uploadBlob"
+    "com.atproto.repo.uploadBlob",
+    "agency.self.skeeditor.postVersion"
   ],
   "resolutions": {
     "app.bsky.actor.defs": {

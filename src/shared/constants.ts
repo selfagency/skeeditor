@@ -126,3 +126,6 @@ export const LABELER_DID = 'did:plc:m6h36r2hzbnozuhxj4obhkyb';
 
 /** Endpoint to trigger a label broadcast after a successful edit */
 export const LABELER_EMIT_URL = 'https://labeler.skeeditor.link/xrpc/tools.skeeditor.emitLabel';
+
+/** WebSocket endpoint to receive real-time `edited` label pushes from the labeler */
+export const LABELER_SUBSCRIBE_WS_URL = 'wss://labeler.skeeditor.link/xrpc/com.atproto.label.subscribeLabels?cursor=0';

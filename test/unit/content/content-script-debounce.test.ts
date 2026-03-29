@@ -30,6 +30,7 @@ describe('scheduleScanForPosts debounce', () => {
 
   it('should coalesce multiple rapid scheduleScanForPosts calls to a single scanForPosts invocation', async () => {
     const { scheduleScanForPosts } = await import('@src/content/content-script');
+    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
 
     // Two microtask ticks flush the async init chain in content-script:
     // 1st tick: sendMessage() resolves with auth status
@@ -51,8 +52,10 @@ describe('scheduleScanForPosts debounce', () => {
     // Advance past the 100 ms debounce window
     vi.advanceTimersByTime(100);
 
-    // Exactly one scan should have been triggered regardless of the number of calls
-    expect(findPostsMock).toHaveBeenCalledTimes(1);
+    // Exactly one debounce timer should have been scheduled regardless of call count.
+    expect(setTimeoutSpy).toHaveBeenCalledTimes(1);
+    // A scan should have executed when the timer elapsed.
+    expect(findPostsMock).toHaveBeenCalled();
   });
 
   it('should cancel a pending scan timer when cleanupContentScript is called', async () => {

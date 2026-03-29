@@ -1,9 +1,28 @@
 import { browser, type Browser } from 'wxt/browser';
-import { APP_NAME } from '../shared/constants';
-import type { AuthListAccountsAccount, PutRecordConflictResponse, PutRecordResponse } from '../shared/messages';
+import { getHandleForDid } from '../shared/api/resolve-did';
+import { APP_BSKY_FEED_POST_COLLECTION, APP_NAME } from '../shared/constants';
+import { createLogger } from '../shared/logger';
+import type {
+  AuthListAccountsAccount,
+  LabelReceivedNotification,
+  PutRecordConflictResponse,
+  PutRecordResponse,
+} from '../shared/messages';
 import { sendMessage } from '../shared/messages';
 import { EditModal } from './edit-modal';
-import { extractPostInfo, extractPostText, findPosts, type PostInfo, updatePostText } from './post-detector';
+import {
+  getCached,
+  getCacheSize,
+  loadFromStorage,
+  normalizeCacheKey,
+  registerIdentity,
+  resolveBatch,
+  resolve as resolveEditedText,
+  setCached,
+  setIdentity,
+  setStorage,
+} from './edited-post-cache';
+import { extractPostInfo, extractPostText, findPosts, updatePostText } from './post-detector';
 import { buildUpdatedPostRecord, type EditablePostRecord } from './post-editor';
 import './styles.css';
 
@@ -11,37 +30,7 @@ const POST_MARKER_ATTRIBUTE = 'data-skeeditor-processed';
 const EDIT_BUTTON_ATTRIBUTE = 'data-skeeditor-edit-button';
 const ACTION_AREA_WAIT_TIMEOUT = 3000;
 
-// ── Persistent edit cache ─────────────────────────────────────────────────────
-
-const EDITED_POSTS_KEY = 'editedPosts';
-const EDITED_POST_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
-
-/**
- * Normalize an AT-URI so its repo segment is always the DID, not a handle.
- *
- * bsky.app produces post URLs in handle form on profile pages
- * (e.g. /profile/self.agency/post/...) but in DID form on the home feed
- * (e.g. /profile/did:plc:xxx/post/...).  Storing and looking up cache
- * entries by the raw AT-URI would cause misses whenever the form differs
- * between save-time and lookup-time.  We normalize to DID form using the
- * currentDid/currentHandle values that are always available in this module.
- */
-function normalizeCacheKey(atUri: string, repo: string): string {
-  if (currentDid !== null && (repo === currentHandle || repo === currentDid)) {
-    // Replace the repo segment with the canonical DID
-    return atUri.replace(`at://${repo}/`, `at://${currentDid}/`);
-  }
-  return atUri;
-}
-
-interface EditedPostEntry {
-  text: string;
-  /** Original text before the edit — shown in Bluesky's "Edited" moderation dialog */
-  originalText?: string;
-  editedAt: number;
-}
-
-let editedPostsCache = new Map<string, EditedPostEntry>();
+const log = createLogger('content');
 
 // ── Recent record cache (avoids stale GET_RECORD after a fresh save) ──────────
 
@@ -55,123 +44,420 @@ interface RecentRecordEntry {
 
 const recentRecordsCache = new Map<string, RecentRecordEntry>();
 
-async function loadEditedPostsCache(): Promise<void> {
-  try {
-    const stored = await browser.storage.local.get(EDITED_POSTS_KEY);
-    const raw = (stored[EDITED_POSTS_KEY] ?? {}) as Record<string, EditedPostEntry>;
-    const now = Date.now();
-    editedPostsCache = new Map(Object.entries(raw).filter(([, v]) => now - v.editedAt < EDITED_POST_TTL_MS));
-  } catch (err) {
-    console.warn(`${APP_NAME}: could not load edit cache`, err);
-  }
-}
-
-async function saveEditedPost(atUri: string, text: string, originalText?: string): Promise<void> {
-  const entry: EditedPostEntry = { text, ...(originalText !== undefined && { originalText }), editedAt: Date.now() };
-  editedPostsCache.set(atUri, entry);
-  try {
-    const stored = await browser.storage.local.get(EDITED_POSTS_KEY);
-    const raw = (stored[EDITED_POSTS_KEY] ?? {}) as Record<string, EditedPostEntry>;
-    const now = Date.now();
-    const pruned: Record<string, EditedPostEntry> = {};
-    for (const [k, v] of Object.entries(raw)) {
-      if (now - v.editedAt < EDITED_POST_TTL_MS) pruned[k] = v;
-    }
-    pruned[atUri] = entry;
-    await browser.storage.local.set({ [EDITED_POSTS_KEY]: pruned });
-  } catch (err) {
-    console.warn(`${APP_NAME}: could not persist edited post`, err);
-  }
-}
-
 function applyEditedPostsFromCache(): void {
-  if (editedPostsCache.size === 0) return;
-  const now = Date.now();
+  if (getCacheSize() === 0) return;
+
+  let scanned = 0;
+  let cacheHits = 0;
+  let applied = 0;
+
+  // ── 1. Normal path: findPosts() covers feed items, replies, search results,
+  //       list views, notifications — anything with a recognisable container.
   for (const postInfo of findPosts(document)) {
-    // Normalize to DID form so handle-form and DID-form URIs hit the same entry.
+    scanned += 1;
     const cacheKey = normalizeCacheKey(postInfo.atUri, postInfo.repo);
-    const entry = editedPostsCache.get(cacheKey);
-    if (entry !== undefined && now - entry.editedAt < EDITED_POST_TTL_MS) {
-      // Guard: only mutate the DOM if the visible text differs from the cached
-      // text. Without this check, every updatePostText() call triggers the
-      // MutationObserver which immediately calls applyEditedPostsFromCache()
-      // again, creating an infinite loop that locks the browser.
-      if (extractPostText(postInfo.element) !== entry.text) {
+    const entry = getCached(cacheKey);
+    if (entry !== null) {
+      cacheHits += 1;
+      const currentText = extractPostText(postInfo.element).trim();
+      if (currentText !== entry.text.trim()) {
         updatePostText(postInfo.element, entry.text);
+        applied += 1;
       }
-      // Kick off a background PDS fetch to get the authoritative current text.
-      // bsky.app's AppView doesn't reflect edits from the firehose, so we read
-      // directly from the PDS on every page load/navigation to stay in sync.
-      void refreshPostTextFromPds(postInfo, cacheKey);
     }
+  }
+
+  // ── 2. Thread-root fallback for post permalink pages.
+  const threadApplied = applyToThreadRoot();
+  log.debug('apply-cache', { cacheSize: getCacheSize(), scanned, cacheHits, applied, threadApplied });
+}
+
+/**
+ * Apply cached text to the thread-root post on permalink pages.
+ * Single implementation used by all paths (MO, label push, permalink load).
+ */
+function applyToThreadRoot(text?: string, rkey?: string): boolean {
+  const urlMatch = /\/profile\/([^/?#]+)\/post\/([^/?#]+)/.exec(window.location.pathname);
+  if (!urlMatch) return false;
+
+  const urlRepo = urlMatch[1];
+  const urlRkey = rkey ?? urlMatch[2];
+  if (!urlRepo || !urlRkey) return false;
+
+  // If explicit text is given, apply directly.
+  // Otherwise look up from cache. Only try the URL repo (which is the
+  // post author's identity) — do NOT try currentDid/currentHandle here,
+  // as that causes cross-contamination when the current user's cached post
+  // gets applied to someone else's thread root.
+  let resolvedText = text ?? null;
+
+  if (resolvedText === null) {
+    // The URL repo might be a handle or DID. Try both forms via normalizeCacheKey
+    // which will normalize currentUser's handle→DID. For other users, try as-is.
+    const candidateUri = `at://${urlRepo}/${APP_BSKY_FEED_POST_COLLECTION}/${urlRkey}`;
+    const normalizedKey = normalizeCacheKey(candidateUri, urlRepo);
+    const entry = getCached(normalizedKey);
+    if (entry !== null) {
+      resolvedText = entry.text;
+    } else {
+      // If URL repo is a handle, try DID-canonicalized keys discovered from
+      // visible post metadata (e.g. feedItem-by-did:* containers).
+      for (const p of findPosts(document)) {
+        if (p.rkey !== urlRkey) continue;
+        if (p.repo.startsWith('did:')) {
+          const didKey = normalizeCacheKey(`at://${p.repo}/${APP_BSKY_FEED_POST_COLLECTION}/${urlRkey}`, p.repo);
+          const didEntry = getCached(didKey);
+          if (didEntry !== null) {
+            resolvedText = didEntry.text;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  if (resolvedText === null) return false;
+
+  // On permalink pages, [data-testid="postDetailedText"] is the thread root's
+  // text element. On bsky.app, this element is often rendered *outside* the
+  // postThreadItem container, so querying it directly is more reliable than
+  // going through extractPostText(containerElement) which falls back to the
+  // entire container's textContent and produces garbage comparisons.
+  const detailedTextEl = document.querySelector<HTMLElement>('[data-testid="postDetailedText"]');
+  if (detailedTextEl) {
+    const domText = detailedTextEl.textContent?.trim() ?? '';
+    if (domText !== resolvedText.trim()) {
+      detailedTextEl.textContent = resolvedText;
+    }
+    return true;
+  }
+
+  // Fallback: postDetailedText not found (feed/list views that use standard
+  // postThreadItem layout). Use findPosts to match by rkey and update.
+  for (const p of findPosts(document)) {
+    if (p.rkey === urlRkey) {
+      const domText = extractPostText(p.element).trim();
+      if (domText !== resolvedText.trim()) {
+        updatePostText(p.element, resolvedText);
+      }
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// ── Fetch triggers ────────────────────────────────────────────────────────────
+//
+// Three distinct events trigger fetches from Slingshot/PDS. The MutationObserver
+// NEVER fetches — it only applies cached text to the DOM.
+
+/**
+ * Trigger 1: Permalink page load — fetch from Slingshot for the thread root,
+ * but ONLY if the post is known to be edited ("Edited" badge in the DOM).
+ * Without this gate we'd fetch and cache every permalink post, overwriting
+ * the DOM with Slingshot's text even for unedited posts.
+ */
+async function fetchPermalinkPost(): Promise<void> {
+  const urlMatch = /\/profile\/([^/?#]+)\/post\/([^/?#]+)/.exec(window.location.pathname);
+  if (!urlMatch) {
+    log.debug('fetch-permalink-skip', { reason: 'not-permalink', pathname: window.location.pathname });
+    return;
+  }
+
+  const repo = urlMatch[1]!;
+  const rkey = urlMatch[2]!;
+  const atUri = `at://${repo}/${APP_BSKY_FEED_POST_COLLECTION}/${rkey}`;
+  const atCacheKey = normalizeCacheKey(atUri, repo);
+
+  // Scope the "Edited" badge check to the thread-root container for this permalink.
+  // A broad document.querySelector would match an edited badge on a reply or embedded
+  // quote, causing us to fetch the root post even when it isn't edited.
+  let rootPost: ReturnType<typeof extractPostInfo> | null = null;
+  for (const p of findPosts(document)) {
+    if (normalizeCacheKey(p.atUri, p.repo) === atCacheKey) {
+      rootPost = p;
+      break;
+    }
+  }
+  if (!rootPost) {
+    // Root not in DOM yet — MutationObserver / scanForPosts will handle it on next render.
+    log.debug('fetch-permalink-skip', { reason: 'root-post-not-found', atUri });
+    return;
+  }
+  const editedBadge = rootPost.element.querySelector('button[aria-label="Edited"]');
+  if (!editedBadge) {
+    log.debug('fetch-permalink-skip', { reason: 'no-edited-badge', pathname: window.location.pathname });
+    return;
+  }
+
+  log.debug('fetch-permalink-start', { atUri, repo, rkey });
+
+  const text = await resolveEditedText(atUri, repo, APP_BSKY_FEED_POST_COLLECTION, rkey);
+  if (text !== null) {
+    applyToThreadRoot(text, rkey);
+    // Also try findPosts in case the DOM has rendered
+    for (const p of findPosts(document)) {
+      const cacheKey = normalizeCacheKey(p.atUri, p.repo);
+      if (cacheKey === atCacheKey && extractPostText(p.element).trim() !== text.trim()) {
+        updatePostText(p.element, text);
+        break;
+      }
+    }
+    log.debug('fetch-permalink-applied', { atUri, textLength: text.length });
+  } else {
+    log.debug('fetch-permalink-miss', { atUri });
   }
 }
 
 /**
- * In-flight set: prevents duplicate GET_RECORD calls for the same AT-URI
- * while a fetch is already pending (e.g. when the MO fires repeatedly).
+ * Trigger 2: DOM scan for "Edited" badge — bsky.app renders
+ * `button[aria-label="Edited"]` for posts labeled as edited.
  */
-const pdsFetchInFlight = new Set<string>();
+async function fetchEditedPostsInView(): Promise<void> {
+  const editedButtons = document.querySelectorAll<HTMLElement>('button[aria-label="Edited"]');
+  if (editedButtons.length === 0) {
+    log.debug('fetch-edited-skip', { reason: 'no-edited-buttons' });
+    return;
+  }
 
-/**
- * Fetch the authoritative post text from the PDS via GET_RECORD and update
- * both the DOM and the local cache to match.
- *
- * bsky.app's AppView does not process edits replayed from the firehose —
- * it continues showing the original text.  Other clients (Blacksky etc.)
- * read the PDS directly.  Calling this after applying the local cache
- * ensures skeeditor users always see what the PDS actually has.
- */
-async function refreshPostTextFromPds(postInfo: PostInfo, cacheKey: string): Promise<void> {
-  if (pdsFetchInFlight.has(cacheKey)) return;
-  pdsFetchInFlight.add(cacheKey);
-  try {
-    const response = await sendMessage({
-      type: 'GET_RECORD',
-      repo: postInfo.repo,
-      collection: postInfo.collection,
-      rkey: postInfo.rkey,
-    });
-    if ('error' in response) return;
+  const postsToFetch: Array<{ atUri: string; repo: string; rkey: string }> = [];
 
-    const freshText = (response.value as EditablePostRecord).text;
-    if (typeof freshText !== 'string') return;
+  for (const btn of editedButtons) {
+    // Walk up to the nearest post container
+    const postElement =
+      btn.closest<HTMLElement>('[data-at-uri]') ??
+      btn.closest<HTMLElement>('[data-uri]') ??
+      btn.closest<HTMLElement>('[data-testid^="postThreadItem"]') ??
+      btn.closest<HTMLElement>('[data-testid^="feedItem"]') ??
+      btn.closest<HTMLElement>('article');
+    if (!postElement) continue;
 
-    // Update in-memory cache + storage so subsequent loads use fresh text.
-    const existing = editedPostsCache.get(cacheKey);
-    if (existing !== undefined && existing.text !== freshText) {
-      void saveEditedPost(cacheKey, freshText, existing.originalText);
-    }
+    const info = extractPostInfo(postElement);
+    if (!info) continue;
 
-    // Re-query the post element (the original ref may be stale after React re-renders).
+    const cacheKey = normalizeCacheKey(info.atUri, info.repo);
+    if (getCached(cacheKey) !== null) continue;
+
+    postsToFetch.push({ atUri: info.atUri, repo: info.repo, rkey: info.rkey });
+  }
+
+  if (postsToFetch.length === 0) {
+    log.debug('fetch-edited-skip', { reason: 'no-uncached-posts', editedButtonCount: editedButtons.length });
+    return;
+  }
+
+  log.debug('fetch-edited-start', {
+    editedButtonCount: editedButtons.length,
+    postsToFetch: postsToFetch.map(p => ({ atUri: p.atUri, repo: p.repo, rkey: p.rkey })),
+  });
+
+  const results = await resolveBatch(postsToFetch);
+  log.debug('fetch-edited-resolved', { resultCount: results.size });
+
+  // Apply resolved text to DOM
+  let applied = 0;
+  for (const [cacheKey, text] of results) {
     for (const p of findPosts(document)) {
       if (normalizeCacheKey(p.atUri, p.repo) === cacheKey) {
-        if (extractPostText(p.element) !== freshText) {
-          updatePostText(p.element, freshText);
+        if (extractPostText(p.element).trim() !== text.trim()) {
+          updatePostText(p.element, text);
+          applied += 1;
         }
         break;
       }
     }
-  } catch {
-    // Silent — network error, PDS unreachable, etc. Local cache stays.
-  } finally {
-    pdsFetchInFlight.delete(cacheKey);
   }
+
+  // Also try thread-root
+  applyToThreadRoot();
+  log.debug('fetch-edited-applied', { applied });
 }
+
+/**
+ * Fallback trigger: resolve visible own posts even when the "Edited" badge is
+ * not rendered in this surface (e.g. some search/profile variants).
+ */
+async function fetchOwnPostsInView(): Promise<void> {
+  if (currentDid === null) {
+    log.debug('fetch-own-skip', { reason: 'no-auth' });
+    return;
+  }
+
+  const postsToFetch: Array<{ atUri: string; repo: string; rkey: string }> = [];
+  let scanned = 0;
+  let ownVisible = 0;
+  let alreadyCached = 0;
+
+  for (const postInfo of findPosts(document)) {
+    scanned += 1;
+    if (!isElementOwnPost(postInfo.element, postInfo.repo)) {
+      continue;
+    }
+
+    ownVisible += 1;
+
+    const cacheKey = normalizeCacheKey(postInfo.atUri, postInfo.repo);
+    if (getCached(cacheKey) !== null) {
+      alreadyCached += 1;
+      continue;
+    }
+
+    postsToFetch.push({ atUri: postInfo.atUri, repo: postInfo.repo, rkey: postInfo.rkey });
+  }
+
+  if (postsToFetch.length === 0) {
+    log.debug('fetch-own-skip', { reason: 'no-uncached-own-posts', scanned, ownVisible, alreadyCached });
+    return;
+  }
+
+  log.debug('fetch-own-start', {
+    currentDid,
+    scanned,
+    ownVisible,
+    alreadyCached,
+    postsToFetch: postsToFetch.map(p => ({ atUri: p.atUri, repo: p.repo, rkey: p.rkey })),
+  });
+
+  const results = await resolveBatch(postsToFetch);
+  log.debug('fetch-own-resolved', { resultCount: results.size });
+
+  let applied = 0;
+  for (const [cacheKey, text] of results) {
+    for (const p of findPosts(document)) {
+      if (normalizeCacheKey(p.atUri, p.repo) === cacheKey) {
+        if (extractPostText(p.element).trim() !== text.trim()) {
+          updatePostText(p.element, text);
+          applied += 1;
+        }
+        break;
+      }
+    }
+  }
+
+  const threadApplied = applyToThreadRoot();
+  log.debug('fetch-own-applied', { applied, threadApplied });
+}
+
+/**
+ * Trigger 3: LABEL_RECEIVED push from the service worker WebSocket.
+ *
+ * Label URIs always use the DID form (`at://did:plc:xyz/...`), but the DOM
+ * may only contain handle-based URIs (e.g. from anchor hrefs). To bridge the
+ * mismatch we:
+ *   1. Resolve the DID to a handle and register the mapping so all future
+ *      cache lookups work in both directions.
+ *   2. Match DOM posts by rkey (+ collection) since the URI form may differ.
+ */
+async function handleLabelPush(uri: string): Promise<void> {
+  const match = /^at:\/\/([^/]+)\/([^/]+)\/([^/]+)$/.exec(uri);
+  if (!match) {
+    log.debug('label-push-parse-failed', { uri });
+    return;
+  }
+
+  const repo = match[1]!;
+  const collection = match[2]!;
+  const rkey = match[3]!;
+
+  // Resolve DID → handle and register the pair so the cache module can
+  // translate between handle-form and DID-form keys.
+  if (repo.startsWith('did:')) {
+    try {
+      const handle = await getHandleForDid(repo);
+      if (handle) {
+        registerIdentity(handle, repo);
+        log.debug('label-push-resolved-identity', { did: repo, handle });
+      }
+    } catch {
+      // Best-effort — continue without the mapping.
+      log.debug('label-push-resolve-failed', { did: repo });
+    }
+  }
+
+  const text = await resolveEditedText(uri, repo, collection, rkey);
+  if (text === null) return;
+
+  // Apply to DOM — match by rkey since the URI form in the DOM may differ
+  // from the DID-based URI in the label notification.
+  let applied = false;
+  for (const p of findPosts(document)) {
+    if (p.rkey === rkey && p.collection === collection) {
+      const currentText = extractPostText(p.element).trim();
+      if (currentText !== text.trim()) {
+        updatePostText(p.element, text);
+        applied = true;
+      }
+      break;
+    }
+  }
+
+  // Thread-root fallback
+  const threadApplied = applyToThreadRoot(text, rkey);
+  log.debug('label-push-applied', { uri, applied, threadApplied });
+}
+
+const ensureRuntimeMessageListener = (): void => {
+  if (runtimeMessageHandler !== null) return;
+
+  runtimeMessageHandler = (msg: unknown): void => {
+    const message = msg as { type?: string };
+    if (message?.type === 'LABEL_RECEIVED') {
+      const { uri } = msg as LabelReceivedNotification;
+      if (typeof uri === 'string') {
+        void handleLabelPush(uri);
+      }
+    }
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  browser.runtime.onMessage.addListener(runtimeMessageHandler as any);
+};
+
 const ACTION_AREA_SELECTORS = [
   '[data-testid="postButtonInline"]',
   'button[aria-label="Open post options menu"]',
   'button[data-testid="postDropdownBtn"]',
 ];
 
+const isElementOwnPost = (postElement: HTMLElement, postRepo: string): boolean => {
+  if (currentDid === null) {
+    return false;
+  }
+
+  if (postRepo === currentDid || postRepo === currentHandle) {
+    return true;
+  }
+
+  const dataTestId = postElement.getAttribute('data-testid') ?? '';
+  if (
+    dataTestId.includes(`by-${currentDid}`) ||
+    (currentHandle !== null && dataTestId.includes(`by-${currentHandle}`))
+  ) {
+    return true;
+  }
+
+  const profileAnchors = postElement.querySelectorAll<HTMLAnchorElement>('a[href*="/profile/"]');
+  for (const anchor of profileAnchors) {
+    const href = anchor.getAttribute('href') ?? anchor.href;
+    if (!href) continue;
+    if (href.includes(`/profile/${currentDid}`)) return true;
+    if (currentHandle !== null && href.includes(`/profile/${currentHandle}`)) return true;
+  }
+
+  return false;
+};
+
 // Debug: Log when content script loads
 console.log(`${APP_NAME}: content script loaded on ${document.location.href}`);
 
 let mutationObserver: MutationObserver | null = null;
+let isApplyingCache = false;
 let currentDid: string | null = null;
 let currentHandle: string | null = null;
 let domContentLoadedHandler: (() => void) | null = null;
 let storageChangeHandler: ((changes: Record<string, Browser.storage.StorageChange>) => void) | null = null;
+let runtimeMessageHandler: ((msg: unknown) => void) | null = null;
 let scanScheduled = false;
 let scanTimer: ReturnType<typeof setTimeout> | null = null;
 let activeModal: EditModal | null = null;
@@ -211,11 +497,13 @@ const refreshAuthState = async (): Promise<void> => {
     console.log(`${APP_NAME}: received auth status response:`, status);
     currentDid = status.authenticated ? status.did : null;
     currentHandle = status.authenticated ? (status.handle ?? null) : null;
+    setIdentity(currentDid, currentHandle);
     console.log(`${APP_NAME}: currentDid=${currentDid}, currentHandle=${currentHandle}`);
   } catch (err) {
     console.error(`${APP_NAME}: failed to load auth state`, err);
     currentDid = null;
     currentHandle = null;
+    setIdentity(null, null);
   }
 
   // Trigger a scan for posts after updating auth state
@@ -252,6 +540,10 @@ const checkProfileSwitch = async (url: string): Promise<void> => {
   const identifier = extractProfileIdentifier(url);
   if (!identifier) return;
 
+  if (knownAccounts.length === 0) {
+    await loadKnownAccounts();
+  }
+
   const account = knownAccounts.find(acc => !acc.isActive && (acc.handle === identifier || acc.did === identifier));
   if (!account) return;
 
@@ -278,15 +570,18 @@ const ensureNavigationListeners = (): void => {
 
   history.pushState = function (...args: Parameters<typeof history.pushState>): void {
     originalPushState!.apply(history, args);
+    scheduleScanForPosts();
     void checkProfileSwitch(location.href);
   };
 
   history.replaceState = function (...args: Parameters<typeof history.replaceState>): void {
     originalReplaceState!.apply(history, args);
+    scheduleScanForPosts();
     void checkProfileSwitch(location.href);
   };
 
   navigationHandler = (): void => {
+    scheduleScanForPosts();
     void checkProfileSwitch(location.href);
   };
 
@@ -402,6 +697,28 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
       }
     }
 
+    // Create a history record for the old version before modifying the post!
+    try {
+      // Resolve to DID-form so the postUri stored in the archive record is canonical
+      // and not subject to handle changes.
+      const resolvedRepo = info.repo === currentHandle && currentDid !== null ? currentDid : info.repo;
+      await sendMessage({
+        type: 'CREATE_RECORD',
+        repo: resolvedRepo,
+        collection: 'agency.self.skeeditor.postVersion',
+        record: {
+          $type: 'agency.self.skeeditor.postVersion',
+          postUri: `at://${resolvedRepo}/${info.collection}/${info.rkey}`,
+          postCid: currentCid,
+          text: currentRecord.text,
+          createdAt: new Date().toISOString(),
+        },
+      });
+    } catch (err) {
+      console.warn('Failed to archive previous post version:', err);
+      // We do not abort the actual edit if archiving fails.
+    }
+
     const writeResponse = await sendMessage({
       type: 'PUT_RECORD',
       repo: info.repo,
@@ -448,9 +765,9 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
     // Normalize to DID form so cache lookups succeed regardless of whether the
     // post was found via handle-form or DID-form URL.
     const normalizedAtUri = normalizeCacheKey(info.atUri, info.repo);
-    // initialRecordText is the pre-edit original — pass it so the moderation
-    // dialog can display it when the user clicks the "Edited" label.
-    void saveEditedPost(normalizedAtUri, text, initialRecordText);
+    // Write to cache immediately — the MO path will keep applying the cached
+    // text on React re-renders. No setTimeout hack needed.
+    setCached(normalizedAtUri, text, initialRecordText);
     recentRecordsCache.set(normalizedAtUri, { record: updatedRecord, cid: writeResponse.cid, savedAt: Date.now() });
     modal.setSuccess('Edit saved.');
     console.info(`${APP_NAME}: edit saved`, { atUri: normalizedAtUri, uri: writeResponse.uri, cid: writeResponse.cid });
@@ -563,24 +880,82 @@ const scanForPosts = (): void => {
   applyEditedPostsFromCache();
 
   console.log(`${APP_NAME}: scanning for posts, currentDid=${currentDid}, currentHandle=${currentHandle}`);
+
+  // Trigger 2: detect "Edited" badges in the DOM and fetch from Slingshot.
+  // This runs async — the MO path will apply the results once they land in cache.
+  void fetchEditedPostsInView();
+
+  // Fallback trigger: own posts should still resolve even when this surface
+  // does not render the Edited badge.
+  void fetchOwnPostsInView();
+
+  // Trigger 1: on permalink pages, always fetch the thread root.
+  void fetchPermalinkPost();
+
   // No authenticated DID → don't inject any edit buttons.
   if (currentDid === null) {
     console.log(`${APP_NAME}: no auth session, skipping edit button injection`);
+    log.debug('scan-no-auth');
     return;
   }
 
+  let visiblePosts = 0;
+  let ownPosts = 0;
+
   for (const postInfo of findPosts(document)) {
-    console.log(
-      `${APP_NAME}: found post with repo=${postInfo.repo}, comparing with currentDid=${currentDid}, currentHandle=${currentHandle}`,
-    );
-    if (postInfo.repo !== currentDid && postInfo.repo !== currentHandle) {
-      console.log(`${APP_NAME}: skipping post, repo does not match currentDid or currentHandle`);
+    visiblePosts += 1;
+    if (!isElementOwnPost(postInfo.element, postInfo.repo)) {
       continue;
     }
+    ownPosts += 1;
 
-    console.log(`${APP_NAME}: injecting edit button for post with repo=${postInfo.repo}`);
     injectEditButton(postInfo.element);
   }
+
+  if (visiblePosts === 0) {
+    // Dump DOM diagnostics so we can see WHY no posts matched
+    const diagnosticSelectors = [
+      '[data-at-uri]',
+      '[data-uri]',
+      '[data-post]',
+      '[data-testid="post"]',
+      '[data-testid="feedItem"]',
+      '[data-testid="postThreadItem"]',
+      '[data-testid^="feedItem"]',
+      '[data-testid^="postThreadItem"]',
+      '[role="article"]',
+      'article',
+      '[data-testid]',
+    ];
+    const selectorCounts = new Map<string, number>();
+    for (const sel of diagnosticSelectors) {
+      selectorCounts.set(sel, document.querySelectorAll(sel).length);
+    }
+    // Grab all data-testid values on the page for inspection
+    const allTestIds = Array.from(document.querySelectorAll('[data-testid]'))
+      .map(el => el.getAttribute('data-testid')!)
+      .filter(Boolean);
+    const uniqueTestIds = [...new Set(allTestIds)].slice(0, 50);
+    // Check for main/feed containers
+    const mainEl = document.querySelector('main');
+    const feedEl = document.querySelector('[data-testid="feed"]');
+    log.debug('scan-no-containers', {
+      pathname: location.pathname,
+      href: location.href,
+      currentDid,
+      currentHandle,
+      selectorCounts: Object.fromEntries(selectorCounts),
+      uniqueTestIds,
+      hasMain: !!mainEl,
+      mainChildCount: mainEl?.children.length ?? 0,
+      hasFeed: !!feedEl,
+      feedChildCount: feedEl?.children.length ?? 0,
+      bodyChildCount: document.body.children.length,
+      articleCount: document.querySelectorAll('article').length,
+    });
+  }
+
+  log.debug('scan-summary', { currentDid, currentHandle, visiblePosts, ownPosts });
 };
 
 export const scheduleScanForPosts = (): void => {
@@ -636,6 +1011,7 @@ const ensureStorageListener = (): void => {
     if (activeDidCleared || sessionsCleared) {
       currentDid = null;
       currentHandle = null;
+      setIdentity(null, null);
       dismissActiveModal();
       removeInjectedElements();
       return;
@@ -683,7 +1059,7 @@ const ensureEditedLabelListener = (): void => {
       if (!info) return;
 
       const cacheKey = normalizeCacheKey(info.atUri, info.repo);
-      pendingOriginalText = editedPostsCache.get(cacheKey)?.originalText ?? null;
+      pendingOriginalText = getCached(cacheKey)?.originalText ?? null;
     },
     true,
   );
@@ -707,8 +1083,7 @@ const injectOriginalTextIntoDialog = (): void => {
 
   const wrapper = document.createElement('div');
   wrapper.className = 'skeeditor-original-text';
-  wrapper.style.cssText =
-    'margin-top:12px;padding:10px 12px;background:rgba(255,255,255,0.06);border-radius:8px;';
+  wrapper.style.cssText = 'margin-top:12px;padding:10px 12px;background:rgba(255,255,255,0.06);border-radius:8px;';
 
   const label = document.createElement('div');
   label.style.cssText =
@@ -732,10 +1107,18 @@ const ensureObserver = (): void => {
   }
 
   mutationObserver = new MutationObserver(() => {
-    // Re-apply cached text immediately so React re-renders don't produce a visible flicker.
-    applyEditedPostsFromCache();
-    // Inject original text into Bluesky's "Edited" moderation dialog if one just appeared.
-    injectOriginalTextIntoDialog();
+    // Guard against re-entrant calls: applyEditedPostsFromCache() calls updatePostText()
+    // which causes DOM mutations that would otherwise retrigger this observer infinitely.
+    if (isApplyingCache) return;
+    isApplyingCache = true;
+    try {
+      // Re-apply cached text immediately so React re-renders don't produce a visible flicker.
+      applyEditedPostsFromCache();
+      // Inject original text into Bluesky's "Edited" moderation dialog if one just appeared.
+      injectOriginalTextIntoDialog();
+    } finally {
+      isApplyingCache = false;
+    }
     // Debounced scan for edit-button injection (more expensive).
     scheduleScanForPosts();
   });
@@ -750,8 +1133,12 @@ export const start = (): void => {
   if (hasStarted) return;
   hasStarted = true;
 
+  // Initialize the cache module's storage backend.
+  setStorage(browser.storage.local);
+
   ensureObserver();
   ensureStorageListener();
+  ensureRuntimeMessageListener();
   ensureNavigationListeners();
   ensureEditedLabelListener();
 
@@ -821,14 +1208,27 @@ export const start = (): void => {
     });
 
   void waitForSwReady()
-    .then(() => Promise.all([refreshAuthState(), loadKnownAccounts(), loadEditedPostsCache()]))
-    .then(() => {
+    .then(() => Promise.all([refreshAuthState(), loadKnownAccounts(), loadFromStorage()]))
+    .then(async () => {
+      log.debug('start-ready', { pathname: location.pathname, search: location.search });
+      // On first page load (not just SPA navigation), ensure active account
+      // matches the profile currently being viewed.
+      await checkProfileSwitch(location.href);
+
       scanForPosts();
+
+      // scanForPosts() already triggers fetchPermalinkPost() and
+      // fetchEditedPostsInView() — no separate call needed.
+
       document.documentElement.setAttribute('data-skeeditor-initialized', 'true');
       console.info(`${APP_NAME}: content script loaded`);
     })
     .catch(error => {
       console.error(`${APP_NAME}: failed to load auth state`, error);
+      log.debug('start-fallback-anonymous', {
+        pathname: location.pathname,
+        message: error instanceof Error ? error.message : String(error),
+      });
       scanForPosts();
       document.documentElement.setAttribute('data-skeeditor-initialized', 'true');
       console.info(`${APP_NAME}: content script loaded with anonymous state`);
@@ -855,6 +1255,12 @@ export const cleanupContentScript = (): void => {
     storageChangeHandler = null;
   }
 
+  if (runtimeMessageHandler !== null) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    browser.runtime.onMessage.removeListener(runtimeMessageHandler as any);
+    runtimeMessageHandler = null;
+  }
+
   // Restore patched history methods and remove popstate listener.
   if (originalPushState !== null) {
     history.pushState = originalPushState;
@@ -873,6 +1279,7 @@ export const cleanupContentScript = (): void => {
 
   currentDid = null;
   currentHandle = null;
+  setIdentity(null, null);
   knownAccounts = [];
   hasStarted = false;
 };

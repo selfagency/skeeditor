@@ -214,6 +214,9 @@ async function fetchHandleFromSession(pdsUrl: string, accessToken: string): Prom
 
 interface XrpcInterface {
   getRecord: (params: { repo: string; collection: string; rkey: string }) => Promise<GetRecordResult>;
+  createRecord: (
+    params: import('../shared/api/xrpc-client').CreateRecordParams,
+  ) => Promise<import('../shared/api/xrpc-client').CreateRecordResult>;
   putRecord: (params: {
     repo: string;
     collection: string;
@@ -316,6 +319,39 @@ interface GetRecordPayload {
 
 function isValidGetRecordPayload(msg: IncomingMessage): msg is IncomingMessage & GetRecordPayload {
   return isNonEmptyString(msg['repo']) && isNonEmptyString(msg['collection']) && isNonEmptyString(msg['rkey']);
+}
+
+interface CreateRecordPayload {
+  repo: string;
+  collection: string;
+  record: Record<string, unknown> & { $type: string };
+  rkey?: string;
+  validate?: boolean;
+}
+
+function isValidCreateRecordPayload(msg: IncomingMessage): msg is IncomingMessage & CreateRecordPayload {
+  if (!isNonEmptyString(msg['repo']) || !isNonEmptyString(msg['collection'])) {
+    return false;
+  }
+  const record = msg['record'];
+  if (
+    record === null ||
+    typeof record !== 'object' ||
+    Array.isArray(record) ||
+    Object.getPrototypeOf(record) !== Object.prototype
+  ) {
+    return false;
+  }
+  if (!isNonEmptyString((record as Record<string, unknown>)['$type'])) {
+    return false;
+  }
+  if (msg['rkey'] !== undefined && !isNonEmptyString(msg['rkey'])) {
+    return false;
+  }
+  if (msg['validate'] !== undefined && typeof msg['validate'] !== 'boolean') {
+    return false;
+  }
+  return true;
 }
 
 interface PutRecordPayload {
@@ -517,8 +553,13 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
           // resource metadata (which lists authorization_servers). This avoids a 404 that
           // occurs when the PDS URL is a regional shard (*.bsky.network) that does not host
           // the OAuth token endpoint — only the entryway (bsky.social) does.
-          const authServerUrl = stored.authServerUrl ?? await resolveAuthServerForPds(await getCurrentPdsUrl(stored.did));
-          const tokens = await deps.refreshTokens(getOAuthTokenUrl(authServerUrl), stored.refreshToken, BSKY_OAUTH_CLIENT_ID);
+          const authServerUrl =
+            stored.authServerUrl ?? (await resolveAuthServerForPds(await getCurrentPdsUrl(stored.did)));
+          const tokens = await deps.refreshTokens(
+            getOAuthTokenUrl(authServerUrl),
+            stored.refreshToken,
+            BSKY_OAUTH_CLIENT_ID,
+          );
           if (isNonEmptyString(tokens.access_token) && isNonEmptyString(tokens.refresh_token)) {
             const refreshed: StoredSession = {
               ...stored,
@@ -605,6 +646,51 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
         return { ok: true };
       } catch (error) {
         return { error: error instanceof Error ? error.message : 'Failed to save settings' };
+      }
+    }
+
+    case 'CREATE_RECORD': {
+      if (!isValidCreateRecordPayload(message)) {
+        return {
+          type: 'PUT_RECORD_ERROR',
+          message: 'Invalid CREATE_RECORD payload',
+        } satisfies import('../shared/messages').PutRecordErrorResponse;
+      }
+      const stored = await deps.store.get();
+      const valid = await deps.store.isAccessTokenValid();
+      if (stored === null || !valid) {
+        return {
+          type: 'PUT_RECORD_ERROR',
+          message: 'Not authenticated',
+          requiresReauth: true,
+        } satisfies import('../shared/messages').PutRecordErrorResponse;
+      }
+      try {
+        const pdsUrl = await getCurrentPdsUrl(stored.did);
+        const client = deps.createXrpc({ service: pdsUrl, did: stored.did, accessJwt: stored.accessToken });
+
+        const params: any = {
+          repo: message['repo'],
+          collection: message['collection'],
+          record: message['record'],
+        };
+        if (message['rkey'] !== undefined) params.rkey = message['rkey'];
+        if (message['validate'] !== undefined) params.validate = message['validate'];
+
+        const result = await client.createRecord(params);
+        return {
+          type: 'CREATE_RECORD_SUCCESS',
+          uri: result.uri,
+          cid: result.cid,
+        } satisfies import('../shared/messages').CreateRecordSuccessResponse;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to create record';
+        const isAuthError = err && typeof err === 'object' && 'status' in err && err.status === 401;
+        return {
+          type: 'PUT_RECORD_ERROR',
+          message: errorMessage,
+          requiresReauth: !!isAuthError,
+        } satisfies import('../shared/messages').PutRecordErrorResponse;
       }
     }
 
