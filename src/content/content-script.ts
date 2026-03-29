@@ -10,7 +10,6 @@ import type {
 } from '../shared/messages';
 import { sendMessage } from '../shared/messages';
 import { EditModal } from './edit-modal';
-import './toast';
 import {
   getCached,
   getCacheSize,
@@ -914,12 +913,15 @@ const scanForPosts = (): void => {
   // will discard their results rather than apply stale text.
   const gen = ++scanGeneration;
 
-  // Build the post list once. This single DOM scan is shared across:
-  //   - applyEditedPostsFromCache  (cache → DOM patch)
-  //   - fetchOwnPostsInView        (scan phase, before async fetch)
-  //   - fetchPermalinkPost         (root-post lookup, before async fetch)
-  //   - edit-button injection loop (below)
-  const posts = [...findPosts(document)];
+  // Compute the post list lazily: only do the DOM scan when there is a reason to.
+  // On anonymous/idle pages (no auth, empty cache) every sub-function returns
+  // early before touching posts, so skip the scan entirely.
+  //   - applyEditedPostsFromCache  (needs posts only when cache is non-empty)
+  //   - fetchOwnPostsInView        (gates on currentDid !== null)
+  //   - fetchPermalinkPost         (falls back to its own scan if posts is undefined)
+  //   - edit-button injection loop (gates on currentDid !== null)
+  const posts: PostInfo[] | undefined =
+    getCacheSize() > 0 || currentDid !== null ? [...findPosts(document)] : undefined;
 
   // Always re-apply persisted text edits — React may have re-rendered since last time.
   applyEditedPostsFromCache(posts);
@@ -948,7 +950,8 @@ const scanForPosts = (): void => {
   let visiblePosts = 0;
   let ownPosts = 0;
 
-  for (const postInfo of posts) {
+  // posts is always defined when currentDid !== null (see lazy guard above).
+  for (const postInfo of posts ?? []) {
     visiblePosts += 1;
     if (!isElementOwnPost(postInfo.element, postInfo.repo)) {
       continue;
@@ -1327,6 +1330,10 @@ export const cleanupContentScript = (): void => {
   setIdentity(null, null);
   knownAccounts = [];
   hasStarted = false;
+  // Invalidate any in-flight async fetches from the previous lifecycle.
+  // After cleanup a new start() will increment this value again, so stale
+  // fetches that arrive between cleanup and re-start discard their results.
+  scanGeneration++;
 
   if (editedLabelClickHandler !== null) {
     document.removeEventListener('click', editedLabelClickHandler, true);
