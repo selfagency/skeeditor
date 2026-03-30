@@ -5,6 +5,7 @@ status: completed
 type: bug
 priority: critical
 branch: fix/2jwe-auth-contract-labeler
+pr: 83
 created_at: 2026-03-30T14:04:21Z
 updated_at: 2026-03-30T14:04:21Z
 parent: skeeditor-d3m1
