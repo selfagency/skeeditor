@@ -135,21 +135,26 @@ Frame format:
 ### Emit Authentication
 
 The extension must prove it is acting on behalf of the DID that owns the post
-being labeled. Two options (implement option A for v1):
+being labeled.
 
-**Option A — Bearer JWT (simple):**
-Extension sends the user's ATProto access JWT in `Authorization: Bearer <token>`.
-Worker validates the JWT's `sub` claim matches the `did` in the emit body.
-No cryptographic verification of JWT signature — PDS is trusted arbiter; we
-check `did` consistency only (JWT is a bearer credential, not our trust root).
+**Implemented: Bearer JWT with cryptographic verification**
 
-**Option B — DPoP proof (stronger):**
-Extension creates a DPoP proof over the emit request using the user's DPoP key
-pair (already available in the extension auth layer). Worker verifies the proof
-against the user's DID document's `#atproto` key. Requires background script
-to hold key pair and sign emit request before sending.
+The extension sends the user's ATProto access JWT in `Authorization: Bearer <token>`.
+The labeler worker:
 
-Start with Option A. Option B can be added after MVP.
+1. Parses the JWT and decodes the `sub` claim (the authenticated DID).
+2. Verifies `sub` matches the `did` field in the emit body.
+3. Verifies `sub` matches the repo component of the `uri` AT URI.
+4. Resolves the subject DID to its PDS endpoint:
+   - `did:plc` → queries `https://plc.directory/{did}` for the DID document.
+   - `did:web` → queries `https://{domain}/.well-known/did.json`.
+   Locates the `#atproto_pds` service entry to find the PDS URL.
+5. Calls `GET {pds}/xrpc/com.atproto.server.getSession` with the bearer token.
+   The PDS cryptographically verifies the JWT signature. A forged or tampered
+   token is rejected with a 4xx response, which the labeler treats as auth failure.
+
+This means a token accepted by the labeler is guaranteed to have been issued and
+signed by the subject's own PDS — forged or tampered tokens are rejected at step 5.
 
 ### Durable Object: `BroadcastHub`
 
