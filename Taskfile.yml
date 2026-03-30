@@ -324,8 +324,10 @@ tasks:
   precommit:
     desc: Run linters before committing
     vars:
+      STAGED_RELATIVE_FILES:
+        sh: printf '%s\n' {{.CLI_ARGS}} | sed "s#^$PWD/##" | tr '\n' ' ' | sed 's/[[:space:]]*$//' || true
       STAGED_SCRIPTS:
-        sh: echo "{{.CLI_ARGS}}" | tr ' ' '\n' | grep -E '\.(ts|js|cjs|mjs)$' | tr '\n' ' ' | sed 's/[[:space:]]*$//' || true
+        sh: printf '%s\n' {{.CLI_ARGS}} | sed "s#^$PWD/##" | grep -E '\.(ts|tsx|js|jsx|cjs|mjs)$' | tr '\n' ' ' | sed 's/[[:space:]]*$//' || true
     cmds:
       - cmd: |
           {{.TASK_EXE}} typecheck
@@ -334,5 +336,5 @@ tasks:
         if: '[ -n "{{.STAGED_SCRIPTS | trim}}" ]'
       - cmd: ./node_modules/.bin/oxlint --fix {{.STAGED_SCRIPTS}}
         if: '[ -n "{{.STAGED_SCRIPTS | trim}}" ]'
-      - cmd: ./node_modules/.bin/oxfmt --write {{.CLI_ARGS}}
-        if: '[ -n "{{.CLI_ARGS | trim}}" ]'
+      - cmd: ./node_modules/.bin/oxfmt --write --no-error-on-unmatched-pattern {{.STAGED_RELATIVE_FILES}}
+        if: '[ -n "{{.STAGED_RELATIVE_FILES | trim}}" ]'

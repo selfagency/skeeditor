@@ -13,8 +13,8 @@ branch: fix/uukf-lint-staged-precommit
 The current `lint-staged` integration shells out to `task precommit -- <absolute paths>`, but the Taskfile logic mishandles those arguments and causes the Husky pre-commit hook to fail with `Expected at least one target file`. Fix the pre-commit path handling so staged-file formatting/linting works reliably.
 
 ## Todo
-- [ ] Reproduce the pre-commit failure with a focused test or command path
-- [ ] Fix lint-staged / Taskfile argument handling for staged files
-- [ ] Verify pre-commit succeeds for bean markdown and code files
-- [ ] Add regression coverage or documented validation steps
+- [x] Reproduce the pre-commit failure with a focused test or command path
+- [x] Fix lint-staged / Taskfile argument handling for staged files
+- [x] Verify pre-commit succeeds for bean markdown and code files
+- [x] Add regression coverage or documented validation steps
 - [ ] Commit and push the implementation branch
