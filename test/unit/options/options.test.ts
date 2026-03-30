@@ -244,7 +244,7 @@ describe('options page', () => {
           callCount++;
           return callCount === 1 ? { accounts: [makeAccount({ did: 'did:plc:testuser123' })] } : { accounts: [] };
         }
-        if (type === 'GET_SETTINGS') return { editTimeLimit: null };
+        if (type === 'GET_SETTINGS') return { editTimeLimit: null, postDateStrategy: 'update' };
         return { ok: true };
       });
 

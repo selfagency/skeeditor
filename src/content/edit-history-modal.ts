@@ -193,8 +193,11 @@ export class EditHistoryModal {
 
   public showError(message: string): void {
     if (!this.versionsContainer) return;
-    const escaped = message.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    this.versionsContainer.innerHTML = `<div class="loading-text">${escaped}</div>`;
+    this.versionsContainer.replaceChildren();
+    const container = document.createElement('div');
+    container.className = 'loading-text';
+    container.textContent = message;
+    this.versionsContainer.appendChild(container);
   }
 
   public close(): void {

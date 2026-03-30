@@ -217,6 +217,12 @@ async function fetchHandleFromSession(pdsUrl: string, accessToken: string): Prom
 // ── Dependency injection types ────────────────────────────────────────────────
 
 interface XrpcInterface {
+  listRecords: (params: {
+    repo: string;
+    collection: string;
+    limit?: number;
+    cursor?: string;
+  }) => Promise<{ records: Array<{ uri: string; cid: string; value: Record<string, unknown> }>; cursor?: string }>;
   getRecord: (params: { repo: string; collection: string; rkey: string }) => Promise<GetRecordResult>;
   createRecord: (
     params: import('../shared/api/xrpc-client').CreateRecordParams,
@@ -724,6 +730,11 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
       if (stored === null || !valid) {
         return { error: 'Not authenticated' };
       }
+
+      if (message['repo'] !== stored.did) {
+        return { error: 'LIST_RECORDS repo must match the active account DID' };
+      }
+
       try {
         const pdsUrl = await getCurrentPdsUrl(stored.did);
         const client = deps.createXrpc({

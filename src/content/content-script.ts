@@ -954,7 +954,7 @@ const moveEditedBadgeNearArchived = (postElement: HTMLElement): void => {
 
 /** Intercept all "Edited" and "Archived post" buttons not yet processed by skeeditor. */
 const interceptArchivedPostButtons = (): void => {
-  if (currentDid === null) return;
+  if (currentDid === null && currentHandle === null) return;
 
   const archivedButtons = document.querySelectorAll<HTMLElement>(
     `button[aria-label="Archived post"]:not([${ARCHIVED_BUTTON_ATTRIBUTE}])`,
@@ -972,9 +972,6 @@ const interceptArchivedPostButtons = (): void => {
     btn.addEventListener(
       'click',
       async event => {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-
         // Find the post container to get the AT-URI + repo.
         const postElement =
           btn.closest<HTMLElement>('[data-at-uri]') ??
@@ -983,23 +980,31 @@ const interceptArchivedPostButtons = (): void => {
           btn.closest<HTMLElement>('[data-testid^="feedItem"]') ??
           btn.closest<HTMLElement>('article');
 
-        const archivedButton = isArchivedButton
-          ? btn
-          : (postElement?.querySelector<HTMLElement>('button[aria-label="Archived post"]') ?? null);
-        const originalDate = archivedButton ? parseArchivedDateText(archivedButton) : 'Unknown original date';
-        const modal = getOrCreateHistoryModal();
-        modal.open(originalDate);
-
         if (!postElement) {
-          modal.showError('Could not identify the post.');
+          // Unknown context — preserve native Bluesky behavior.
           return;
         }
 
         const info = extractPostInfo(postElement);
         if (!info) {
-          modal.showError('Could not identify the post.');
+          // Unknown context — preserve native Bluesky behavior.
           return;
         }
+
+        // Only hijack badges on the current user's own posts.
+        if (info.repo !== currentDid && info.repo !== currentHandle) {
+          return;
+        }
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+
+        const archivedButton = isArchivedButton
+          ? btn
+          : (postElement.querySelector<HTMLElement>('button[aria-label="Archived post"]') ?? null);
+        const originalDate = archivedButton ? parseArchivedDateText(archivedButton) : 'Unknown original date';
+        const modal = getOrCreateHistoryModal();
+        modal.open(originalDate);
 
         try {
           // Resolve to DID form so listRecords targets the right repo.
@@ -1072,6 +1077,7 @@ const scanForPosts = (): void => {
   applyEditedPostsFromCache(posts);
 
   // Intercept "Archived post" button clicks to show our edit history modal.
+  // (and edited badges on own posts)
   interceptArchivedPostButtons();
 
   console.log(`${APP_NAME}: scanning for posts, currentDid=${currentDid}, currentHandle=${currentHandle}`);
