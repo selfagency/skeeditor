@@ -133,6 +133,11 @@ export async function validateEmitAuth(
     if (!sessionResp.ok) {
       return { valid: false, reason: 'Token rejected by issuer' };
     }
+
+    const sessionBody = (await sessionResp.json()) as { did?: unknown };
+    if (typeof sessionBody.did !== 'string' || sessionBody.did !== sub) {
+      return { valid: false, reason: 'Session subject does not match JWT sub' };
+    }
   } catch {
     return { valid: false, reason: 'Failed to verify token with PDS' };
   }
