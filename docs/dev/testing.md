@@ -371,7 +371,7 @@ Run through this on each browser before opening a PR:
 - [ ] Other users' posts have no Edit button
 - [ ] Clicking Edit opens the modal pre-populated with the post text
 - [ ] Saving an edit closes the modal and shows the success indicator
-- [ ] Triggering a conflict (open the same post in two tabs, save from one, then save a different edit from the other) shows the conflict prompt
+- [ ] Triggering a conflict (open the same post in two tabs, save from one, then save a different edit from the other) shows the warning-only conflict prompt that instructs reload + retry
 
 ---
 

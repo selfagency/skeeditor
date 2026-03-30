@@ -7,11 +7,10 @@ Use `XrpcClient.putRecordWithSwap()` for edit flows that need optimistic concurr
 1. Load the original record and keep both its `cid` and full record value.
 2. Submit edits with `swapRecord` set to the original `cid`.
 3. If the result is successful, trust the returned `{ uri, cid }` as the authoritative write result.
-4. If the result contains `error.kind === 'conflict'`, fetch-latest UI should:
+4. If the result contains `error.kind === 'conflict'`, current UI should:
    - show the user that the post changed on the server
-   - inspect `conflict.currentCid` and `conflict.currentValue`
-   - compare the original record, latest server record, and attempted local edit
-   - retry only after the user confirms the merged content
+   - display a warning that instructs reloading and retrying from the latest state
+   - avoid silent overwrite or automatic retry
 
 ## Three-way merge advisory
 
@@ -28,10 +27,10 @@ use `buildThreeWayMergeAdvisory(base, current, attempted)` to classify fields in
 - `sharedChanges`
 - `conflictingFields`
 
-### Recommended behavior
+### Optional future behavior
 
-- If `hasConflicts === false`, the UI may auto-merge the records and retry.
-- If `hasConflicts === true`, the UI should present the conflicting fields to the user and avoid silent overwrite.
+- If `hasConflicts === false`, a future UI may auto-merge the records and retry.
+- If `hasConflicts === true`, a future UI may present conflicting fields and ask the user to resolve them explicitly.
 - Never discard server-side changes without explicit user confirmation.
 
 ## Error handling recommendations
@@ -39,4 +38,4 @@ use `buildThreeWayMergeAdvisory(base, current, attempted)` to classify fields in
 - `validation`: show a fix-the-input message and do not retry automatically.
 - `auth`: prompt the user to re-authenticate.
 - `network`: allow retry with backoff and preserve the draft locally.
-- `conflict`: show compare/retry UI and require explicit user action.
+- `conflict`: show warning-only guidance to reload and retry manually.

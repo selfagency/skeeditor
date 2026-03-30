@@ -54,7 +54,7 @@ bsky.app may have cached the post. Try refreshing the page. The edit is saved on
 
 ### What does "Conflict detected" mean?
 
-This means the post was updated (by another device, app, or browser extension) between when you opened the editor and when you clicked Save. Skeeditor noticed the mismatch via the record's CID and is preventing a silent overwrite. You can reload the current version or force-save your version. See [Conflict Handling](../dev/conflicts) for details.
+This means the post was updated (by another device, app, or browser extension) between when you opened the editor and when you clicked Save. Skeeditor noticed the mismatch via the record's CID and is preventing a silent overwrite. Reload the post to fetch the latest version, then re-open the editor and apply your changes again. See [Conflict Handling](../dev/conflicts) for details.
 
 ---
 
