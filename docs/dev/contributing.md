@@ -77,11 +77,11 @@ Scopes: `api`, `content`, `background`, `popup`, `options`, `build`, `manifest`,
 Formatter: `oxfmt` with `arrowParens: 'avoid'` (single-parameter arrow functions omit parentheses), `printWidth: 120`, `singleQuote: true`.
 
 ```sh
-pnpm format        # auto-format
-pnpm format:check  # check without writing
-pnpm lint          # oxlint
-pnpm lint:fix      # fix auto-fixable issues
-pnpm typecheck     # tsc --noEmit
+task format        # auto-format
+task format:check  # check without writing
+task lint          # oxlint
+task lint:fix      # fix auto-fixable issues
+task typecheck     # tsc --noEmit
 ```
 
 All three must pass before pushing.
@@ -91,8 +91,8 @@ All three must pass before pushing.
 ## PR requirements
 
 - Reference the bean ID in the PR description.
-- All unit and integration tests must pass (`pnpm test`).
-- `pnpm lint` and `pnpm typecheck` must pass without errors.
+- All unit and integration tests must pass (`task test`).
+- `task lint` and `task typecheck` must pass without errors.
 - E2E tests run on-demand for PRs and are always required on merge to `main`.
 - Squash-merge to `main`. The squash commit message must be a valid conventional commit.
 - Coverage must not regress below threshold (see [Testing → Coverage targets](./testing#coverage-targets)).

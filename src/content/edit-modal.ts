@@ -113,6 +113,13 @@ export class EditModal {
     if (this.fileInput) {
       this.fileInput.addEventListener('change', this.handleUploadBound);
     }
+
+    // Stop all keyboard events from escaping the modal into the host page.
+    // Bluesky (and other SPAs) attach hotkey listeners at the document level;
+    // without this, typing in the textarea triggers those shortcuts (e.g. 'n'
+    // opens a new-post dialog). Events are still handled by our own handler
+    // before propagation is stopped.
+    this.element.addEventListener('keydown', this.handleKeydownBound);
   }
 
   public open(text: string, onCancel?: () => void, onSave?: (text: string) => void | Promise<void>): void {
@@ -139,9 +146,7 @@ export class EditModal {
 
     // Remove before adding to prevent duplicate handlers on repeated open() calls
     this.element.removeEventListener('click', this.handleBackgroundClickBound);
-    window.removeEventListener('keydown', this.handleKeydownBound);
     this.element.addEventListener('click', this.handleBackgroundClickBound);
-    window.addEventListener('keydown', this.handleKeydownBound);
 
     this.element.style.display = 'flex';
     this.isOpen = true;
@@ -158,7 +163,6 @@ export class EditModal {
     if (this.element.isConnected) {
       document.body.removeChild(this.element);
     }
-    window.removeEventListener('keydown', this.handleKeydownBound);
     this.element.removeEventListener('click', this.handleBackgroundClickBound);
     this.isOpen = false;
 
@@ -304,6 +308,9 @@ export class EditModal {
 
   private handleKeydown(event: KeyboardEvent): void {
     if (!this.isOpen) return;
+    // Always stop propagation so host-page hotkeys (e.g. Bluesky's 'n' for new
+    // post) are never triggered while the user is typing inside the modal.
+    event.stopPropagation();
     if (event.key === 'Escape') {
       this.close();
     } else if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {

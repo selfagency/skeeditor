@@ -1,3 +1,3 @@
 export default {
-  '**/*.{ts,js}': files => [`oxlint --fix ${files.join(' ')}`, `oxfmt ${files.join(' ')} --write`],
+  '**/*.{ts,js,mjs,cjs,json,md,yaml,yml}': files => [`./node_modules/.bin/task precommit -- ${files.join(' ')}`],
 };

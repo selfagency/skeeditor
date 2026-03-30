@@ -181,13 +181,14 @@ All browser targets use **Manifest V3**. Maintain separate `manifest.json` files
 
 ### Build & Dev Tooling
 
-- **Bundler**: Vite (or esbuild) with separate entry points for content script, service worker, popup, and options.
+- **Task runner**: [go-task](https://taskfile.dev/) (`task`). All build, test, lint, and release commands are defined in `Taskfile.yml`. Always invoke tasks via `task <name>` directly — never via `pnpm run` or `npm run`.
+- **Bundler**: [WXT](https://wxt.dev/) with entry points under `src/entrypoints/`. Outputs to `dist/<browser>/`.
 - **TypeScript**: Strict mode (`"strict": true`). No `any` unless explicitly justified with a `// eslint-disable-next-line` comment.
-- **Linting**: ESLint with `@typescript-eslint`. Prettier for formatting.
+- **Linting**: [oxlint](https://oxc.rs/docs/guide/usage/linter) with [oxfmt](https://github.com/nicolo-ribaudo/oxfmt) for formatting.
 - **Dev workflow**:
-  - Chrome: `vite build --watch` + load unpacked from `dist/chrome/`.
-  - Firefox: `web-ext run --source-dir dist/firefox/ --firefox=nightly`.
-  - Safari: manual rebuild via Xcode after `scripts/build-safari.sh`.
+  - Chrome: `task build:watch:chrome` + load unpacked from `dist/chrome/`.
+  - Firefox: `task webext:run:firefox` (runs `web-ext run` via the task).
+  - Safari: `task build:safari` then open the generated Xcode project under `dist/safari/`.
 
 ---
 
@@ -251,7 +252,7 @@ All browser targets use **Manifest V3**. Maintain separate `manifest.json` files
 
 Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
-```
+```text
 <type>(<scope>): <description>
 
 [optional body]

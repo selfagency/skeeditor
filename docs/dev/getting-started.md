@@ -8,6 +8,7 @@ This guide walks you through setting up a local development environment so you c
 | ------- | --------------- | ----------------------------------------------------------------- |
 | Node.js | 20.x            | LTS recommended                                                   |
 | pnpm    | 9.x             | `npm install -g pnpm`                                             |
+| task    | 3.x             | [go-task](https://taskfile.dev/) — `brew install go-task`         |
 | Chrome  | 120+            | For extension development and Playwright E2E                      |
 | Firefox | 125+            | Nightly / Developer Edition required for manual extension loading |
 | Git     | 2.x             | —                                                                 |
@@ -36,10 +37,10 @@ This installs all workspace dependencies, including the build toolchain, test ru
 
 ```sh
 # Chrome
-pnpm build:watch:chrome
+task build:watch:chrome
 
 # Firefox
-pnpm build:watch:firefox
+task build:watch:firefox
 ```
 
 Both commands start Vite in watch mode. Changes to `src/` files trigger an incremental rebuild immediately.
@@ -47,18 +48,18 @@ Both commands start Vite in watch mode. Changes to `src/` files trigger an incre
 ### Production build
 
 ```sh
-pnpm build:chrome    # outputs to dist/chrome/
-pnpm build:firefox   # outputs to dist/firefox/
-pnpm build:safari    # outputs to dist/safari/ (macOS only, requires Xcode)
+task build:chrome   # outputs to dist/chrome/
+task build:firefox  # outputs to dist/firefox/
+task build:safari   # outputs to dist/safari/ (macOS only, requires Xcode)
 ```
 
 To build all targets at once:
 
 ```sh
-pnpm build
+task build:all
 ```
 
-> **Note:** `pnpm build` is an alias for `pnpm build:chrome`. To build other targets, use `pnpm build:firefox` or `pnpm build:safari` explicitly.
+> **Note:** Prefer direct Task commands (`task <name>`) for day-to-day development.
 
 ---
 
@@ -66,23 +67,23 @@ pnpm build
 
 ### Chrome
 
-1. Run `pnpm build:watch:chrome` (or `pnpm build:chrome`).
-2. Open `chrome://extensions`.
-3. Enable **Developer mode**.
-4. Click **Load unpacked** → select `dist/chrome/`.
+1. Run `task build:watch:chrome` (or `task build:chrome`).
+1. Open `chrome://extensions`.
+1. Enable **Developer mode**.
+1. Click **Load unpacked** → select `dist/chrome/`.
 
 The extension reloads automatically when files in `dist/chrome/` change (i.e. when the watch build rebuilds).
 
 ### Firefox
 
-1. Run `pnpm build:watch:firefox` (or `pnpm build:firefox`).
+1. Run `task build:watch:firefox` (or `task build:firefox`).
 2. Open `about:debugging#/runtime/this-firefox`.
 3. Click **Load Temporary Add-on…** → select `dist/firefox/manifest.json`.
 
 If you have `web-ext` installed globally you can also run:
 
 ```sh
-web-ext run --source-dir dist/firefox/ --firefox=nightly
+task webext:run:firefox
 ```
 
 ### Safari (macOS)
@@ -90,7 +91,7 @@ web-ext run --source-dir dist/firefox/ --firefox=nightly
 Safari extensions require an Xcode app wrapper. Build the converter output first:
 
 ```sh
-pnpm build:safari
+task build:safari
 ```
 
 Then open the generated Xcode project under `dist/safari/` and run it. See [Cross-Browser Platform](./platform) for full instructions.
@@ -100,9 +101,9 @@ Then open the generated Xcode project under `dist/safari/` and run it. See [Cros
 ## Run tests
 
 ```sh
-pnpm test          # unit + integration (Vitest)
-pnpm test:e2e      # E2E (Playwright, requires Chrome and Firefox)
-pnpm test:coverage # unit + integration with coverage report
+task test          # unit + integration (Vitest)
+task test:e2e      # E2E (Playwright, requires Chrome and Firefox)
+task test:coverage # unit + integration with coverage report
 ```
 
 See [Testing](./testing) for full details on the test suite.
@@ -112,8 +113,8 @@ See [Testing](./testing) for full details on the test suite.
 ## Lint and type-check
 
 ```sh
-pnpm lint          # ESLint + oxfmt
-pnpm typecheck     # tsc --noEmit
+task lint
+task typecheck
 ```
 
 Both must pass before opening a pull request. CI enforces them on every push.

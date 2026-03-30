@@ -8,11 +8,11 @@ skeeditor targets Chrome, Firefox, and Safari using a shared `src/` codebase. Br
 
 | Browser | Build command        | Output directory |
 | ------- | -------------------- | ---------------- |
-| Chrome  | `pnpm build:chrome`  | `dist/chrome/`   |
-| Firefox | `pnpm build:firefox` | `dist/firefox/`  |
-| Safari  | `pnpm build:safari`  | `dist/safari/`   |
+| Chrome  | `task build:chrome`  | `dist/chrome/`   |
+| Firefox | `task build:firefox` | `dist/firefox/`  |
+| Safari  | `task build:safari`  | `dist/safari/`   |
 
-`pnpm build` is an alias for `pnpm build:chrome`.
+`task build` is an alias for Chrome; `task build:all` builds every browser target.
 
 ---
 
@@ -125,23 +125,23 @@ WXT writes the final `manifest.json` to `dist/<browser>/manifest.json` during ea
 ### Chrome
 
 ```sh
-pnpm build:watch:chrome
+task build:watch:chrome
 # In Chrome: chrome://extensions → Developer mode → Load unpacked → dist/chrome/
 ```
 
 ### Firefox
 
 ```sh
-pnpm build:watch:firefox
+task build:watch:firefox
 # Then either:
-web-ext run --source-dir dist/firefox/ --firefox=nightly
+task webext:run:firefox
 # Or: about:debugging → Load Temporary Add-on → dist/firefox/manifest.json
 ```
 
 ### Safari
 
 ```sh
-pnpm build:safari
+task build:safari
 xcrun safari-web-extension-converter dist/safari \
   --project-location ./safari-xcode \
   --app-name skeeditor \

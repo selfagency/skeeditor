@@ -175,7 +175,7 @@ describe('edit-modal', () => {
       // Focus on cancel (last non-disabled), Tab should wrap to first focusable (close button)
       cancelButton.focus();
       const tabEvent = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
-      window.dispatchEvent(tabEvent);
+      modal.element.dispatchEvent(tabEvent);
 
       const activeEl = shadow.activeElement;
       const closeButton = shadow.querySelector('.close-button') as HTMLElement;
@@ -198,7 +198,7 @@ describe('edit-modal', () => {
         bubbles: true,
         cancelable: true,
       });
-      window.dispatchEvent(shiftTabEvent);
+      modal.element.dispatchEvent(shiftTabEvent);
 
       const activeEl = shadow.activeElement;
       const cancelButton = shadow.querySelector('.cancel-button') as HTMLElement;
