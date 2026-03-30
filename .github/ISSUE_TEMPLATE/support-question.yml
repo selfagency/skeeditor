@@ -1,0 +1,31 @@
+name: ❓ Question / Help
+description: Stuck or confused? No worries — ask away and we'll help you out!
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        No question is too basic! If you're having trouble with Skeeditor or just want to understand how something works, this is the place. 😊
+
+  - type: textarea
+    id: question
+    attributes:
+      label: What do you need help with?
+      description: Tell us what you're trying to do or what's confusing you.
+      placeholder: |
+        I signed in but I don't see the edit button on any posts. What am I missing?
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Which browser are you using? (optional)
+      description: This helps us narrow things down if it's a browser-specific issue.
+      placeholder: "Chrome 126"
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Screenshots, links, error messages — whatever you think might help.
