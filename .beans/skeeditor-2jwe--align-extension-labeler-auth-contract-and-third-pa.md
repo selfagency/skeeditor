@@ -1,9 +1,10 @@
 ---
 # skeeditor-2jwe
 title: Align extension-labeler auth contract and third-party token handling
-status: todo
+status: in-progress
 type: bug
 priority: critical
+branch: fix/2jwe-auth-contract-labeler
 created_at: 2026-03-30T14:04:21Z
 updated_at: 2026-03-30T14:04:21Z
 parent: skeeditor-d3m1
