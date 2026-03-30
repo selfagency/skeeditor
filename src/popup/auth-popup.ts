@@ -140,9 +140,6 @@ class AuthPopup extends HTMLElement {
               </button>
               <a id="report-bug" href="${escapeHTML(BUG_REPORT_URL)}" target="_blank" rel="noopener noreferrer"
                 class="mt-1 flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-3.5" aria-hidden="true">
-                  <path d="M11.134 1.535c.7-.509 1.416-.942 2.076-1.155.649-.21 1.463-.267 2.069.34.603.601.568 1.411.368 2.07-.204.668-.63 1.399-1.13 2.109-.499.71-1.078 1.424-1.67 2.065a22.5 22.5 0 0 1-1.453 1.49c.26.45.444.943.544 1.46.116.6.074 1.27-.18 1.894-.258.632-.664 1.2-1.165 1.586a3.3 3.3 0 0 1-.665.4A2.5 2.5 0 0 1 9.2 14H6.8a2.5 2.5 0 0 1-.728-.206 3.3 3.3 0 0 1-.665-.4c-.501-.387-.907-.955-1.165-1.587-.254-.623-.296-1.293-.18-1.893.1-.517.284-1.01.544-1.46a22.5 22.5 0 0 1-1.453-1.49 25 25 0 0 1-1.67-2.066c-.5-.71-.926-1.44-1.13-2.109-.2-.659-.235-1.469.368-2.07.606-.607 1.42-.55 2.07-.34.659.213 1.375.646 2.075 1.155A9 9 0 0 1 6.2 2.573 3.6 3.6 0 0 1 8 2c.635 0 1.239.164 1.8.573a9 9 0 0 1 1.334-.038Z" />
-                </svg>
                 Report a bug
               </a>
             </div>
