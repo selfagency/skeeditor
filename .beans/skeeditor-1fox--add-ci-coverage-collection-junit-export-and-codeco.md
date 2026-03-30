@@ -1,12 +1,13 @@
 ---
 # skeeditor-1fox
 title: Add CI coverage collection, JUnit export, and Codecov reporting
-status: todo
+status: in-progress
 type: task
 priority: high
 created_at: 2026-03-30T14:04:21Z
-updated_at: 2026-03-30T14:12:53Z
+updated_at: 2026-03-30T14:58:55Z
 parent: skeeditor-d3m1
+branch: chore/1fox-ci-coverage-codecov
 ---
 
 CI currently runs tests but does not publish repository coverage or JUnit test results. Add a canonical coverage workflow using `task`, emit `test-report.junit.xml`, upload coverage to Codecov, and upload test results via Codecov's test-results action.
