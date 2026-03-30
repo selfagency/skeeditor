@@ -1,0 +1,55 @@
+name: 🐛 Bug Report
+description: Something isn't working? Let us know — no technical expertise required!
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Don't worry about getting everything perfect — just describe what happened and we'll figure it out together. 🙂
+
+  - type: input
+    id: browser
+    attributes:
+      label: Which browser are you using?
+      description: "For example: Chrome, Firefox, Edge, Brave, Arc, etc."
+      placeholder: "Chrome 126"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the problem in your own words. Screenshots are super helpful if you have them!
+      placeholder: |
+        When I tried to edit a post, the save button didn't do anything. I clicked it a few times but nothing changed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+      description: What were you trying to do?
+      placeholder: |
+        I expected the post text to update after I clicked Save.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce (if you can remember)
+      description: "Walk us through what you did, step by step. It's okay if you can't remember every detail!"
+      placeholder: |
+        1. Opened a post on bsky.app
+        2. Clicked the edit button
+        3. Changed the text
+        4. Clicked Save
+        5. Nothing happened
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Console errors, screenshots, links to the post — anything you think might help.

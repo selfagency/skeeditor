@@ -1,0 +1,38 @@
+name: 💡 Feature Request
+description: Have an idea for something Skeeditor could do? We'd love to hear it!
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Got an idea for a feature? Awesome! Just describe what you'd like and why — we'll take it from there. No special format needed. 💡
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What would you like Skeeditor to do?
+      description: Describe the feature in your own words. What should it look like or how should it work?
+      placeholder: |
+        It would be great if I could undo an edit and go back to the original text.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why would this be useful?
+      description: Help us understand the problem this would solve for you.
+      placeholder: |
+        Sometimes I make a typo in the edit and want to quickly go back to what I had before.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Have you tried any workarounds?
+      description: Is there anything you currently do to get around this?
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Screenshots, mockups, links to similar features in other tools — anything goes!

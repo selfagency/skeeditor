@@ -305,5 +305,19 @@ describe('auth-popup Web Component', () => {
 
       expect(vi.mocked(browser.runtime.openOptionsPage)).toHaveBeenCalled();
     });
+
+    it('shows a "Report a bug" link pointing to the GitHub issue template', async () => {
+      mockSendMessage([makeAccount({ isActive: true })]);
+
+      const el = createElement();
+      await attach(el);
+
+      const link = el.shadowRoot?.querySelector<HTMLAnchorElement>('#report-bug');
+      expect(link).not.toBeNull();
+      expect(link?.href).toContain('github.com/selfagency/skeeditor/issues/new');
+      expect(link?.href).toContain('template=bug-report.yml');
+      expect(link?.target).toBe('_blank');
+      expect(link?.rel).toContain('noopener');
+    });
   });
 });
