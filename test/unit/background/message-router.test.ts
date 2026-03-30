@@ -1077,4 +1077,71 @@ describe('createDefaultDeps', () => {
       expect(result).toEqual({ error: 'Invalid AUTH_SIGN_OUT_ACCOUNT payload' });
     });
   });
+
+  describe('UPLOAD_BLOB', () => {
+    it('should accept ArrayBuffer data and reconstruct Blob for upload', async () => {
+      const session = makeSession();
+      const deps = makeDeps({ store: makeStoreMock(session) });
+
+      const arrayBuffer = new ArrayBuffer(16);
+
+      const result = await handleMessage(
+        {
+          type: 'UPLOAD_BLOB',
+          data: arrayBuffer,
+          mimeType: 'image/png',
+          repo: 'did:plc:testuser',
+        },
+        deps,
+      );
+
+      expect(result).toHaveProperty('blobRef');
+      expect(result).toHaveProperty('mimeType', 'image/png');
+
+      const xrpc = vi.mocked(deps.createXrpc).mock.results[0]!.value;
+      expect(xrpc.uploadBlob).toHaveBeenCalledOnce();
+      const uploadArgs = xrpc.uploadBlob.mock.calls[0]![0];
+      expect(uploadArgs.data).toBeInstanceOf(Blob);
+    });
+
+    it('should reject payload without data', async () => {
+      const session = makeSession();
+      const deps = makeDeps({ store: makeStoreMock(session) });
+
+      const result = await handleMessage(
+        { type: 'UPLOAD_BLOB', mimeType: 'image/png', repo: 'did:plc:testuser' },
+        deps,
+      );
+
+      expect(result).toEqual({ error: 'Invalid UPLOAD_BLOB payload' });
+    });
+
+    it('should reject payload without mimeType', async () => {
+      const session = makeSession();
+      const deps = makeDeps({ store: makeStoreMock(session) });
+
+      const result = await handleMessage(
+        { type: 'UPLOAD_BLOB', data: new ArrayBuffer(8), repo: 'did:plc:testuser' },
+        deps,
+      );
+
+      expect(result).toEqual({ error: 'Invalid UPLOAD_BLOB payload' });
+    });
+
+    it('should return error when not authenticated', async () => {
+      const deps = makeDeps({ store: makeStoreMock(null) });
+
+      const result = await handleMessage(
+        {
+          type: 'UPLOAD_BLOB',
+          data: new ArrayBuffer(8),
+          mimeType: 'image/png',
+          repo: 'did:plc:testuser',
+        },
+        deps,
+      );
+
+      expect(result).toEqual({ error: 'Not authenticated' });
+    });
+  });
 });
