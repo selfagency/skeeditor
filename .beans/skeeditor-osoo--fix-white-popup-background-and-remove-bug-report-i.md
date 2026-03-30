@@ -6,9 +6,6 @@ type: fix
 priority: high
 created_at: 2026-03-30T05:07:59Z
 updated_at: 2026-03-30T05:09:51Z
----
-
----
 branch: fix/osoo-white-popup-bg
 pr: 73
 ---
