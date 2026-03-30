@@ -158,7 +158,7 @@ Automated tests cover the majority of logic, but manual testing in a real browse
 
 | Tool                                                    | Purpose                |
 | ------------------------------------------------------- | ---------------------- |
-| Node.js 20+ / pnpm 9+                                   | Build toolchain        |
+| Node.js 20+ / pnpm 10+                                  | Build toolchain        |
 | task 3.x ([go-task](https://taskfile.dev/))             | Task runner            |
 | Chrome 120+                                             | Chrome manual testing  |
 | Firefox 125+ (Nightly or Developer Edition recommended) | Firefox manual testing |

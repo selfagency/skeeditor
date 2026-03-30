@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
@@ -8,6 +8,14 @@ import { basename, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
+
+/** Flag names whose immediately-following argument must not appear in logs. */
+const SENSITIVE_FLAGS = new Set(['--api-key', '--api-secret', '--client-secret', '--refresh-token']);
+
+/** @param {string[]} args */
+function redactArgs(args) {
+  return args.map((arg, i) => (i > 0 && SENSITIVE_FLAGS.has(args[i - 1] ?? '') ? '[REDACTED]' : arg));
+}
 
 /** @typedef {{
  * dryRun: boolean;
@@ -70,12 +78,20 @@ function logStep(message) {
   process.stdout.write(`\n[release] ${message}\n`);
 }
 
-async function run(command, args, extraEnv = {}) {
-  process.stdout.write(`[run] ${command} ${args.join(' ')}\n`);
-  await execFileAsync(command, args, {
-    cwd: rootDir,
-    env: { ...process.env, ...extraEnv },
-    stdio: 'inherit',
+/** @returns {Promise<void>} */
+function run(command, args, extraEnv = {}) {
+  process.stdout.write(`[run] ${command} ${redactArgs(args).join(' ')}\n`);
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd: rootDir,
+      env: { ...process.env, ...extraEnv },
+      stdio: 'inherit',
+    });
+    child.on('close', code => {
+      if (code === 0) resolve();
+      else reject(new Error(`Command exited with code ${code}: ${command} ${redactArgs(args).join(' ')}`));
+    });
+    child.on('error', reject);
   });
 }
 
@@ -91,7 +107,6 @@ async function zipDir(inputDir, outputZip) {
   await execFileAsync('zip', ['-r', outputZip, '.'], {
     cwd: inputDir,
     env: process.env,
-    stdio: 'inherit',
   });
 }
 
@@ -234,10 +249,13 @@ async function publishFirefox() {
     throw new Error('Missing Firefox credentials. Required: FIREFOX_API_KEY, FIREFOX_API_SECRET');
   }
 
+  const webExtBin =
+    process.platform === 'win32'
+      ? resolve(rootDir, 'node_modules/.bin/web-ext.cmd')
+      : resolve(rootDir, 'node_modules/.bin/web-ext');
+
   logStep('Signing Firefox build via web-ext');
-  await run('pnpm', [
-    'exec',
-    'web-ext',
+  await run(webExtBin, [
     'sign',
     '--source-dir',
     'dist/firefox',

@@ -7,7 +7,7 @@ This guide walks you through setting up a local development environment so you c
 | Tool    | Minimum version | Notes                                                             |
 | ------- | --------------- | ----------------------------------------------------------------- |
 | Node.js | 20.x            | LTS recommended                                                   |
-| pnpm    | 9.x             | `npm install -g pnpm`                                             |
+| pnpm    | 10.x            | `npm install -g pnpm`                                             |
 | task    | 3.x             | [go-task](https://taskfile.dev/) — `brew install go-task`         |
 | Chrome  | 120+            | For extension development and Playwright E2E                      |
 | Firefox | 125+            | Nightly / Developer Edition required for manual extension loading |
