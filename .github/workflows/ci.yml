@@ -84,13 +84,13 @@ jobs:
           if-no-files-found: error
 
       - name: Upload coverage reports to Codecov
-        if: !cancelled() && env.CODECOV_TOKEN != ''
+        if: ${{ !cancelled() && env.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ env.CODECOV_TOKEN }}
 
       - name: Upload test results to Codecov
-        if: !cancelled() && env.CODECOV_TOKEN != ''
+        if: ${{ !cancelled() && env.CODECOV_TOKEN != '' }}
         uses: codecov/test-results-action@v1
         with:
           token: ${{ env.CODECOV_TOKEN }}
