@@ -1,7 +1,7 @@
 ---
 # skeeditor-1fox
 title: Add CI coverage collection, JUnit export, and Codecov reporting
-status: in-progress
+status: completed
 type: task
 priority: high
 created_at: 2026-03-30T14:04:21Z
@@ -20,3 +20,9 @@ CI currently runs tests but does not publish repository coverage or JUnit test r
 - [x] Upload test results with `codecov/test-results-action@v1`
 - [x] Upload raw coverage and JUnit artifacts to GitHub Actions
 - [x] Document local and CI coverage workflow
+
+## Summary of Changes
+- Added `task test:coverage:ci` to run unit and integration coverage with JUnit output to `test-report.junit.xml`.
+- Updated `.github/workflows/ci.yml` with a dedicated coverage job that uploads coverage artifacts and sends coverage plus test results to Codecov when `CODECOV_TOKEN` is available.
+- Added `test/unit/utils/coverage-ci-config.test.ts` as a regression test for the Taskfile and CI coverage wiring.
+- Updated `docs/dev/testing.md` with local and CI coverage guidance and ignored the generated `test-report.junit.xml` artifact in `.gitignore`.
