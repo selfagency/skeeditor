@@ -152,6 +152,8 @@ The labeler worker:
 5. Calls `GET {pds}/xrpc/com.atproto.server.getSession` with the bearer token.
    The PDS cryptographically verifies the JWT signature. A forged or tampered
    token is rejected with a 4xx response, which the labeler treats as auth failure.
+6. Verifies the returned session DID matches the JWT `sub` claim before accepting
+   the emit request.
 
 This means a token accepted by the labeler is guaranteed to have been issued and
 signed by the subject's own PDS — forged or tampered tokens are rejected at step 5.

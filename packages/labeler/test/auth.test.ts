@@ -49,9 +49,11 @@ const SESSION_OK = { did: DID_PLC, handle: 'user.bsky.social', email: 'user@exam
  */
 function makeFetch({
   sessionStatus = 200,
+  sessionBody,
   didDoc = PLC_DID_DOC as unknown,
 }: {
   sessionStatus?: number;
+  sessionBody?: unknown;
   didDoc?: unknown;
 } = {}): typeof fetch {
   return async (input: RequestInfo | URL, _init?: RequestInit): Promise<Response> => {
@@ -66,7 +68,8 @@ function makeFetch({
     }
 
     if (url.endsWith('/xrpc/com.atproto.server.getSession')) {
-      const body = sessionStatus === 200 ? SESSION_OK : { error: 'InvalidToken', message: 'Token is invalid' };
+      const body =
+        sessionBody ?? (sessionStatus === 200 ? SESSION_OK : { error: 'InvalidToken', message: 'Token is invalid' });
       return new Response(JSON.stringify(body), {
         status: sessionStatus,
         headers: { 'Content-Type': 'application/json' },
@@ -94,7 +97,11 @@ describe('validateEmitAuth', () => {
     const result = await validateEmitAuth(
       `Bearer ${jwt}`,
       payload,
-      makeFetch({ sessionStatus: 200, didDoc: WEB_DID_DOC }),
+      makeFetch({
+        sessionStatus: 200,
+        didDoc: WEB_DID_DOC,
+        sessionBody: { did: DID_WEB, handle: 'user.example.com' },
+      }),
     );
     expect(result).toEqual({ valid: true });
   });
@@ -111,6 +118,16 @@ describe('validateEmitAuth', () => {
     const jwt = makeJwt({ sub: DID_PLC });
     const result = await validateEmitAuth(`Bearer ${jwt}`, VALID_PAYLOAD, makeFetch({ sessionStatus: 400 }));
     expect(result).toEqual({ valid: false, reason: 'Token rejected by issuer' });
+  });
+
+  it('rejects when getSession succeeds but session did does not match JWT sub', async () => {
+    const jwt = makeJwt({ sub: DID_PLC, iat: 1_000_000, exp: 9_999_999 });
+    const result = await validateEmitAuth(
+      `Bearer ${jwt}`,
+      VALID_PAYLOAD,
+      makeFetch({ sessionStatus: 200, sessionBody: { did: 'did:plc:someoneelse', handle: 'other.bsky.social' } }),
+    );
+    expect(result).toEqual({ valid: false, reason: 'Session subject does not match JWT sub' });
   });
 
   // ── DID mismatch ────────────────────────────────────────────────────────
