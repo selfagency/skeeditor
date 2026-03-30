@@ -5,7 +5,7 @@ status: completed
 type: fix
 priority: critical
 created_at: 2026-03-30T19:24:49Z
-updated_at: 2026-03-30T19:24:49Z
+updated_at: 2026-03-30T19:35:20Z
 branch: fix/ck9o-main-ci-hotfix
 pr: 85
 ---
@@ -22,9 +22,13 @@ Main branch CI is failing after merge with:
 - [x] Fix/align debounce synchronous findPosts behavior or test setup
 - [x] Run task typecheck and task test:coverage:ci
 - [x] Commit and open hotfix PR
+- [x] Add listRecords unit coverage requested in PR review
 
 ## Summary of Changes
 - Replaced invalid `Client.call('com.atproto.repo.listRecords', ...)` usage with typed `Client.listRecords(...)` in `src/shared/api/xrpc-client.ts`.
 - Ensured `ListRecordsResult.cursor` is only included when defined, fixing `exactOptionalPropertyTypes` assignment errors.
 - Removed redundant synchronous `findPosts` scan by threading precomputed `posts` into `interceptArchivedPostButtons(...)` from `scanForPosts(...)`.
-- Verified fixes with `task typecheck`, focused debounce unit test, and `task test:coverage:ci` (all green).
+- Added focused unit tests in `test/unit/api/xrpc-client.test.ts` to verify:
+  - `_client.listRecords` invocation arguments for `collection` and list options.
+  - `cursor` is omitted from `ListRecordsResult` when undefined.
+- Verified this follow-up with targeted unit tests and `task typecheck`.
