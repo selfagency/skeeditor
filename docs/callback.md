@@ -1,5 +1,5 @@
 ---
-title: Authentication — skeeditor
+title: Authentication — Skeeditor
 ---
 
 <script setup>

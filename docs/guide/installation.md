@@ -7,7 +7,7 @@
 1. Visit the [Chrome Web Store listing](https://chrome.google.com/webstore) _(coming soon)_.
 2. Click **Add to Chrome**.
 3. Click **Add extension** in the confirmation dialog.
-4. The skeeditor icon appears in your toolbar. Pin it for easy access.
+4. The Skeeditor icon appears in your toolbar. Pin it for easy access.
 
 ### Load manually (developer / release ZIP)
 
@@ -45,25 +45,19 @@ Alternatively, for development:
 
 ---
 
-## Safari (macOS)
+## Safari (macOS) — Coming soon
 
-Safari extensions are distributed as macOS apps.
-
-1. Download the latest `skeeditor-safari-<version>.dmg` from [GitHub Releases](https://github.com/selfagency/skeeditor/releases).
-2. Open the DMG and drag the app to `/Applications`.
-3. Open the app once to register the extension with Safari.
-4. In Safari, open **Settings → Extensions**.
-5. Enable **skeeditor** and click **Always Allow on bsky.app**.
+Safari support is under active development. Safari extensions are distributed as macOS apps, so the release process is a bit different. Check back soon!
 
 ::: info Developer builds
-To load an unsigned Safari extension during development, enable Safari → Settings → Advanced → **Show features for web developers**, then in Safari → Develop → **Allow Unsigned Extensions**.
+If you're building Skeeditor from source, you can generate a Safari build with `task build:safari:swift`. See the [Cross-Browser Platform](../dev/platform) docs for development instructions.
 :::
 
 ---
 
 ## Permissions
 
-When you install skeeditor, your browser will ask for these permissions:
+When you install Skeeditor, your browser will ask for these permissions:
 
 | Permission                 | Why it is needed                                                                          |
 | -------------------------- | ----------------------------------------------------------------------------------------- |
@@ -72,4 +66,4 @@ When you install skeeditor, your browser will ask for these permissions:
 | `https://bsky.app/*`       | Injects the edit UI into bsky.app pages and intercepts post navigation                    |
 | `https://*.bsky.network/*` | Makes authenticated calls to the Bluesky PDS (Personal Data Server) to fetch/save records |
 
-skeeditor requests no other permissions. It does not access your browser history, bookmarks, clipboard (beyond what you paste into the editor), or any other site.
+Skeeditor requests no other permissions. It does not access your browser history, bookmarks, clipboard (beyond what you paste into the editor), or any other site.

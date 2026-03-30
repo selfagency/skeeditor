@@ -1,6 +1,6 @@
 # Authentication
 
-skeeditor authenticates with the Bluesky PDS (Personal Data Server) via OAuth 2.0 with PKCE (Proof Key for Code Exchange) and DPoP (Demonstrating Proof of Possession). All auth flow logic lives in the background service worker.
+Skeeditor authenticates with the Bluesky PDS (Personal Data Server) via OAuth 2.0 with PKCE (Proof Key for Code Exchange) and DPoP (Demonstrating Proof of Possession). All auth flow logic lives in the background service worker.
 
 ## Key principle
 
@@ -10,41 +10,28 @@ Content scripts and the popup **never handle tokens directly**. They send typed 
 
 ## OAuth 2.0 + PKCE flow
 
-```text
-Popup: AUTH_SIGN_IN message
-  │
-  ▼
-Background: buildAuthorizationRequest()
-  → generates code_verifier + code_challenge (PKCE)
-  → generates state (CSRF protection)
-  → stores { state, codeVerifier } in browser.storage.local ('pendingAuth')
-  → opens new tab to <pdsUrl>/oauth/authorize
-  │
-  ▼
-User authorizes on bsky.social
-  │
-  ▼
-PDS redirects to https://docs.skeeditor.link/callback.html?code=…&state=…
-  │
-  ▼
-callback.html: sends { code, state } to background via browser.runtime.sendMessage
-  │
-  ▼
-Background (AUTH_CALLBACK handler):
-  → verifies state against stored pendingAuth.state (CSRF check)
-  → calls exchangeCodeForTokens() with code + code_verifier
-  → POST <pdsUrl>/oauth/token (DPoP proof header included)
-  → receives { access_token, refresh_token, expires_in }
-  │
-  ▼
-Background: sessionStore.set(session)  → browser.storage.local (keyed by DID)
-  │
-  ▼
-Background: sends CHECK_LABELER_SUBSCRIPTION
-  → if not subscribed, popup shows consent dialog on next open
-  │
-  ▼
-Background: closes callback tab, notifies popup of success
+```mermaid
+flowchart TD
+    A["Popup: AUTH_SIGN_IN message"] --> B["Background: buildAuthorizationRequest()
+    • generates code_verifier + code_challenge (PKCE)
+    • generates state (CSRF protection)
+    • stores { state, codeVerifier } in storage ('pendingAuth')
+    • opens new tab to pdsUrl/oauth/authorize"]
+    B --> C["User authorizes on bsky.social"]
+    C --> D["PDS redirects to
+    docs.skeeditor.link/callback.html?code=…&state=…"]
+    D --> E["callback.html sends { code, state }
+    to background via browser.runtime.sendMessage"]
+    E --> F["Background (AUTH_CALLBACK handler):
+    • verifies state against pendingAuth.state (CSRF check)
+    • calls exchangeCodeForTokens() with code + code_verifier
+    • POST pdsUrl/oauth/token (DPoP proof header)
+    • receives { access_token, refresh_token, expires_in }"]
+    F --> G["sessionStore.set(session) →
+    browser.storage.local (keyed by DID)"]
+    G --> H["CHECK_LABELER_SUBSCRIPTION"]
+    H -->|"Subscribed"| I["Done — closes callback tab, notifies popup"]
+    H -->|"Not subscribed"| J["Popup shows consent dialog on next open"]
 ```
 
 ---

@@ -1,35 +1,36 @@
 # Introduction
 
-> **They said Bluesky would never have an edit button. We simply disagreed.** 🦋✏️
+> **The edit button Bluesky never gave you. Until now.** 🦋✏️
 
-**skeeditor** is a cross-browser extension that adds the **✏️ Edit** button to your posts on [bsky.app](https://bsky.app) that you've been waiting for since the day you joined. Click it, fix whatever needs fixing, save — and the post is updated via the official AT Protocol API without you ever leaving the page. No more deleting and reposting. No more screenshots of your own typos in the replies. Just edit.
+**Skeeditor** is a cross-browser extension that adds the **✏️ Edit** button to your posts on [bsky.app](https://bsky.app). Spot a typo? Want to rephrase something? Just click Edit, make your change, and save — your post is updated in place without you ever leaving the page.
 
-## 🔧 How it works
+No more deleting and reposting. No more copying text into a third-party tool. Just a simple, friendly edit button right where it belongs.
 
-Bluesky posts are stored as records in the AT Protocol repository. skeeditor authenticates with your Bluesky account using OAuth 2.0 + PKCE, fetches the current record from the PDS (Personal Data Server), opens a slick in-page editor pre-filled with your original text, then writes the updated record back when you save.
+## How it works
 
-Rich-text facets (links, mentions, hashtags) are re-detected from the edited text and recalculated at the correct UTF-8 byte offsets before the record is written, so formatting is preserved correctly. Your post comes out the other side looking like it was always meant to be that way. 💅
+When you click Edit, Skeeditor talks directly to the Bluesky servers using the official AT Protocol API. It fetches your post, lets you change it, and writes it back — preserving your links, mentions, hashtags, embeds, and timestamps. Everything stays exactly the way it should.
+
+If you subscribe to the Skeeditor labeler (`@skeeditor.link`), your edited posts will be tagged with an "edited" label so other users know the post was modified. This is entirely optional.
+
+For the full technical details on how things work under the hood, check out the [Developer Docs](/dev/architecture).
 
 ## Supported browsers
 
-| Browser | Status       | Minimum version                                            |
-| ------- | ------------ | ---------------------------------------------------------- |
-| Chrome  | ✅ Supported | 120+                                                       |
-| Firefox | ✅ Supported | 125+ (Nightly / Developer Edition recommended for testing) |
-| Safari  | ✅ Supported | macOS 14+ (Sonoma)                                         |
+| Browser | Status                | Minimum version    |
+| ------- | --------------------- | ------------------ |
+| Chrome  | ✅ Supported          | 120+               |
+| Firefox | ✅ Supported          | 125+               |
+| Safari  | 🔜 Coming soon        | macOS 14+ (Sonoma) |
 
 ## 🚀 Current status
 
-skeeditor is an early-access project — but the important bits work. The core edit flow (sign in → edit → save) is complete and tested. Check the [GitHub releases page](https://github.com/selfagency/skeeditor/releases) for the latest published version.
+Skeeditor is in active development. The core edit flow — sign in, edit, save — is fully working and tested across Chrome and Firefox. Multi-account support, labeler integration, and edit time limits are all live. Check the [GitHub releases page](https://github.com/selfagency/skeeditor/releases) for the latest version.
 
-## 🚫 What skeeditor does not do
+## 🚫 What Skeeditor does not do
 
-Let's set expectations (for now):
-
-- It prevents edits that would exceed Bluesky's 300-grapheme limit, showing an error if your edit is too long.
-- It does not yet support editing embedded images or videos (text-only edits for now — we're working on rich media editing 🫡).
-- It does not edit posts on behalf of other accounts. Your typos are your own.
-- It supports `bsky.social` and custom PDS instances, and transmits no data except for authentication and record operations. Your data stays between you and your PDS.
+- **No data collection.** Skeeditor collects absolutely no user data, telemetry, analytics, or identifying information. We keep no records whatsoever — not even during the authentication flow through our website. Your data stays between you and Bluesky.
+- **No editing other people's posts.** You can only edit posts authored by accounts you've signed in with. Your typos are your own.
+- **No exceeding the post limit.** Skeeditor enforces Bluesky's 300-grapheme limit and shows an error if your edit is too long.
 
 ## 👉 Next steps
 

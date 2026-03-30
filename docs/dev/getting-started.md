@@ -1,6 +1,6 @@
 # Getting Started
 
-This guide walks you through setting up a local development environment so you can build, test, and iterate on skeeditor.
+This guide walks you through setting up a local development environment so you can build, test, and iterate on Skeeditor.
 
 ## Prerequisites
 

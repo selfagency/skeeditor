@@ -9,12 +9,12 @@ skeeditor/
 │   └── dev/                     # Developer documentation
 │
 ├── lexicons/                    # AT Protocol Lexicon JSON files
-│   ├── agency/self/skeeditor/   # Custom skeeditor lexicons (e.g. postVersion record)
+│   ├── agency/self/skeeditor/   # Custom Skeeditor lexicons (e.g. postVersion record)
 │   ├── app/bsky/                # Bluesky app lexicons
 │   └── com/atproto/             # Core AT Protocol lexicons
 │
 ├── packages/                    # Internal workspace packages
-│   └── labeler/                 # Cloudflare Worker — skeeditor labeler service
+│   └── labeler/                 # Cloudflare Worker — Skeeditor labeler service
 │       ├── package.json
 │       ├── tsconfig.json
 │       ├── wrangler.jsonc       # Cloudflare Worker config (routes, bindings, vars)

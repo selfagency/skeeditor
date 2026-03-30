@@ -9,7 +9,19 @@
     "browser-extension",
     "monorepo"
   ],
+  "homepage": "https://skeeditor.link",
+  "bugs": {
+    "url": "https://github.com/selfagency/skeeditor/issues"
+  },
   "license": "MIT",
+  "author": {
+    "name": "Daniel Sieradski",
+    "email": "daniel@self.agency"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/selfagency/skeeditor.git"
+  },
   "type": "module",
   "scripts": {
     "postinstall": "wxt prepare",
@@ -40,6 +52,7 @@
     "tsx": "^4.21.0",
     "typescript": "6.0.2",
     "vitepress": "^1.6.4",
+    "vitepress-mermaid-renderer": "^1.1.20",
     "vitest": "4.1.2",
     "web-ext": "10.0.0",
     "wxt": "^0.20.20"

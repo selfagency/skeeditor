@@ -4,7 +4,7 @@
 
 ### Can I edit any post?
 
-You can only edit your own posts — the ones written by the account you signed in with. skeeditor adds the Edit button only to posts authored by your DID.
+You can only edit your own posts — the ones written by the account you signed in with. Skeeditor adds the Edit button only to posts authored by your DID.
 
 ### Can I edit posts that other people have replied to?
 
@@ -16,7 +16,9 @@ No. Editing a record in the AT Protocol does not generate a new feed event. Your
 
 ### Will the "edited" indicator appear on my post?
 
-The Bluesky platform does not currently display an edited indicator on posts. This is a Bluesky product decision, not something skeeditor controls.
+If you have subscribed to the **Skeeditor labeler** (`@skeeditor.link`), an "edited" label will be applied to your post after you save an edit. Other Bluesky users who also subscribe to the Skeeditor labeler will see this label on your post.
+
+The labeler is a core part of how Skeeditor communicates that a post has been edited — without it, there is no visible indicator on the Bluesky platform. You can subscribe during the initial sign-in flow or at any time from your [Bluesky moderation settings](https://bsky.app/moderation). See [Using Skeeditor → Labeler consent](./usage#labeler-consent) for more details.
 
 ---
 
@@ -24,7 +26,7 @@ The Bluesky platform does not currently display an edited indicator on posts. Th
 
 ### Why does sign-in open a new tab?
 
-OAuth requires a browser redirect to the authorization server (bsky.social). Browser extensions cannot intercept HTTPS redirects in a popup window, so skeeditor opens a dedicated tab, completes the OAuth flow there, and then closes the tab automatically.
+OAuth requires a browser redirect to the authorization server (bsky.social). Browser extensions cannot intercept HTTPS redirects in a popup window, so Skeeditor opens a dedicated tab, completes the OAuth flow there, and then closes the tab automatically.
 
 ### I closed the sign-in tab by accident. What do I do?
 
@@ -32,7 +34,7 @@ The OAuth flow will time out. Click **Sign In** in the popup again to start a fr
 
 ### Do I need to sign in every time?
 
-No. skeeditor stores your refresh token and automatically renews it in the background. You should remain signed in indefinitely as long as your Bluesky session is active. If Bluesky revokes your token (e.g. you change your password), the popup will prompt you to re-authorize.
+No. Skeeditor stores your refresh token and automatically renews it in the background. You should remain signed in indefinitely as long as your Bluesky session is active. If Bluesky revokes your token (e.g. you change your password), the popup will prompt you to re-authorize.
 
 ---
 
@@ -42,9 +44,9 @@ No. skeeditor stores your refresh token and automatically renews it in the backg
 
 300 graphemes — same as a new Bluesky post. This means the limit is based on user-perceived characters, not code points or bytes.
 
-### Can I add or remove images and videos?
+### Can I add images and videos?
 
-Not yet. The current version edits text only. Embeds are preserved as-is when you save; you cannot add, remove, or replace them through skeeditor.
+Yes. The edit modal includes an **Add Media** button that lets you attach new images or videos to a post. Existing embeds (images, videos, external link cards) are preserved automatically when you save. Removing existing media from a post is not yet supported — you can only add new media or replace all existing media with new attachments.
 
 ### I edited a post but the page still shows the old text. Why?
 
@@ -52,7 +54,7 @@ bsky.app may have cached the post. Try refreshing the page. The edit is saved on
 
 ### What does "Conflict detected" mean?
 
-This means the post was updated (by another device, app, or browser extension) between when you opened the editor and when you clicked Save. skeeditor noticed the mismatch via the record's CID and is preventing a silent overwrite. You can reload the current version or force-save your version. See [Conflict Handling](../dev/conflicts) for details.
+This means the post was updated (by another device, app, or browser extension) between when you opened the editor and when you clicked Save. Skeeditor noticed the mismatch via the record's CID and is preventing a silent overwrite. You can reload the current version or force-save your version. See [Conflict Handling](../dev/conflicts) for details.
 
 ---
 
@@ -60,7 +62,7 @@ This means the post was updated (by another device, app, or browser extension) b
 
 ### Which browsers are supported?
 
-Chrome 120+, Firefox 125+, and Safari on macOS 14+ (Sonoma). See [Installation](./installation) for browser-specific instructions.
+Chrome 120+ and Firefox 125+. Safari support is coming soon. See [Installation](./installation) for browser-specific instructions.
 
 ### Is there a mobile version?
 
@@ -70,14 +72,18 @@ Not yet. Mobile browsers have more restricted extension APIs. A future release m
 
 ## Privacy and security
 
-### Does skeeditor see my Bluesky password?
+### Does Skeeditor see my Bluesky password?
 
-No. The extension uses OAuth 2.0 + PKCE. You authenticate directly on bsky.social; skeeditor only ever holds the OAuth tokens, never your password.
+No. The extension uses OAuth 2.0 + PKCE. You authenticate directly on bsky.social; Skeeditor only ever holds the OAuth tokens, never your password.
 
-### Does skeeditor send my posts to any server other than Bluesky?
+### Does Skeeditor collect any data?
 
-No. All network requests go to `bsky.social`. There are no intermediate proxies, analytics endpoints, or skeeditor-operated servers. See [Privacy & Security](./privacy) for the full list of network destinations.
+No. Skeeditor collects absolutely no user data, telemetry, analytics, or identifying information. We keep no records whatsoever — not even during the authentication flow through our website. See [Privacy & Security](./privacy) for full details.
 
-### Is skeeditor open source?
+### Does Skeeditor send my posts to any server other than Bluesky?
+
+No. All network requests go to your Bluesky PDS (typically `bsky.social`) and, if you subscribe, the Skeeditor labeler at `labeler.skeeditor.link`. There are no intermediate proxies, analytics endpoints, or other third-party servers. See [Privacy & Security](./privacy) for the full list of network destinations.
+
+### Is Skeeditor open source?
 
 Yes, MIT licence. The full source is at [github.com/selfagency/skeeditor](https://github.com/selfagency/skeeditor).

@@ -2,7 +2,7 @@
 layout: home
 
 hero:
-  name: skeeditor
+  name: Skeeditor
   text: Edit your Bluesky posts
   tagline: A cross-browser extension that lets you edit your own posts directly on bsky.app, without leaving the page.
   actions:
@@ -23,13 +23,16 @@ features:
   - icon: 🔒
     title: Secure by design
     details: Authenticates with Bluesky via OAuth 2.0 + PKCE. Tokens are stored only in your browser's extension storage, never sent anywhere else.
+  - icon: 🏷️
+    title: Edited label via labeler
+    details: Posts you edit are marked with an "edited" label via the Skeeditor labeler service. Other users who subscribe to the labeler can see which posts have been modified.
   - icon: 🌐
     title: Cross-browser
-    details: Works on Chrome, Firefox, and Safari (macOS). Uses the standard WebExtension API via webextension-polyfill so the same codebase targets all three.
+    details: Works on Chrome and Firefox today, with Safari support coming soon.
   - icon: ⚡
     title: Fast and lightweight
     details: Pure TypeScript, no UI framework overhead. The extension adds a single content script and a small background worker.
   - icon: 🦋
-    title: Official Bluesky account
-    details: Follow [@skeeditor.link](https://bsky.app/profile/skeeditor.link) for updates and support.
+    title: Follow us on Bluesky
+    details: Follow @skeeditor.link on Bluesky for updates and support.
 ---

@@ -18,9 +18,9 @@
  * Conversion from the Chrome/Firefox build:
  * ```
  * xcrun safari-web-extension-converter dist/safari \
- *   --project-location ./safari-xcode \
+ *   --project-location ./xcode \
  *   --app-name skeeditor \
- *   --bundle-identifier dev.selfagency.skeeditor \
+ *   --bundle-identifier agency.self.skeeditor \
  *   --swift
  * ```
  * Then open the generated Xcode project, build, and enable unsigned extensions:

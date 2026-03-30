@@ -2,7 +2,7 @@
 
 ## Overview
 
-skeeditor uses [WXT](https://wxt.dev/) — a browser-extension framework built on top of Vite — to build, manifest, and package the extension for every target browser. WXT replaces the previous bespoke `vite.config.ts` + `scripts/build.ts` + `manifests/` pipeline.
+Skeeditor uses [WXT](https://wxt.dev/) — a browser-extension framework built on top of Vite — to build, manifest, and package the extension for every target browser. WXT replaces the previous bespoke `vite.config.ts` + `scripts/build.ts` + `manifests/` pipeline.
 
 The primary configuration file is `wxt.config.ts` at the project root. `pnpm workspaces` handles multi-package dependency management (the main extension and the `packages/labeler` Cloudflare Worker).
 
@@ -22,7 +22,7 @@ export default defineConfig({
   modules: ['@wxt-dev/auto-icons'],
   autoIcons: { baseIconPath: 'assets/icon.svg' },
   manifest: ctx => ({              // manifest built as a function of the target browser
-    name: 'skeeditor',
+    name: 'Skeeditor',
     version: '0.1.0',
     permissions: ['storage', 'activeTab', 'tabs', 'alarms'],
     host_permissions: [
@@ -127,15 +127,21 @@ Extension icons are generated automatically from a single SVG source file via th
 ## Safari build
 
 ```sh
-task build:safari
-xcrun safari-web-extension-converter dist/safari \
-  --project-location ./safari-xcode \
-  --app-name skeeditor \
-  --bundle-identifier dev.selfagency.skeeditor \
-  --swift
+task build:safari         # Build web extension to dist/safari/
+task build:safari:swift   # Run xcrun converter → Xcode project under xcode/
 ```
 
-Run the first command to produce `dist/safari/`, then use the Apple converter to wrap it in an Xcode project. Open the generated Xcode project and build it to register the extension with Safari. CI verifies that the converter exits successfully but does not run the Xcode app.
+The first command produces `dist/safari/`. The second wraps it in an Xcode project via `xcrun safari-web-extension-converter`. Open the generated Xcode project and build it to register the extension with Safari. CI verifies that the converter exits successfully but does not run the Xcode app.
+
+To run the converter manually instead:
+
+```sh
+xcrun safari-web-extension-converter dist/safari \
+  --project-location ./xcode \
+  --app-name skeeditor \
+  --bundle-identifier agency.self.skeeditor \
+  --swift
+```
 
 ---
 

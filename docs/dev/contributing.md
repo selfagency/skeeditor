@@ -1,6 +1,6 @@
 # Contributing
 
-Thank you for contributing to skeeditor! This guide covers everything you need to know before submitting a pull request.
+Thank you for contributing to Skeeditor! This guide covers everything you need to know before submitting a pull request.
 
 ---
 

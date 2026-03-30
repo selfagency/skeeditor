@@ -1,4 +1,4 @@
-# Releasing skeeditor
+# Releasing Skeeditor
 
 This guide provides a complete, step-by-step release process for:
 
@@ -142,21 +142,18 @@ Because you have a paid Apple Developer account, you can complete signing and di
 
 ```sh
 task build:safari
+task build:safari:swift
 ```
 
-If your workflow uses a converter script, run it next (example):
+The first command builds the Safari web extension to `dist/safari/`. The second runs `xcrun safari-web-extension-converter` and generates the Xcode project under `xcode/`.
 
-```sh
-scripts/build-safari.sh
-```
-
-Or run the converter directly (example shape):
+To run the converter manually instead:
 
 ```sh
 xcrun safari-web-extension-converter dist/safari \
-  --project-location ./safari-xcode \
+  --project-location ./xcode \
   --app-name skeeditor \
-  --bundle-identifier dev.selfagency.skeeditor \
+  --bundle-identifier agency.self.skeeditor \
   --swift
 ```
 

@@ -1,6 +1,6 @@
 # XRPC Client
 
-`XrpcClient` (`src/shared/api/xrpc-client.ts`) wraps the `@atproto/lex` `Client` to provide a typed interface for the two XRPC operations used by skeeditor: fetching and writing `app.bsky.feed.post` records.
+`XrpcClient` (`src/shared/api/xrpc-client.ts`) wraps the `@atproto/lex` `Client` to provide a typed interface for the two XRPC operations used by Skeeditor: fetching and writing `app.bsky.feed.post` records.
 
 All XRPC calls are made from the background service worker. Content scripts and the popup communicate with the background via [typed messages](./messages) — they never call `XrpcClient` directly.
 

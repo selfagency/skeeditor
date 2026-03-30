@@ -1,10 +1,10 @@
 # Platform Guide
 
-Cross-browser compatibility for skeeditor — Chrome, Firefox, and Safari.
+Cross-browser compatibility for Skeeditor — Chrome, Firefox, and Safari.
 
 ## Overview
 
-skeeditor targets three browser families via Manifest V3. All share a common
+Skeeditor targets three browser families via Manifest V3. All share a common
 `src/` codebase and differ only in manifest overlays and per-browser build output.
 The `webextension-polyfill` package normalises the callback-based `chrome.*` API
 on Chromium browsers into the same Promise-based `browser.*` surface used natively
@@ -51,9 +51,9 @@ combining `manifests/base.json` with the per-browser overlay at
 
    ```sh
    xcrun safari-web-extension-converter dist/safari \
-     --project-location ./safari-xcode \
+     --project-location ./xcode \
      --app-name skeeditor \
-     --bundle-identifier dev.selfagency.skeeditor \
+     --bundle-identifier agency.self.skeeditor \
      --swift
    ```
 
@@ -68,7 +68,7 @@ testing on Safari is manual.
 
 ## Polyfill Strategy
 
-skeeditor uses [WXT](https://wxt.dev/), which handles the `webextension-polyfill` transparently. Extension code imports `browser` from `wxt/browser` when needed:
+Skeeditor uses [WXT](https://wxt.dev/), which handles the `webextension-polyfill` transparently. Extension code imports `browser` from `wxt/browser` when needed:
 
 ```ts
 import { browser } from 'wxt/browser';
@@ -123,19 +123,19 @@ for any data that must survive the background being unloaded.
 
 ### `browser.identity`
 
-Not available on Firefox or Safari. skeeditor uses `browser.tabs.create` for
+Not available on Firefox or Safari. Skeeditor uses `browser.tabs.create` for
 the OAuth redirect flow — this works cross-browser.
 
 ### Side panel / sidebar
 
-- Chrome 114+: `browser.sidePanel` (not currently used by skeeditor)
+- Chrome 114+: `browser.sidePanel` (not currently used by Skeeditor)
 - Firefox: `browser.sidebarAction` (Firefox-specific, different API)
 - Safari: no equivalent
 
 ### `webRequest` blocking mode
 
 Replaced by `declarativeNetRequest` in MV3 on Chrome and Safari.
-Firefox MV3 still supports `webRequest` blocking, but skeeditor does not use
+Firefox MV3 still supports `webRequest` blocking, but Skeeditor does not use
 either API.
 
 ### Firefox-only APIs

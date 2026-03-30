@@ -1,10 +1,10 @@
-# skeeditor ✏️🦋
+# Skeeditor ✏️🦋
 
 > **The edit button Bluesky never gave you. Until now.**
 
-You know the feeling — you hit post, look at it for 0.3 seconds, and spot a typo. Or a bad take that needs a _slightly_ less bad take. Bluesky doesn't have an edit button, but why should that stop us?
+You know the feeling — you hit post, look at it for 0.3 seconds, and spot a typo. Or a bad take that needs a _slightly_ less bad take. Bluesky doesn’t have an edit button, but why should that stop us?
 
-**skeeditor** is a cross-browser extension that adds a real, working **✏️ Edit** button to your posts on [bsky.app](https://bsky.app). Click it, fix your regrets, save. Done. No copy-paste gymnastics, no deleting and reposting, no shame spiral.
+**Skeeditor** is a cross-browser extension that adds a real, working **✏️ Edit** button to your posts on [bsky.app](https://bsky.app). Click it, fix your regrets, save. Done. No copy-paste gymnastics, no deleting and reposting, no shame spiral.
 
 It authenticates via OAuth 2.0 + PKCE, fetches the actual record from the Bluesky PDS, and writes it back — preserving your links, mentions, hashtags, embeds, and timestamps like nothing ever happened. 🤫
 
@@ -16,22 +16,22 @@ It authenticates via OAuth 2.0 + PKCE, fetches the actual record from the Bluesk
 
 - **🖊️ In-place editing** — an edit button appears right on bsky.app next to your posts, where it always should have been
 - **👥 Multi-account** — sign in with multiple Bluesky accounts and switch between them from the toolbar popup
-- **🏷️ Edited label** — posts you edit are marked with an "edited" label via the skeeditor labeler service (opt-in; requires subscribing to `@skeeditor.link`)
+- **🏷️ Edited label** — posts you edit are marked with an "edited" label via the Skeeditor labeler service (opt-in; requires subscribing to `@skeeditor.link`)
 - **⏱️ Edit time limit** — optionally configure a 0.5–5 minute window after posting during which the Edit button is active
 - **🔒 Secure by design** — OAuth 2.0 + PKCE + DPoP; tokens stored only in extension storage, never sent to any third party
 - **💅 Rich text preserved** — links, @mentions, and #hashtags are re-detected and byte-offset facets recalculated on every save
 - **🛡️ Conflict-safe** — CID-based optimistic locking detects concurrent edits and prompts before overwriting
-- **🌍 Cross-browser** — Chrome 120+, Firefox 125+, Safari (macOS 14+)
+- **🌍 Cross-browser** — Chrome 120+, Firefox 125+ (Safari coming soon)
 
 ---
 
 ## Browser support
 
-| Browser | Minimum version    |
-| ------- | ------------------ |
-| Chrome  | 120+               |
-| Firefox | 125+               |
-| Safari  | macOS 14+ (Sonoma) |
+| Browser | Minimum version |
+| ------- | --------------- |
+| Chrome  | 120+            |
+| Firefox | 125+            |
+| Safari  | 🔜 Coming soon  |
 
 ---
 

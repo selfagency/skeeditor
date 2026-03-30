@@ -2,7 +2,7 @@
 
 > **Canonical documentation:** [Developer Auth Guide](./dev/auth.md)
 
-skeeditor authenticates with the Bluesky PDS via **OAuth 2.0 with PKCE** (Proof Key for Code Exchange). All auth flow logic lives in the background service worker; content scripts and the popup never handle tokens directly.
+Skeeditor authenticates with the Bluesky PDS via **OAuth 2.0 with PKCE** (Proof Key for Code Exchange). All auth flow logic lives in the background service worker; content scripts and the popup never handle tokens directly.
 
 ---
 

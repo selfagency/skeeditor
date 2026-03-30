@@ -14,7 +14,7 @@ export default defineConfig({
     baseIconPath: 'assets/icon.svg',
   },
   manifest: ctx => ({
-    name: 'skeeditor',
+    name: 'Skeeditor',
     version: '0.1.0',
     description: 'Edit your own Bluesky posts directly on bsky.app.',
     incognito: 'not_allowed' as const,
@@ -29,7 +29,7 @@ export default defineConfig({
       ...(ctx.mode !== 'production' ? ['http://localhost/*'] : []),
     ],
     action: {
-      default_title: 'skeeditor',
+      default_title: 'Skeeditor',
       default_popup: 'popup/index.html',
       default_icon: {
         '16': 'icons/16.png',

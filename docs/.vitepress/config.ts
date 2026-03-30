@@ -1,14 +1,14 @@
 import { defineConfig } from 'vitepress';
 
 export default defineConfig({
-  title: 'skeeditor',
+  title: 'Skeeditor',
   description: 'Edit your Bluesky posts directly on bsky.app — cross-browser extension docs',
   base: '/',
 
   head: [['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }]],
 
   themeConfig: {
-    logo: { light: '/logo.svg', dark: '/logo.svg', alt: 'skeeditor' },
+    logo: { light: '/logo.svg', dark: '/logo.svg', alt: 'Skeeditor' },
 
     nav: [
       { text: 'User Guide', link: '/guide/introduction' },
@@ -23,7 +23,7 @@ export default defineConfig({
           items: [
             { text: 'Introduction', link: '/guide/introduction' },
             { text: 'Installation', link: '/guide/installation' },
-            { text: 'Using skeeditor', link: '/guide/usage' },
+            { text: 'Using Skeeditor', link: '/guide/usage' },
             { text: 'Privacy & Security', link: '/guide/privacy' },
             { text: 'FAQ', link: '/guide/faq' },
           ],
