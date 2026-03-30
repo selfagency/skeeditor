@@ -201,6 +201,56 @@ describe('handleMessage', () => {
 
       expect(result).toEqual({ authenticated: false });
     });
+
+    it('retains the existing refresh token when silent refresh returns only a new access token', async () => {
+      const session = makeSession({
+        handle: 'alice.bsky.social',
+        refreshToken: 'rt_keep_me',
+        authServerUrl: 'https://bsky.social',
+      });
+      const store = makeStoreMock(session);
+      store.isAccessTokenValid.mockResolvedValue(false);
+      const deps = makeDeps({
+        store,
+        refreshTokens: vi.fn().mockResolvedValue({
+          access_token: 'refreshed-access-token',
+          expires_in: 3600,
+        }),
+      });
+
+      const result = await handleMessage({ type: 'AUTH_GET_STATUS' }, deps);
+
+      expect(store.set).toHaveBeenCalledWith({
+        ...session,
+        accessToken: 'refreshed-access-token',
+        refreshToken: 'rt_keep_me',
+        expiresAt: expect.any(Number),
+      });
+      expect(result).toEqual({
+        authenticated: true,
+        did: session.did,
+        handle: 'alice.bsky.social',
+        expiresAt: expect.any(Number),
+      });
+    });
+
+    it('returns unauthenticated when silent refresh response omits a usable access token', async () => {
+      const session = makeSession({ authServerUrl: 'https://bsky.social' });
+      const store = makeStoreMock(session);
+      store.isAccessTokenValid.mockResolvedValue(false);
+      const deps = makeDeps({
+        store,
+        refreshTokens: vi.fn().mockResolvedValue({
+          refresh_token: 'refreshed-refresh-token',
+          expires_in: 3600,
+        }),
+      });
+
+      const result = await handleMessage({ type: 'AUTH_GET_STATUS' }, deps);
+
+      expect(store.set).not.toHaveBeenCalled();
+      expect(result).toEqual({ authenticated: false });
+    });
   });
 
   describe('AUTH_SIGN_IN', () => {
