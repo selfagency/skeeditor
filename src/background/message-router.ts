@@ -573,11 +573,11 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
             stored.refreshToken,
             BSKY_OAUTH_CLIENT_ID,
           );
-          if (isNonEmptyString(tokens.access_token) && isNonEmptyString(tokens.refresh_token)) {
+          if (isNonEmptyString(tokens.access_token)) {
             const refreshed: StoredSession = {
               ...stored,
               accessToken: tokens.access_token,
-              refreshToken: tokens.refresh_token,
+              refreshToken: isNonEmptyString(tokens.refresh_token) ? tokens.refresh_token : stored.refreshToken,
               expiresAt:
                 tokens.expires_in !== undefined ? Date.now() + tokens.expires_in * 1000 : Date.now() + 3_600_000,
             };
