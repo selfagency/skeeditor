@@ -4,37 +4,37 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "Run in dry-run mode (build/package only; no store publish)"
+        description: 'Run in dry-run mode (build/package only; no store publish)'
         required: true
         type: boolean
         default: true
       publish_chrome:
-        description: "Publish to Chrome Web Store"
+        description: 'Publish to Chrome Web Store'
         required: true
         type: boolean
         default: false
       publish_firefox:
-        description: "Sign/publish to Firefox AMO via web-ext"
+        description: 'Sign/publish to Firefox AMO via web-ext'
         required: true
         type: boolean
         default: false
       publish_edge:
-        description: "Publish to Edge Add-ons via EDGE_PUBLISH_COMMAND"
+        description: 'Publish to Edge Add-ons via EDGE_PUBLISH_COMMAND'
         required: true
         type: boolean
         default: false
       skip_checks:
-        description: "Skip lint/typecheck/tests"
+        description: 'Skip lint/typecheck/tests'
         required: true
         type: boolean
         default: false
       skip_tests:
-        description: "Skip test suites while keeping lint/typecheck"
+        description: 'Skip test suites while keeping lint/typecheck'
         required: true
         type: boolean
         default: false
       skip_safari:
-        description: "Skip Safari build"
+        description: 'Skip Safari build'
         required: true
         type: boolean
         default: false
