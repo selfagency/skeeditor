@@ -1,5 +1,7 @@
+export const OXFMT_STAGED_COMMAND = './node_modules/.bin/oxfmt --no-error-on-unmatched-pattern';
+export const OXLINT_STAGED_COMMAND = './node_modules/.bin/oxlint';
+
 export default {
-  '**/*.{cjs,css,html,js,json,md,mjs,ts,yaml,yml}': files => [
-    `./node_modules/.bin/task precommit -- ${files.join(' ')}`,
-  ],
+  '*': OXFMT_STAGED_COMMAND,
+  '*.{js,jsx,ts,tsx,mjs,cjs}': OXLINT_STAGED_COMMAND,
 };
