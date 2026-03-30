@@ -964,9 +964,34 @@ describe('createDefaultDeps', () => {
       await deps.storeAuthState('test-state', 'test-verifier');
 
       expect(globalThis.browser.storage.session.set).toHaveBeenCalledWith({
-        pendingAuth: { state: 'test-state', codeVerifier: 'test-verifier' },
+        pendingAuth: expect.objectContaining({ state: 'test-state', codeVerifier: 'test-verifier' }),
       });
       expect(globalThis.browser.storage.local.set).not.toHaveBeenCalled();
+    });
+
+    it('should include a numeric createdAt timestamp when storing PKCE state', async () => {
+      const before = Date.now();
+      const deps = createDefaultDeps();
+
+      await deps.storeAuthState('test-state', 'test-verifier');
+
+      const after = Date.now();
+      const call = vi.mocked(globalThis.browser.storage.session.set).mock.calls[0]?.[0] as Record<string, unknown>;
+      const pendingAuth = call['pendingAuth'] as Record<string, unknown>;
+      expect(typeof pendingAuth['createdAt']).toBe('number');
+      expect(pendingAuth['createdAt'] as number).toBeGreaterThanOrEqual(before);
+      expect(pendingAuth['createdAt'] as number).toBeLessThanOrEqual(after);
+    });
+
+    it('should store pdsUrl alongside createdAt when provided', async () => {
+      const deps = createDefaultDeps();
+
+      await deps.storeAuthState('test-state', 'test-verifier', 'https://bsky.social');
+
+      const call = vi.mocked(globalThis.browser.storage.session.set).mock.calls[0]?.[0] as Record<string, unknown>;
+      const pendingAuth = call['pendingAuth'] as Record<string, unknown>;
+      expect(pendingAuth['pdsUrl']).toBe('https://bsky.social');
+      expect(typeof pendingAuth['createdAt']).toBe('number');
     });
 
     it('should read PKCE state from browser.storage.session', async () => {
