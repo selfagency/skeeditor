@@ -10,6 +10,14 @@ import { APP_NAME } from '../shared/constants';
 // background entrypoint which only ever runs inside a service worker.
 declare const self: ServiceWorkerGlobalScope & typeof globalThis;
 
+function hasUsableSessionStorage(): boolean {
+  if (!('session' in browser.storage)) return false;
+  const session = (browser.storage as Record<string, unknown>)['session'];
+  if (session === null || typeof session !== 'object') return false;
+  const area = session as Record<string, unknown>;
+  return typeof area['get'] === 'function' && typeof area['set'] === 'function' && typeof area['remove'] === 'function';
+}
+
 export default defineBackground(() => {
   console.info(`${APP_NAME}: background service worker started`);
 
@@ -53,21 +61,25 @@ export default defineBackground(() => {
     console.warn(`${APP_NAME}: alarms API unavailable, skipping alarm keepalive`, err);
   }
 
-  // On install/activate, clear stale OAuth PKCE state that may have been written to
-  // browser.storage.local on Firefox (where storage.session is unavailable). Any
-  // pendingAuth older than 5 minutes from a previous lifecycle can never be redeemed.
-  if (!('session' in browser.storage)) {
+  // On startup, clear stale OAuth PKCE state that may have been written to
+  // browser.storage.local when storage.session is unavailable. Any pendingAuth
+  // older than 5 minutes from a previous lifecycle can never be redeemed, and
+  // legacy records without createdAt are treated as stale and removed.
+  if (!hasUsableSessionStorage()) {
     const PENDING_AUTH_TTL_MS = 5 * 60 * 1000;
     void (async () => {
       try {
         const result = await browser.storage.local.get('pendingAuth');
         const record = (result as Record<string, unknown>)['pendingAuth'];
-        if (!record) return;
-        const createdAt =
-          typeof (record as Record<string, unknown>)['createdAt'] === 'number'
-            ? ((record as Record<string, unknown>)['createdAt'] as number)
-            : undefined;
-        if (createdAt !== undefined && Date.now() - createdAt > PENDING_AUTH_TTL_MS) {
+        if (record === null || typeof record !== 'object') return;
+
+        const createdAt = (record as Record<string, unknown>)['createdAt'];
+        if (typeof createdAt !== 'number' || !Number.isFinite(createdAt)) {
+          await browser.storage.local.remove('pendingAuth');
+          return;
+        }
+
+        if (Date.now() - createdAt > PENDING_AUTH_TTL_MS) {
           await browser.storage.local.remove('pendingAuth');
         }
       } catch {
