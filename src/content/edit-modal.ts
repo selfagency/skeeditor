@@ -1,4 +1,5 @@
 import globalStyles from '../shadow-styles.css?inline';
+import { normalizeMediaFiles } from './post-editor';
 import { graphemeLength } from '../shared/utils/text';
 
 const EDIT_MODAL_TEMPLATE = `
@@ -382,9 +383,16 @@ export class EditModal {
       if (inputTarget.files) {
         // File input change - handle selected files
         const files = Array.from(inputTarget.files) as File[];
-        this.uploadedMedia = [...this.uploadedMedia, ...files];
-        this.updateMediaPreview();
-        this.updateSaveButtonState();
+        const nextMedia = [...this.uploadedMedia, ...files];
+        try {
+          this.uploadedMedia = normalizeMediaFiles(nextMedia);
+          this.hideStatusMessage();
+          this.updateMediaPreview();
+          this.updateSaveButtonState();
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Invalid media selection';
+          this.setError(message);
+        }
         inputTarget.value = ''; // Reset input to allow selecting same file again
       }
     }

@@ -12,6 +12,15 @@ const createModal = (): EditModal => {
 };
 
 describe('edit-modal', () => {
+  const createFile = (name: string, type: string): File => new File(['x'], name, { type });
+
+  const setFileInputFiles = (input: HTMLInputElement, files: File[]): void => {
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: files as unknown as FileList,
+    });
+  };
+
   afterEach(() => {
     activeModal?.close();
     activeModal = null;
@@ -212,6 +221,53 @@ describe('edit-modal', () => {
       const textarea = modal.element.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
 
       expect(textarea.getAttribute('aria-label')).toBe('Edit post content');
+    });
+  });
+
+  describe('media validation', () => {
+    it('should reject mixed image and video selection with a user-facing error', () => {
+      const modal = createModal();
+      modal.open('Hello');
+
+      const input = modal.element.shadowRoot!.querySelector('input[type="file"]') as HTMLInputElement;
+      setFileInputFiles(input, [createFile('photo.jpg', 'image/jpeg'), createFile('clip.mp4', 'video/mp4')]);
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+
+      expect(modal.getUploadedMedia()).toHaveLength(0);
+      const statusMessage = modal.element.shadowRoot!.querySelector('.status-message') as HTMLElement;
+      expect(statusMessage.textContent).toContain('Cannot mix images and video in one post');
+    });
+
+    it('should reject selecting more than four images', () => {
+      const modal = createModal();
+      modal.open('Hello');
+
+      const input = modal.element.shadowRoot!.querySelector('input[type="file"]') as HTMLInputElement;
+      setFileInputFiles(input, [
+        createFile('1.jpg', 'image/jpeg'),
+        createFile('2.jpg', 'image/jpeg'),
+        createFile('3.jpg', 'image/jpeg'),
+        createFile('4.jpg', 'image/jpeg'),
+        createFile('5.jpg', 'image/jpeg'),
+      ]);
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+
+      expect(modal.getUploadedMedia()).toHaveLength(0);
+      const statusMessage = modal.element.shadowRoot!.querySelector('.status-message') as HTMLElement;
+      expect(statusMessage.textContent).toContain('You can attach up to 4 images');
+    });
+
+    it('should reject selecting more than one video', () => {
+      const modal = createModal();
+      modal.open('Hello');
+
+      const input = modal.element.shadowRoot!.querySelector('input[type="file"]') as HTMLInputElement;
+      setFileInputFiles(input, [createFile('a.mp4', 'video/mp4'), createFile('b.mp4', 'video/mp4')]);
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+
+      expect(modal.getUploadedMedia()).toHaveLength(0);
+      const statusMessage = modal.element.shadowRoot!.querySelector('.status-message') as HTMLElement;
+      expect(statusMessage.textContent).toContain('You can attach only 1 video');
     });
   });
 });

@@ -30,6 +30,9 @@ export interface EditablePostRecord extends Record<string, unknown> {
   embed?: ExternalEmbed | ImagesEmbed | VideoEmbed;
 }
 
+const MAX_IMAGE_COUNT = 4;
+const MAX_VIDEO_COUNT = 1;
+
 const buildMentionDidResolver = (currentRecord: EditablePostRecord): ((handle: string) => string | undefined) => {
   const mentionDidByHandle = new Map<string, string>();
 
@@ -78,15 +81,43 @@ export function buildUpdatedPostRecord(
 
   // Override embed with new media if provided; otherwise preserve the existing embed from currentRecord
   if (mediaFiles && mediaFiles.length > 0) {
-    nextRecord.embed = buildMediaEmbed(mediaFiles);
+    nextRecord.embed = buildMediaEmbed(normalizeMediaFiles(mediaFiles));
   }
 
   return nextRecord;
 }
 
-function buildMediaEmbed(mediaFiles: File[]): ImagesEmbed | VideoEmbed {
+export function normalizeMediaFiles(mediaFiles: File[]): File[] {
   const imageFiles = mediaFiles.filter(file => file.type.startsWith('image/'));
   const videoFiles = mediaFiles.filter(file => file.type.startsWith('video/'));
+
+  if (imageFiles.length > 0 && videoFiles.length > 0) {
+    throw new Error('Cannot mix images and video in one post');
+  }
+
+  if (imageFiles.length > MAX_IMAGE_COUNT) {
+    throw new Error(`You can attach up to ${MAX_IMAGE_COUNT} images`);
+  }
+
+  if (videoFiles.length > MAX_VIDEO_COUNT) {
+    throw new Error(`You can attach only ${MAX_VIDEO_COUNT} video`);
+  }
+
+  if (imageFiles.length > 0) {
+    return imageFiles;
+  }
+
+  if (videoFiles.length > 0) {
+    const firstVideo = videoFiles[0];
+    if (!firstVideo) throw new Error('No video file found');
+    return [firstVideo];
+  }
+
+  throw new Error('No valid media files found');
+}
+
+function buildMediaEmbed(mediaFiles: File[]): ImagesEmbed | VideoEmbed {
+  const imageFiles = mediaFiles.filter(file => file.type.startsWith('image/'));
 
   if (imageFiles.length > 0) {
     const placeholder = {} as unknown as l.BlobRef;
@@ -99,8 +130,8 @@ function buildMediaEmbed(mediaFiles: File[]): ImagesEmbed | VideoEmbed {
     };
   }
 
-  if (videoFiles.length > 0) {
-    const videoFile = videoFiles[0];
+  if (mediaFiles.length > 0) {
+    const videoFile = mediaFiles[0];
     if (!videoFile) throw new Error('No video file found');
     const placeholder = {} as unknown as l.BlobRef;
     return {
