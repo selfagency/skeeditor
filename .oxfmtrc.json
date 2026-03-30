@@ -3,10 +3,6 @@
   "ignorePatterns": [
     ".beans",
     ".beans.yml",
-    ".github",
-    ".vscode",
-    "devnet",
-    "docs",
     "node_modules",
     "dist",
     "coverage",
