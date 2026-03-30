@@ -45,6 +45,23 @@ describe('service-worker', () => {
     expect(globalThis.browser.storage.local.remove).toHaveBeenCalledWith('pendingAuth');
   });
 
+  it('preserves local pendingAuth when storage.session is unavailable and createdAt is fresh', async () => {
+    delete (globalThis.browser.storage as { session?: unknown }).session;
+    await globalThis.browser.storage.local.set({
+      pendingAuth: {
+        state: 'active-state',
+        codeVerifier: 'active-verifier',
+        createdAt: Date.now() - 60 * 1000,
+      },
+    });
+
+    const entrypoint = await import('@src/entrypoints/background');
+    entrypoint.default.main();
+    await flushPromises();
+
+    expect(globalThis.browser.storage.local.remove).not.toHaveBeenCalled();
+  });
+
   it('clears local pendingAuth when storage.session is unavailable and createdAt is missing', async () => {
     delete (globalThis.browser.storage as { session?: unknown }).session;
     await globalThis.browser.storage.local.set({

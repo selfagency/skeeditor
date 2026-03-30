@@ -1217,6 +1217,30 @@ describe('createDefaultDeps', () => {
       expect(globalThis.browser.storage.session.remove).toHaveBeenCalledWith('pendingAuth');
       expect(globalThis.browser.storage.local.remove).not.toHaveBeenCalled();
     });
+
+    it('falls back to browser.storage.local when browser.storage.session exists but is unusable', async () => {
+      const sessionArea = globalThis.browser.storage.session as unknown as Record<string, unknown>;
+      sessionArea['get'] = undefined;
+      sessionArea['set'] = undefined;
+      sessionArea['remove'] = undefined;
+
+      const deps = createDefaultDeps();
+
+      await deps.storeAuthState('fallback-state', 'fallback-verifier');
+      expect(globalThis.browser.storage.local.set).toHaveBeenCalledWith({
+        pendingAuth: expect.objectContaining({ state: 'fallback-state', codeVerifier: 'fallback-verifier' }),
+      });
+
+      vi.mocked(globalThis.browser.storage.local.get).mockResolvedValueOnce({
+        pendingAuth: { state: 'stored-local-state', codeVerifier: 'stored-local-verifier' },
+      });
+      const state = await deps.getAuthState();
+      expect(globalThis.browser.storage.local.get).toHaveBeenCalledWith('pendingAuth');
+      expect(state).toEqual({ state: 'stored-local-state', codeVerifier: 'stored-local-verifier' });
+
+      await deps.clearAuthState();
+      expect(globalThis.browser.storage.local.remove).toHaveBeenCalledWith('pendingAuth');
+    });
   });
 
   describe('AUTH_LIST_ACCOUNTS', () => {

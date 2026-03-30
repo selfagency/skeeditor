@@ -2,6 +2,7 @@ import { browser } from 'wxt/browser';
 import { defineBackground } from 'wxt/utils/define-background';
 import { registerMessageRouter } from '../background/message-router';
 import { cleanupLabelerWs, connectLabelerWs } from '../background/service-worker';
+import { hasUsableSessionStorage } from '../shared/auth/auth-state-storage';
 import { APP_NAME } from '../shared/constants';
 
 // Tell TypeScript that `self` in this module is a ServiceWorkerGlobalScope,
@@ -9,14 +10,6 @@ import { APP_NAME } from '../shared/constants';
 // defaults to the DOM definition of `self`; this override corrects that for the
 // background entrypoint which only ever runs inside a service worker.
 declare const self: ServiceWorkerGlobalScope & typeof globalThis;
-
-function hasUsableSessionStorage(): boolean {
-  if (!('session' in browser.storage)) return false;
-  const session = (browser.storage as Record<string, unknown>)['session'];
-  if (session === null || typeof session !== 'object') return false;
-  const area = session as Record<string, unknown>;
-  return typeof area['get'] === 'function' && typeof area['set'] === 'function' && typeof area['remove'] === 'function';
-}
 
 export default defineBackground(() => {
   console.info(`${APP_NAME}: background service worker started`);
