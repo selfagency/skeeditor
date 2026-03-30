@@ -37,6 +37,7 @@ export default defineConfig({
             { text: 'Getting Started', link: '/dev/getting-started' },
             { text: 'Project Structure', link: '/dev/project-structure' },
             { text: 'Build System', link: '/dev/build' },
+            { text: 'Releasing', link: '/dev/releasing' },
             { text: 'Testing', link: '/dev/testing' },
             { text: 'Contributing', link: '/dev/contributing' },
           ],

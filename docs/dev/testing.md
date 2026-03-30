@@ -7,18 +7,17 @@ skeeditor has three test layers: unit, integration, and end-to-end. Each targets
 ## Quick reference
 
 ```sh
-pnpm test               # unit + integration (default CI gate)
-pnpm test:unit          # unit only
-pnpm test:integration   # integration only
-pnpm test:e2e           # Playwright E2E (Chrome + Firefox)
-pnpm test:watch         # Vitest in watch mode (unit + integration)
+task test               # unit + integration (default CI gate)
+task test:unit          # unit only
+task test:integration   # integration only
+task test:e2e           # Playwright E2E (Chrome + Firefox)
+task test:watch         # Vitest in watch mode (unit + integration)
 ```
 
 For a coverage report:
 
 ```sh
-pnpm test:coverage   # if the script is configured; otherwise:
-vitest run --coverage --project unit --project integration
+task test:coverage
 ```
 
 ---
@@ -132,21 +131,21 @@ E2E tests load the built extension (from `dist/chrome/` or `dist/firefox/`) into
 The extension must be built before running E2E tests:
 
 ```sh
-pnpm build:chrome && pnpm build:firefox
-pnpm test:e2e
+task build:chrome && task build:firefox
+task test:e2e
 ```
 
 Run only one browser:
 
 ```sh
-pnpm test:e2e:chromium
-pnpm test:e2e:firefox
+task test:e2e:chromium
+task test:e2e:firefox
 ```
 
 List all tests without running:
 
 ```sh
-pnpm test:e2e:list
+task test:e2e:list
 ```
 
 ---
@@ -160,6 +159,7 @@ Automated tests cover the majority of logic, but manual testing in a real browse
 | Tool                                                    | Purpose                |
 | ------------------------------------------------------- | ---------------------- |
 | Node.js 20+ / pnpm 9+                                   | Build toolchain        |
+| task 3.x ([go-task](https://taskfile.dev/))             | Task runner            |
 | Chrome 120+                                             | Chrome manual testing  |
 | Firefox 125+ (Nightly or Developer Edition recommended) | Firefox manual testing |
 | macOS 14+ (Sonoma), Xcode 15+, Safari 17+               | Safari manual testing  |
@@ -167,7 +167,8 @@ Automated tests cover the majority of logic, but manual testing in a real browse
 Install Playwright browsers once if you haven't already (needed for the Xcode helper too):
 
 ```sh
-pnpm exec playwright install chromium firefox
+task playwright:install:chromium
+task playwright:install:firefox
 ```
 
 ---
@@ -179,13 +180,13 @@ pnpm exec playwright install chromium firefox
 One-time build:
 
 ```sh
-pnpm build:chrome
+task build:chrome
 ```
 
 Or start a watch build so the extension rebuilds on every file save:
 
 ```sh
-pnpm build:watch:chrome
+task build:watch:chrome
 ```
 
 #### 2. Load unpacked
@@ -225,13 +226,13 @@ Right-click the extension icon in the toolbar and choose **Inspect popup**. DevT
 #### 1. Build the Firefox extension
 
 ```sh
-pnpm build:firefox
+task build:firefox
 ```
 
 Or watch mode:
 
 ```sh
-pnpm build:watch:firefox
+task build:watch:firefox
 ```
 
 #### 2a. Load via `about:debugging` (no extra tools)
@@ -247,9 +248,7 @@ The extension loads as a temporary add-on and appears in the list. Temporary add
 `web-ext` is included as a dev dependency:
 
 ```sh
-pnpm exec web-ext run \
-  --source-dir dist/firefox/ \
-  --firefox=nightly        # or: --firefox=deved
+task webext:run:firefox
 ```
 
 `web-ext` launches a clean Firefox profile with the extension pre-loaded and **automatically reloads** the extension whenever files in `dist/firefox/` change, making watch-mode iteration much smoother.
@@ -283,7 +282,7 @@ Safari requires every extension to ship as a **macOS app wrapper**. The build sc
 #### 1. Build and convert the Safari extension
 
 ```sh
-pnpm build:safari
+task build:safari
 ```
 
 This runs Vite for the `safari` target and then executes the converter. The Xcode project lands at **`dist/safari-xcode/`**.
@@ -345,7 +344,7 @@ Click the extension icon to open the popup, then go to **Develop → (your Mac n
 
 After any source change:
 
-1. Run `pnpm build:safari` again (the converter adds `--force` to overwrite).
+1. Run `task build:safari` again (the converter adds `--force` to overwrite).
 2. In Safari Settings → Extensions, toggle the extension off and on to reload it.
 
 You do **not** need to re-run the Xcode app unless the app wrapper itself has changed.

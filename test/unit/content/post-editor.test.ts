@@ -25,10 +25,7 @@ describe('post-editor', () => {
       langs: ['en'],
     });
     expect(nextRecord.facets).toHaveLength(1);
-    expect(nextRecord.labels).toEqual({
-      $type: 'com.atproto.label.defs#selfLabels',
-      values: [{ $type: 'com.atproto.label.defs#selfLabel', val: 'edited' }],
-    });
+    expect(nextRecord.labels).toBeUndefined();
     expect(nextRecord.tags).toBeDefined();
     expect(nextRecord.tags).toHaveLength(1);
     expect(nextRecord.tags?.[0]).toMatch(/^skeeditor-edit-/);
@@ -56,10 +53,7 @@ describe('post-editor', () => {
     const nextRecord = buildUpdatedPostRecord(currentRecord, 'Plain post text');
 
     expect(nextRecord).not.toHaveProperty('facets');
-    expect(nextRecord.labels).toEqual({
-      $type: 'com.atproto.label.defs#selfLabels',
-      values: [{ $type: 'com.atproto.label.defs#selfLabel', val: 'edited' }],
-    });
+    expect(nextRecord.labels).toBeUndefined();
     expect(nextRecord.tags).toBeDefined();
     expect(nextRecord.tags).toHaveLength(1);
     expect(nextRecord.tags?.[0]).toMatch(/^skeeditor-edit-/);
@@ -88,10 +82,7 @@ describe('post-editor', () => {
         }),
       ]),
     );
-    expect(nextRecord.labels).toEqual({
-      $type: 'com.atproto.label.defs#selfLabels',
-      values: [{ $type: 'com.atproto.label.defs#selfLabel', val: 'edited' }],
-    });
+    expect(nextRecord.labels).toBeUndefined();
     expect(nextRecord.tags).toBeDefined();
     expect(nextRecord.tags).toHaveLength(1);
     expect(nextRecord.tags?.[0]).toMatch(/^skeeditor-edit-/);
@@ -121,16 +112,13 @@ describe('post-editor', () => {
         }),
       ]),
     );
-    expect(nextRecord.labels).toEqual({
-      $type: 'com.atproto.label.defs#selfLabels',
-      values: [{ $type: 'com.atproto.label.defs#selfLabel', val: 'edited' }],
-    });
+    expect(nextRecord.labels).toBeUndefined();
     expect(nextRecord.tags).toBeDefined();
     expect(nextRecord.tags).toHaveLength(1);
     expect(nextRecord.tags?.[0]).toMatch(/^skeeditor-edit-/);
   });
 
-  it('should add edited self-label to all updated posts', () => {
+  it('should not add edited self-labels to updated posts', () => {
     const currentRecord: EditablePostRecord = {
       $type: 'app.bsky.feed.post' as const,
       text: 'Original text',
@@ -139,11 +127,7 @@ describe('post-editor', () => {
 
     const nextRecord = buildUpdatedPostRecord(currentRecord, 'Updated text');
 
-    expect(nextRecord.labels).toBeDefined();
-    expect(nextRecord.labels).toEqual({
-      $type: 'com.atproto.label.defs#selfLabels',
-      values: [{ $type: 'com.atproto.label.defs#selfLabel', val: 'edited' }],
-    });
+    expect(nextRecord.labels).toBeUndefined();
   });
 
   it('should preserve existing labels when present', () => {
@@ -159,10 +143,10 @@ describe('post-editor', () => {
 
     const nextRecord = buildUpdatedPostRecord(currentRecord, 'Updated text');
 
-    // Should preserve existing labels and add edited label
+    // Should preserve existing labels unchanged
     expect(nextRecord.labels).toBeDefined();
     expect(nextRecord.labels?.values).toContainEqual({ $type: 'com.atproto.label.defs#selfLabel', val: 'bot' });
-    expect(nextRecord.labels?.values).toContainEqual({ $type: 'com.atproto.label.defs#selfLabel', val: 'edited' });
+    expect(nextRecord.labels?.values).toHaveLength(1);
     // Should also add edit history tag
     expect(nextRecord.tags).toBeDefined();
     expect(nextRecord.tags).toHaveLength(1);

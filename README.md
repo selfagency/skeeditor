@@ -54,17 +54,17 @@ pnpm install
 ### Build
 
 ```sh
-pnpm build:chrome    # → dist/chrome/
-pnpm build:firefox   # → dist/firefox/
-pnpm build:safari    # → dist/safari/ (macOS, requires Xcode)
-pnpm build           # alias for build:chrome
+task build:chrome   # → dist/chrome/
+task build:firefox  # → dist/firefox/
+task build:safari   # → dist/safari/
+task build          # alias for build:chrome
 ```
 
 Watch mode:
 
 ```sh
-pnpm build:watch:chrome
-pnpm build:watch:firefox
+task build:watch:chrome
+task build:watch:firefox
 ```
 
 ### Load in your browser
@@ -97,28 +97,28 @@ See `.vscode/launch.json` and `.vscode/tasks.json` for full configuration detail
 ### Test
 
 ```sh
-pnpm test               # unit + integration
-pnpm test:unit          # Vitest (jsdom + browser API mocks)
-pnpm test:integration   # Vitest + MSW (HTTP mocking)
-pnpm test:e2e           # Playwright (Chrome + Firefox, requires built dist/)
-pnpm test:watch         # watch mode
+task test               # unit + integration
+task test:unit          # Vitest (jsdom + browser API mocks)
+task test:integration   # Vitest + MSW (HTTP mocking)
+task test:e2e           # Playwright (Chrome + Firefox, requires built dist/)
+task test:watch         # watch mode
 ```
 
 ### Code quality
 
 ```sh
-pnpm lint          # oxlint
-pnpm format        # oxfmt (write)
-pnpm format:check  # oxfmt (check only)
-pnpm typecheck     # tsc --noEmit
+task lint          # oxlint
+task format        # oxfmt (write)
+task format:check  # oxfmt (check only)
+task typecheck     # tsc --noEmit
 ```
 
 ### Lexicons
 
 ```sh
-pnpm lex:install   # download AT Protocol lexicon JSON files
-pnpm lex:build     # compile lexicons → TypeScript types in src/lexicons/
-pnpm lex:sync      # both steps in order
+task lex:install   # download AT Protocol lexicon JSON files
+task lex:build     # compile lexicons → TypeScript types in src/lexicons/
+task lex:sync      # both steps in order
 ```
 
 ---

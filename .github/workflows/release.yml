@@ -1,0 +1,120 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Run in dry-run mode (build/package only; no store publish)"
+        required: true
+        type: boolean
+        default: true
+      publish_chrome:
+        description: "Publish to Chrome Web Store"
+        required: true
+        type: boolean
+        default: false
+      publish_firefox:
+        description: "Sign/publish to Firefox AMO via web-ext"
+        required: true
+        type: boolean
+        default: false
+      publish_edge:
+        description: "Publish to Edge Add-ons via EDGE_PUBLISH_COMMAND"
+        required: true
+        type: boolean
+        default: false
+      skip_checks:
+        description: "Skip lint/typecheck/tests"
+        required: true
+        type: boolean
+        default: false
+      skip_tests:
+        description: "Skip test suites while keeping lint/typecheck"
+        required: true
+        type: boolean
+        default: false
+      skip_safari:
+        description: "Skip Safari build"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build/package/publish release
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Task
+        uses: go-task/setup-task@v1
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: task install:ci
+
+      - name: Run release script
+        env:
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          FIREFOX_API_KEY: ${{ secrets.FIREFOX_API_KEY }}
+          FIREFOX_API_SECRET: ${{ secrets.FIREFOX_API_SECRET }}
+          EDGE_PUBLISH_COMMAND: ${{ secrets.EDGE_PUBLISH_COMMAND }}
+        run: |
+          set -euo pipefail
+
+          ARGS=()
+
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            ARGS+=("--dry-run")
+          fi
+          if [ "${{ inputs.publish_chrome }}" = "true" ]; then
+            ARGS+=("--publish-chrome")
+          fi
+          if [ "${{ inputs.publish_firefox }}" = "true" ]; then
+            ARGS+=("--publish-firefox")
+          fi
+          if [ "${{ inputs.publish_edge }}" = "true" ]; then
+            ARGS+=("--publish-edge")
+          fi
+          if [ "${{ inputs.skip_checks }}" = "true" ]; then
+            ARGS+=("--skip-checks")
+          fi
+          if [ "${{ inputs.skip_tests }}" = "true" ]; then
+            ARGS+=("--skip-tests")
+          fi
+          if [ "${{ inputs.skip_safari }}" = "true" ]; then
+            ARGS+=("--skip-safari")
+          fi
+
+          task release -- "${ARGS[@]}"
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: |
+            release-artifacts/**
+            release-artifacts-*/**
+          if-no-files-found: error

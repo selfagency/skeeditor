@@ -14,11 +14,11 @@ by Firefox and Safari.
 
 | Browser | Build command        | Output directory |
 | :------ | :------------------- | :--------------- |
-| Chrome  | `pnpm build:chrome`  | `dist/chrome/`   |
-| Firefox | `pnpm build:firefox` | `dist/firefox/`  |
-| Safari  | `pnpm build:safari`  | `dist/safari/`   |
+| Chrome  | `task build:chrome`  | `dist/chrome/`   |
+| Firefox | `task build:firefox` | `dist/firefox/`  |
+| Safari  | `task build:safari`  | `dist/safari/`   |
 
-The default `pnpm build` alias targets Chrome.
+The default `task build` target builds Chrome.
 
 Each build writes a merged manifest to `dist/<browser>/manifest.json` by
 combining `manifests/base.json` with the per-browser overlay at
@@ -28,17 +28,17 @@ combining `manifests/base.json` with the per-browser overlay at
 
 ### Chrome
 
-1. `pnpm build:chrome` (or `pnpm dev` for watch mode)
+1. `task build:chrome` (or `task dev` for watch mode)
 2. Open `chrome://extensions/`, enable **Developer mode**
 3. **Load unpacked** → select `dist/chrome/`
 4. After code changes, click the reload icon in the Extensions page
 
 ### Firefox
 
-1. `pnpm build:firefox`
-2. `npx web-ext run --source-dir dist/firefox/ --firefox=nightly`
+1. `task build:firefox`
+2. `task webext:run:firefox`
    - `web-ext` automatically reloads the extension on file changes when combined
-     with `pnpm build:watch:firefox` (so the watcher writes to `dist/firefox/`)
+  with `task build:watch:firefox` (so the watcher writes to `dist/firefox/`)
 3. Or: `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on** →
    select `dist/firefox/manifest.json`
 
@@ -46,7 +46,7 @@ combining `manifests/base.json` with the per-browser overlay at
 
 > **Requires Safari 17+** (macOS 14 Sonoma; first version to fully support Manifest V3 web extensions).
 
-1. `pnpm build:safari`
+1. `task build:safari`
 2. Convert the output to a native Safari extension:
 
    ```sh

@@ -68,24 +68,6 @@ export function buildUpdatedPostRecord(
     delete nextRecord.facets;
   }
 
-  // Add self-label to indicate this post has been edited (dedupe and cap at 8)
-  const existingLabels = currentRecord.labels?.values || [];
-  const hasEditedLabel = existingLabels.some(label => label.val === 'edited');
-  const labelsWithoutEdited = existingLabels.filter(label => label.val !== 'edited');
-  const cappedLabels = labelsWithoutEdited.slice(0, 7); // leave room for 'edited'
-  nextRecord.labels = {
-    $type: 'com.atproto.label.defs#selfLabels',
-    values: hasEditedLabel
-      ? existingLabels.slice(0, 8)
-      : [
-          ...cappedLabels,
-          {
-            $type: 'com.atproto.label.defs#selfLabel',
-            val: 'edited',
-          },
-        ],
-  };
-
   // Store edit history metadata using tags (dedupe and cap at 8)
   const currentContentHash = simpleHash(currentRecord.text);
   const newTag = `skeeditor-edit-${currentContentHash}`;

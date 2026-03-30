@@ -82,18 +82,18 @@ dist/chrome/
 
 | Command                    | Description                                          |
 | -------------------------- | ---------------------------------------------------- |
-| `pnpm build`               | Build for Chrome (production, one-shot)              |
-| `pnpm build:chrome`        | Same as above                                        |
-| `pnpm build:firefox`       | Build for Firefox                                    |
-| `pnpm build:safari`        | Build for Safari                                     |
-| `pnpm build:repo`          | Build all three browser targets in sequence          |
-| `pnpm dev`                 | Start WXT dev server for Chrome (watch + hot-reload) |
-| `pnpm build:watch`         | Watch mode for Chrome                                |
-| `pnpm build:watch:chrome`  | Watch mode for Chrome                                |
-| `pnpm build:watch:firefox` | Watch mode for Firefox                               |
-| `pnpm clean`               | Remove `dist/` and `.wxt/`                           |
+| `task build`               | Build for Chrome (production, one-shot)              |
+| `task build:chrome`        | Same as above                                        |
+| `task build:firefox`       | Build for Firefox                                    |
+| `task build:safari`        | Build for Safari                                     |
+| `task build:all`           | Build all three browser targets in sequence          |
+| `task dev`                 | Start WXT dev server for Chrome (watch + hot-reload) |
+| `task build:watch`         | Watch mode for Chrome                                |
+| `task build:watch:chrome`  | Watch mode for Chrome                                |
+| `task build:watch:firefox` | Watch mode for Firefox                               |
+| `task clean`               | Remove `dist/` and `.wxt/`                           |
 
-Each build command first runs `pnpm lex:build` to keep generated Lexicon types up to date before invoking WXT.
+Each build command first runs `task lex:build` to keep generated Lexicon types up to date before invoking WXT.
 
 ---
 
@@ -102,12 +102,12 @@ Each build command first runs `pnpm lex:build` to keep generated Lexicon types u
 AT Protocol Lexicons define the XRPC schema for every API call. The pipeline keeps TypeScript types in `src/lexicons/` in sync with the upstream Lexicon JSON files in `lexicons/`.
 
 ```sh
-pnpm lex:install    # Download/update Lexicon JSON from the AT Protocol registry
-pnpm lex:build      # Compile lexicon JSON → TypeScript types in src/lexicons/
-pnpm lex:sync       # Both steps in order (install then build)
+task lex:install    # Download/update Lexicon JSON from the AT Protocol registry
+task lex:build      # Compile lexicon JSON → TypeScript types in src/lexicons/
+task lex:sync       # Both steps in order (install then build)
 ```
 
-Generated types are committed. `lex:build` runs automatically before `pnpm build`, `pnpm typecheck`, and `pnpm test:unit`.
+Generated types are committed. `lex:build` runs automatically before `build:*`, `typecheck`, and `test:unit` Task targets.
 
 ---
 
@@ -127,7 +127,7 @@ Extension icons are generated automatically from a single SVG source file via th
 ## Safari build
 
 ```sh
-pnpm build:safari
+task build:safari
 xcrun safari-web-extension-converter dist/safari \
   --project-location ./safari-xcode \
   --app-name skeeditor \
@@ -141,7 +141,7 @@ Run the first command to produce `dist/safari/`, then use the Apple converter to
 
 ## Generated files (`.wxt/`)
 
-Running `pnpm postinstall` (or `wxt prepare`) generates TypeScript type stubs for WXT APIs in `.wxt/`. These stubs are needed for type-checking but are not committed to source control. If you see type errors after a fresh checkout, run:
+Running `pnpm install` (which triggers `postinstall`) generates TypeScript type stubs for WXT APIs in `.wxt/`. These stubs are needed for type-checking but are not committed to source control. If you see type errors after a fresh checkout, run:
 
 ```sh
 pnpm install   # triggers postinstall → wxt prepare automatically

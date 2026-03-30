@@ -22,6 +22,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install Task
+        uses: go-task/setup-task@v1
+
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
 
@@ -32,16 +35,16 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: task install:ci
 
       - name: Check formatting
-        run: pnpm format:check
+        run: task format:check
 
       - name: Lint sources
-        run: pnpm lint
+        run: task lint
 
       - name: Type-check project
-        run: pnpm typecheck
+        run: task typecheck
 
   unit-tests:
     name: Unit tests
@@ -51,6 +54,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install Task
+        uses: go-task/setup-task@v1
+
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
 
@@ -61,10 +67,10 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: task install:ci
 
       - name: Run unit tests
-        run: pnpm test:unit
+        run: task test:unit
 
   integration-tests:
     name: Integration tests
@@ -74,6 +80,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install Task
+        uses: go-task/setup-task@v1
+
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
 
@@ -84,10 +93,10 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: task install:ci
 
       - name: Run integration tests
-        run: pnpm test:integration
+        run: task test:integration
 
   build:
     name: Build extension artifacts
@@ -97,6 +106,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install Task
+        uses: go-task/setup-task@v1
+
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
 
@@ -107,10 +119,10 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: task install:ci
 
       - name: Build extension (all browsers)
-        run: pnpm build:chrome && pnpm build:firefox
+        run: task build:chrome && task build:firefox
 
       - name: Copy browser manifests
         run: |
@@ -136,6 +148,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install Task
+        uses: go-task/setup-task@v1
+
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
 
@@ -146,7 +161,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: task install:ci
 
       - name: Get Playwright version
         id: pw-version
@@ -160,7 +175,7 @@ jobs:
           restore-keys: playwright-chromium-${{ runner.os }}-
 
       - name: Install Playwright Chromium with system dependencies
-        run: pnpm exec playwright install --with-deps chromium
+        run: task playwright:install:chromium
 
       - name: Download built extension artifact
         uses: actions/download-artifact@v4
@@ -169,7 +184,7 @@ jobs:
           path: dist
 
       - name: Run Chromium extension smoke tests
-        run: pnpm test:e2e:chromium
+        run: task test:e2e:chromium
 
   e2e-chromium-devnet:
     name: Playwright Chromium E2E (devnet)
@@ -186,6 +201,9 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Install Task
+        uses: go-task/setup-task@v1
+
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
 
@@ -196,7 +214,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: task install:ci
 
       - name: Get Playwright version
         id: pw-version
@@ -210,7 +228,7 @@ jobs:
           restore-keys: playwright-chromium-${{ runner.os }}-
 
       - name: Install Playwright Chromium with system dependencies
-        run: pnpm exec playwright install --with-deps chromium
+        run: task playwright:install:chromium
 
       - name: Download built extension artifact
         uses: actions/download-artifact@v4
@@ -219,14 +237,14 @@ jobs:
           path: dist
 
       - name: Start devnet stack
-        run: bash scripts/devnet-up.sh
+        run: task devnet:up
 
       - name: Run Chromium devnet E2E tests
-        run: pnpm test:e2e:chromium:devnet
+        run: task test:e2e:chromium:devnet
 
       - name: Stop devnet stack
         if: always()
-        run: bash scripts/devnet-down.sh
+        run: task devnet:down
 
   e2e-firefox-devnet:
     name: Playwright Firefox E2E (devnet)
@@ -243,6 +261,9 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Install Task
+        uses: go-task/setup-task@v1
+
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
 
@@ -253,7 +274,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: task install:ci
 
       - name: Get Playwright version
         id: pw-version
@@ -267,7 +288,7 @@ jobs:
           restore-keys: playwright-firefox-${{ runner.os }}-
 
       - name: Install Playwright Firefox with system dependencies
-        run: pnpm exec playwright install --with-deps firefox
+        run: task playwright:install:firefox
 
       - name: Download built extension artifact
         uses: actions/download-artifact@v4
@@ -276,13 +297,49 @@ jobs:
           path: dist
 
       - name: Start devnet stack
-        run: bash scripts/devnet-up.sh
+        run: task devnet:up
 
       - name: Run Firefox devnet E2E tests
-        run: pnpm test:e2e:firefox:devnet
+        run: task test:e2e:firefox:devnet
         env:
           FIREFOX_EXTENSION_E2E: "1"
 
       - name: Stop devnet stack
         if: always()
-        run: bash scripts/devnet-down.sh
+        run: task devnet:down
+
+  release-smoke:
+    name: Release automation smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs:
+      - quality
+      - build
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Task
+        uses: go-task/setup-task@v1
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: task install:ci
+
+      - name: Smoke-test release script (dry-run)
+        run: task release:smoke
+
+      - name: Upload release smoke artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts-ci
+          path: release-artifacts-ci/**
+          if-no-files-found: error

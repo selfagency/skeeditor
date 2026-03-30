@@ -1,0 +1,314 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: '3'
+
+set:
+  - errexit
+  - nounset
+  - pipefail
+
+method: none
+
+tasks:
+  default:
+    desc: List available tasks
+    cmd: '{{.TASK_EXE}} --list'
+    silent: true
+
+  install:
+    desc: Install workspace dependencies
+    cmd: pnpm install
+
+  install:ci:
+    desc: Install workspace dependencies with a frozen lockfile
+    cmd: pnpm install --frozen-lockfile
+
+  postinstall:
+    desc: Generate WXT type stubs after install
+    cmd: ./node_modules/.bin/wxt prepare
+
+  prepare:
+    desc: Install Husky hooks
+    cmd: ./node_modules/.bin/husky install
+
+  clean:
+    desc: Remove build outputs
+    cmd: ./node_modules/.bin/rimraf dist .wxt
+
+  format:
+    desc: Format repository files with oxfmt
+    cmd: ./node_modules/.bin/oxfmt . --write
+
+  format:check:
+    desc: Check repository formatting with oxfmt
+    cmd: ./node_modules/.bin/oxfmt . --check
+
+  lint:
+    desc: Lint the repository with oxlint
+    cmd: ./node_modules/.bin/oxlint .
+
+  lint:fix:
+    desc: Auto-fix lint findings with oxlint
+    cmd: ./node_modules/.bin/oxlint . --fix
+
+  lex:install:
+    desc: Download AT Protocol lexicon JSON files
+    cmd: >-
+      pnpm exec lex install
+      app.bsky.feed.post
+      app.bsky.actor.profile
+      com.atproto.repo.createRecord
+      com.atproto.repo.deleteRecord
+      com.atproto.repo.describeRepo
+      com.atproto.repo.getRecord
+      com.atproto.repo.listRecords
+      com.atproto.repo.putRecord
+      com.atproto.repo.uploadBlob
+
+  lex:build:
+    desc: Compile lexicons into TypeScript types
+    cmd: >-
+      pnpm exec lex build --clear --lexicons ./lexicons --out ./src/lexicons
+      && ./node_modules/.bin/tsx scripts/prepare-generated-lexicons.ts
+
+  lex:sync:
+    desc: Download and rebuild lexicons
+    cmds:
+      - task: 'lex:install'
+      - task: 'lex:build'
+
+  build:
+    desc: Build the Chrome extension
+    cmds:
+      - task: 'build:chrome'
+
+  build:all:
+    desc: Build all browser targets
+    aliases: ['build:repo']
+    cmds:
+      - task: 'build:chrome'
+      - task: 'build:firefox'
+      - task: 'build:safari'
+
+  build:browser:
+    internal: true
+    requires:
+      vars:
+        - name: BROWSER
+          enum: ['chrome', 'firefox', 'safari']
+    cmds:
+      - task: 'lex:build'
+      - cmd: ./node_modules/.bin/wxt build -b {{.BROWSER}} {{.CLI_ARGS}}
+
+  build:chrome:
+    desc: Build the Chrome extension
+    cmds:
+      - task: 'build:browser'
+        vars:
+          BROWSER: chrome
+
+  build:firefox:
+    desc: Build the Firefox extension
+    cmds:
+      - task: 'build:browser'
+        vars:
+          BROWSER: firefox
+
+  build:safari:
+    desc: Build the Safari extension bundle
+    cmds:
+      - task: 'build:browser'
+        vars:
+          BROWSER: safari
+
+  build:watch:
+    desc: Watch-build the Chrome extension
+    cmds:
+      - task: 'build:watch:chrome'
+
+  dev:
+    desc: Start the Chrome watch build
+    cmds:
+      - task: 'build:watch:chrome'
+
+  build:watch:browser:
+    internal: true
+    requires:
+      vars:
+        - name: BROWSER
+          enum: ['chrome', 'firefox', 'safari']
+    cmd: ./node_modules/.bin/wxt -b {{.BROWSER}} {{.CLI_ARGS}}
+
+  build:watch:chrome:
+    desc: Watch-build the Chrome extension
+    cmds:
+      - task: 'build:watch:browser'
+        vars:
+          BROWSER: chrome
+
+  build:watch:firefox:
+    desc: Watch-build the Firefox extension
+    cmds:
+      - task: 'build:watch:browser'
+        vars:
+          BROWSER: firefox
+
+  build:watch:safari:
+    desc: Watch-build the Safari extension bundle
+    cmds:
+      - task: 'build:watch:browser'
+        vars:
+          BROWSER: safari
+
+  typecheck:
+    desc: Run TypeScript type-checking
+    cmds:
+      - task: 'lex:build'
+      - cmd: ./node_modules/.bin/tsc --project tsconfig.build.json --noEmit
+
+  test:
+    desc: Run unit and integration tests
+    cmds:
+      - task: 'test:unit'
+      - task: 'test:integration'
+
+  test:unit:
+    desc: Run unit tests
+    cmds:
+      - task: 'lex:build'
+      - cmd: ./node_modules/.bin/vitest run --project unit {{.CLI_ARGS}}
+
+  test:integration:
+    desc: Run integration tests
+    cmd: ./node_modules/.bin/vitest run --project integration {{.CLI_ARGS}}
+
+  test:watch:
+    desc: Run Vitest in watch mode
+    cmd: ./node_modules/.bin/vitest --project unit --project integration {{.CLI_ARGS}}
+
+  test:coverage:
+    desc: Run unit and integration tests with coverage
+    cmd: ./node_modules/.bin/vitest run --coverage --project unit --project integration {{.CLI_ARGS}}
+
+  test:e2e:
+    desc: Run Playwright end-to-end tests
+    cmd: ./node_modules/.bin/playwright test {{.CLI_ARGS}}
+
+  test:e2e:list:
+    desc: List Playwright end-to-end tests
+    cmd: ./node_modules/.bin/playwright test --list {{.CLI_ARGS}}
+
+  test:e2e:project:
+    internal: true
+    requires:
+      vars:
+        - name: PROJECT
+          enum: ['chromium-extension', 'firefox-extension', 'chromium-devnet', 'firefox-devnet']
+    cmd: ./node_modules/.bin/playwright test --project={{.PROJECT}} {{.CLI_ARGS}}
+
+  test:e2e:chromium:
+    desc: Run Playwright Chromium extension tests
+    cmds:
+      - task: 'test:e2e:project'
+        vars:
+          PROJECT: chromium-extension
+
+  test:e2e:firefox:
+    desc: Run Playwright Firefox extension tests
+    cmds:
+      - task: 'test:e2e:project'
+        vars:
+          PROJECT: firefox-extension
+
+  test:e2e:chromium:devnet:
+    desc: Run Playwright Chromium devnet tests
+    cmds:
+      - task: 'test:e2e:project'
+        vars:
+          PROJECT: chromium-devnet
+
+  test:e2e:firefox:devnet:
+    desc: Run Playwright Firefox devnet tests
+    cmds:
+      - task: 'test:e2e:project'
+        vars:
+          PROJECT: firefox-devnet
+
+  playwright:install:browser:
+    internal: true
+    requires:
+      vars:
+        - name: BROWSER
+          enum: ['chromium', 'firefox']
+    cmd: pnpm exec ./node_modules/.bin/playwright install --with-deps {{.BROWSER}} {{.CLI_ARGS}}
+
+  playwright:install:chromium:
+    desc: Install Playwright Chromium browser dependencies
+    cmds:
+      - task: 'playwright:install:browser'
+        vars:
+          BROWSER: chromium
+
+  playwright:install:firefox:
+    desc: Install Playwright Firefox browser dependencies
+    cmds:
+      - task: 'playwright:install:browser'
+        vars:
+          BROWSER: firefox
+
+  devnet:up:
+    desc: Start the local devnet stack
+    cmd: bash scripts/devnet-up.sh
+
+  devnet:down:
+    desc: Stop the local devnet stack
+    cmd: bash scripts/devnet-down.sh
+
+  devnet:logs:
+    desc: Tail local devnet logs
+    cmd: docker compose -f devnet/docker-compose.yml -f devnet/docker-compose.test.yml --project-directory devnet logs -f
+
+  webext:lint:firefox:
+    desc: Lint the Firefox extension package with web-ext
+    cmds:
+      - task: 'build:firefox'
+      - cmd: ./node_modules/.bin/web-ext lint --source-dir dist/firefox {{.CLI_ARGS}}
+
+  webext:run:firefox:
+    desc: Launch Firefox with the extension loaded via web-ext
+    cmds:
+      - task: 'build:firefox'
+      - cmd: ./node_modules/.bin/web-ext run --source-dir dist/firefox --firefox=nightly {{.CLI_ARGS}}
+
+  docs:dev:
+    desc: Start the VitePress docs dev server
+    cmd: ./node_modules/.bin/vitepress dev docs {{.CLI_ARGS}}
+
+  docs:build:
+    desc: Build the VitePress docs site
+    cmd: ./node_modules/.bin/vitepress build docs {{.CLI_ARGS}}
+
+  docs:preview:
+    desc: Preview the built VitePress docs site
+    cmd: ./node_modules/.bin/vitepress preview docs {{.CLI_ARGS}}
+
+  release:
+    desc: Run the release script with extra flags after --
+    cmd: node scripts/release.mjs {{.CLI_ARGS}}
+
+  release:dry-run:
+    desc: Run the release script in dry-run mode
+    cmd: node scripts/release.mjs --dry-run
+
+  release:prepare:
+    desc: Prepare release artifacts quickly (skip tests)
+    cmd: node scripts/release.mjs --dry-run --skip-tests
+
+  release:publish:
+    desc: Publish release artifacts to configured stores
+    prompt:
+      - 'Publish extension artifacts to the configured stores?'
+    cmd: node scripts/release.mjs --publish-chrome --publish-firefox --publish-edge
+
+  release:smoke:
+    desc: Smoke-test release automation in CI/local dry-run mode
+    cmd: node scripts/release.mjs --dry-run --skip-checks --skip-tests --skip-safari --artifacts-dir release-artifacts-ci

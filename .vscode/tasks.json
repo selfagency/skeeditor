@@ -9,7 +9,7 @@
     {
       "label": "Build Chrome (watch)",
       "type": "shell",
-      "command": "pnpm run build:watch:chrome",
+      "command": "pnpm exec task build:watch:chrome",
       "isBackground": true,
       "problemMatcher": {
         "owner": "vite",
@@ -42,7 +42,7 @@
     {
       "label": "Build Chrome (once)",
       "type": "shell",
-      "command": "pnpm run build:chrome",
+      "command": "pnpm exec task build:chrome",
       "problemMatcher": [],
       "group": {
         "kind": "build",
