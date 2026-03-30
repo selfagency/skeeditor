@@ -1,11 +1,11 @@
 ---
 # skeeditor-rx2q
 title: Fix media upload and stale edit display issues
-status: in-progress
+status: completed
 type: fix
 priority: high
 created_at: 2026-03-30T05:25:28Z
-updated_at: 2026-03-30T05:25:44Z
+updated_at: 2026-03-30T05:32:41Z
 ---
 
 ---
