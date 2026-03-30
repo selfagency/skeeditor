@@ -1,7 +1,7 @@
 ---
 # skeeditor-d3m1
 title: '2026 follow-up remediation: security, correctness, docs, and CI coverage'
-status: todo
+status: in-progress
 type: epic
 priority: critical
 created_at: 2026-03-30T14:03:47Z
