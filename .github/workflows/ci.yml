@@ -46,10 +46,12 @@ jobs:
       - name: Type-check project
         run: task typecheck
 
-  unit-tests:
-    name: Unit tests
+  tests:
+    name: Unit, integration tests and coverage
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -69,34 +71,29 @@ jobs:
       - name: Install dependencies
         run: task install:ci
 
-      - name: Run unit tests
-        run: task test:unit
+      - name: Run tests with coverage and JUnit output
+        run: task test:coverage:ci
 
-  integration-tests:
-    name: Integration tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Task
-        uses: go-task/setup-task@v1
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
         with:
-          node-version: 20.19.0
-          cache: pnpm
+          name: coverage-artifacts
+          path: |
+            coverage/**
+            test-report.junit.xml
+          if-no-files-found: error
 
-      - name: Install dependencies
-        run: task install:ci
+      - name: Upload coverage reports to Codecov
+        if: !cancelled() && env.CODECOV_TOKEN != ''
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ env.CODECOV_TOKEN }}
 
-      - name: Run integration tests
-        run: task test:integration
+      - name: Upload test results to Codecov
+        if: !cancelled() && env.CODECOV_TOKEN != ''
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ env.CODECOV_TOKEN }}
 
   build:
     name: Build extension artifacts
@@ -141,8 +138,7 @@ jobs:
     timeout-minutes: 20
     needs:
       - quality
-      - unit-tests
-      - integration-tests
+      - tests
       - build
     steps:
       - name: Checkout repository
@@ -192,8 +188,7 @@ jobs:
     timeout-minutes: 30
     needs:
       - quality
-      - unit-tests
-      - integration-tests
+      - tests
       - build
     steps:
       - name: Checkout repository (with submodules)
@@ -252,8 +247,7 @@ jobs:
     timeout-minutes: 30
     needs:
       - quality
-      - unit-tests
-      - integration-tests
+      - tests
       - build
     steps:
       - name: Checkout repository (with submodules)
