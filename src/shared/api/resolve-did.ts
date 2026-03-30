@@ -2,7 +2,9 @@
  * Resolve a DID to get the PDS URL from the DID document.
  *
  * For did:plc, resolves via https://plc.directory/did/{did}
- * For did:web, resolves via https://{domain}/.well-known/did.json
+ * For did:web, resolves per the W3C did:web spec:
+ *   - did:web:example.com              -> https://example.com/.well-known/did.json
+ *   - did:web:example.com:user:alice   -> https://example.com/user/alice/did.json
  */
 
 export interface DidDocument {
@@ -94,12 +96,43 @@ async function resolveDidPlc(did: string): Promise<DidDocument> {
 }
 
 /**
+ * Build the resolution URL for a did:web identifier per the W3C did:web spec.
+ *
+ * - `did:web:example.com` -> `https://example.com/.well-known/did.json`
+ * - `did:web:example.com:user:alice` -> `https://example.com/user/alice/did.json`
+ * - Colons after the first (host) segment are treated as path separators.
+ * - Each segment is percent-decoded individually (handles encoded ports, etc.).
+ */
+export function buildDidWebUrl(did: string): string {
+  if (!did.startsWith('did:web:')) {
+    throw new DidResolutionError('Invalid did:web identifier: must start with did:web:', did);
+  }
+
+  const withoutPrefix = did.slice('did:web:'.length);
+
+  if (!withoutPrefix) {
+    throw new DidResolutionError('Invalid did:web identifier: empty method-specific identifier', did);
+  }
+
+  // Split on ':' to separate host from optional path segments
+  const segments = withoutPrefix.split(':');
+
+  // Decode each segment individually (e.g. 'example.com%3A8080' -> 'example.com:8080')
+  const decodedSegments = segments.map(s => decodeURIComponent(s));
+  const [host, ...pathSegments] = decodedSegments;
+
+  if (pathSegments.length === 0) {
+    return `https://${host}/.well-known/did.json`;
+  }
+
+  return `https://${host}/${pathSegments.join('/')}/did.json`;
+}
+
+/**
  * Resolve a did:web to its DID document.
  */
 async function resolveDidWeb(did: string): Promise<DidDocument> {
-  const didWithoutPrefix = did.slice('did:web:'.length);
-  const domain = decodeURIComponent(didWithoutPrefix);
-  const url = `https://${domain}/.well-known/did.json`;
+  const url = buildDidWebUrl(did);
 
   const response = await fetch(url, {
     headers: {
