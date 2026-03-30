@@ -4,6 +4,7 @@ title: Fix GitHub Actions YAML parse error in Codecov if condition
 status: completed
 type: bug
 priority: high
+branch: fix/t3gn-codecov-if-yaml
 created_at: 2026-03-30T18:18:53Z
 updated_at: 2026-03-30T18:19:57Z
 ---
