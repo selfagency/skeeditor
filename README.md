@@ -18,7 +18,7 @@ It authenticates via OAuth 2.0 + PKCE, fetches the actual record from the Bluesk
 - **👥 Multi-account** — sign in with multiple Bluesky accounts and switch between them from the toolbar popup
 - **🏷️ Edited label** — posts you edit are marked with an "edited" label via the Skeeditor labeler service (opt-in; requires subscribing to `@skeeditor.link`)
 - **⏱️ Edit time limit** — optionally configure a 0.5–5 minute window after posting during which the Edit button is active
-- **🔒 Secure by design** — OAuth 2.0 + PKCE + DPoP; tokens stored only in extension storage, never sent to any third party
+- **🔒 Secure by design** — OAuth 2.0 + PKCE + DPoP; tokens stored only in extension storage, with access-token forwarding only to the Skeeditor labeler emit endpoint when labeler integration is active
 - **💅 Rich text preserved** — links, @mentions, and #hashtags are re-detected and byte-offset facets recalculated on every save
 - **🛡️ Conflict-safe** — CID-based optimistic locking detects concurrent edits and prompts before overwriting
 - **🌍 Cross-browser** — Chrome 120+, Firefox 125+ (Safari coming soon)

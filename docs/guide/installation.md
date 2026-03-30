@@ -59,11 +59,13 @@ If you're building Skeeditor from source, you can generate a Safari build with `
 
 When you install Skeeditor, your browser will ask for these permissions:
 
-| Permission                 | Why it is needed                                                                          |
-| -------------------------- | ----------------------------------------------------------------------------------------- |
-| `storage`                  | Stores your OAuth session tokens securely in extension storage                            |
-| `activeTab`                | Reads the current tab's URL to know when you are on bsky.app                              |
-| `https://bsky.app/*`       | Injects the edit UI into bsky.app pages and intercepts post navigation                    |
-| `https://*.bsky.network/*` | Makes authenticated calls to the Bluesky PDS (Personal Data Server) to fetch/save records |
+- `storage` — stores OAuth sessions, settings, and short-lived prompt/state flags in extension storage
+- `activeTab` — reads the active tab URL to know when you are on `bsky.app`
+- `tabs` — opens and manages auth callback/sign-in tabs during OAuth flow
+- `alarms` — schedules service-worker keepalive/retry timers in MV3 background context
+- `https://bsky.app/*` — injects the edit UI into bsky.app pages and intercepts post navigation
+- `https://*.bsky.network/*` — makes authenticated PDS calls to fetch/save records
+- `https://docs.skeeditor.link/*` — loads OAuth client metadata and callback host pages
+- `https://slingshot.microcosm.blue/*` — reads public record snapshots for edited-post refresh acceleration
 
-Skeeditor requests no other permissions. It does not access your browser history, bookmarks, clipboard (beyond what you paste into the editor), or any other site.
+Skeeditor requests no analytics, history, bookmark, or broad `<all_urls>` permissions.
