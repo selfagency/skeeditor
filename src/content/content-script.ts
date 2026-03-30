@@ -710,13 +710,15 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
     // Upload media files if any
     if (uploadedMedia.length > 0) {
       try {
-        const uploadPromises = uploadedMedia.map(file =>
-          sendMessage({
+        const uploadPromises = uploadedMedia.map(async file => {
+          const arrayBuffer = await file.arrayBuffer();
+          return sendMessage({
             type: 'UPLOAD_BLOB',
-            data: file,
+            data: arrayBuffer,
+            mimeType: file.type || 'application/octet-stream',
             repo: info.repo,
-          }),
-        );
+          });
+        });
 
         const uploadResults = await Promise.all(uploadPromises);
 

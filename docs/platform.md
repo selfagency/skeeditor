@@ -38,7 +38,7 @@ combining `manifests/base.json` with the per-browser overlay at
 1. `task build:firefox`
 2. `task webext:run:firefox`
    - `web-ext` automatically reloads the extension on file changes when combined
-  with `task build:watch:firefox` (so the watcher writes to `dist/firefox/`)
+     with `task build:watch:firefox` (so the watcher writes to `dist/firefox/`)
 3. Or: `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on** →
    select `dist/firefox/manifest.json`
 
@@ -101,7 +101,7 @@ detection** to identify the current browser — never `navigator.userAgent`.
 Example:
 
 ```ts
-import { platform } from "@src/platform";
+import { platform } from '@src/platform';
 
 if (platform.isFirefox) {
   // Firefox-specific path

@@ -59,13 +59,13 @@ accrues when a label event is actually broadcast. This is the only practical
 way to serve millions of persistent WebSocket connections cost-effectively.
 
 Estimated cost at scale:
-| Event                             | Cost            |
+| Event | Cost |
 | --------------------------------- | --------------- |
-| Idle connections (hibernating)    | $0.00           |
-| DO wakeup per broadcast           | $0.15 / million |
+| Idle connections (hibernating) | $0.00 |
+| DO wakeup per broadcast | $0.15 / million |
 | Worker invocations (emit trigger) | $0.30 / million |
-| KV reads (queryLabels)            | $0.50 / million |
-| **1M edits/day total**            | **< $1/day**    |
+| KV reads (queryLabels) | $0.50 / million |
+| **1M edits/day total** | **< $1/day** |
 
 ### Endpoints
 
@@ -86,17 +86,21 @@ Uses `did:web` with the domain serving the Worker:
 {
   "@context": ["https://www.w3.org/ns/did/v1", "https://w3id.org/security/suites/secp256k1-2019/v1"],
   "id": "did:web:labeler.skeeditor.app",
-  "verificationMethod": [{
-    "id": "did:web:labeler.skeeditor.app#atproto_label",
-    "type": "EcdsaSecp256k1VerificationKey2019",
-    "controller": "did:web:labeler.skeeditor.app",
-    "publicKeyMultibase": "<base58-encoded-secp256k1-public-key>"
-  }],
-  "service": [{
-    "id": "#atproto_labeler",
-    "type": "AtprotoLabeler",
-    "serviceEndpoint": "https://labeler.skeeditor.app"
-  }]
+  "verificationMethod": [
+    {
+      "id": "did:web:labeler.skeeditor.app#atproto_label",
+      "type": "EcdsaSecp256k1VerificationKey2019",
+      "controller": "did:web:labeler.skeeditor.app",
+      "publicKeyMultibase": "<base58-encoded-secp256k1-public-key>"
+    }
+  ],
+  "service": [
+    {
+      "id": "#atproto_labeler",
+      "type": "AtprotoLabeler",
+      "serviceEndpoint": "https://labeler.skeeditor.app"
+    }
+  ]
 }
 ```
 
@@ -109,19 +113,22 @@ Proper DAG-CBOR framing (ATProto spec-compliant) is a Phase 2 concern for
 AppView compatibility.
 
 Frame format:
+
 ```jsonc
 {
   "op": 1,
   "t": "#labels",
   "seq": 12345,
-  "labels": [{
-    "ver": 1,
-    "src": "did:web:labeler.skeeditor.app",
-    "uri": "at://did:plc:xxx/app.bsky.feed.post/rkey",
-    "cid": "bafyrei...",
-    "val": "edited",
-    "cts": "2026-03-27T12:00:00.000Z"
-  }]
+  "labels": [
+    {
+      "ver": 1,
+      "src": "did:web:labeler.skeeditor.app",
+      "uri": "at://did:plc:xxx/app.bsky.feed.post/rkey",
+      "cid": "bafyrei...",
+      "val": "edited",
+      "cts": "2026-03-27T12:00:00.000Z",
+    },
+  ],
 }
 ```
 
@@ -157,8 +164,9 @@ WebSocket lifecycle (Cloudflare Hibernation API):
 ```
 
 Attachment on each WS (accessible after hibernation wakes):
+
 ```typescript
-ws.serializeAttachment({ cursor: number, connectedAt: string })
+ws.serializeAttachment({ cursor: number, connectedAt: string });
 ```
 
 ### KV Schema (queryLabels, optional)
@@ -191,6 +199,7 @@ Cursor-based pagination via KV list prefix scan.
 File: `src/background/label-subscriber.ts` (new)
 
 Lifecycle:
+
 1. On SW `install` / `activate`: open WS to labeler `subscribeLabels`.
 2. On label frame received: extract `uri`, parse AT URI → `{repo, collection, rkey}`,
    broadcast `LABEL_EVENT` to all extension tabs via `chrome.tabs.sendMessage`.
@@ -211,6 +220,7 @@ Called from `src/background/service-worker.ts` on startup.
 File: `src/content/content-script.ts`
 
 On receiving `LABEL_EVENT`:
+
 1. For each label in the frame, parse `uri` → `rkey`.
 2. Find matching post element in DOM by rkey (already tracked by `findPosts`).
 3. Send `GET_RECORD` message to background → get latest record from PDS.
@@ -237,7 +247,7 @@ void emitLabelTrigger({
   cid: writeResponse.cid,
   did: stored.did,
   accessJwt: stored.accessToken,
-})
+});
 ```
 
 Errors are logged but do not surface to the user. The real-time update is

@@ -1,6 +1,6 @@
 name: 🐛 Bug Report
 description: Something isn't working? Let us know — no technical expertise required!
-labels: ["bug"]
+labels: ['bug']
 body:
   - type: markdown
     attributes:
@@ -11,8 +11,8 @@ body:
     id: browser
     attributes:
       label: Which browser are you using?
-      description: "For example: Chrome, Firefox, Edge, Brave, Arc, etc."
-      placeholder: "Chrome 126"
+      description: 'For example: Chrome, Firefox, Edge, Brave, Arc, etc.'
+      placeholder: 'Chrome 126'
     validations:
       required: true
 

@@ -12,11 +12,11 @@ After a user edits a post, Skeeditor writes the updated record to their PDS and 
 
 ## Labeler account
 
-| Property | Value |
-| --- | --- |
-| Handle | `@skeeditor.link` |
-| DID | `did:plc:m6h36r2hzbnozuhxj4obhkyb` |
-| Deployed at | `https://labeler.skeeditor.link` |
+| Property    | Value                              |
+| ----------- | ---------------------------------- |
+| Handle      | `@skeeditor.link`                  |
+| DID         | `did:plc:m6h36r2hzbnozuhxj4obhkyb` |
+| Deployed at | `https://labeler.skeeditor.link`   |
 
 The DID is exported from `src/shared/constants.ts` as `LABELER_DID`.
 
@@ -28,28 +28,28 @@ The labeler service runs as a [Cloudflare Worker](https://workers.cloudflare.com
 
 ### Key files
 
-| File | Purpose |
-| --- | --- |
-| `src/index.ts` | Worker entry point — handles incoming HTTP requests |
-| `src/auth.ts` | DID authentication and request verification |
-| `src/hub.ts` | `BroadcastHub` Durable Object — tracks active subscriptions |
-| `src/label.ts` | Label creation and signing |
-| `src/did-document.ts` | DID document resolution |
-| `src/types.ts` | Shared TypeScript types |
+| File                  | Purpose                                                     |
+| --------------------- | ----------------------------------------------------------- |
+| `src/index.ts`        | Worker entry point — handles incoming HTTP requests         |
+| `src/auth.ts`         | DID authentication and request verification                 |
+| `src/hub.ts`          | `BroadcastHub` Durable Object — tracks active subscriptions |
+| `src/label.ts`        | Label creation and signing                                  |
+| `src/did-document.ts` | DID document resolution                                     |
+| `src/types.ts`        | Shared TypeScript types                                     |
 
 ### Bindings (wrangler.jsonc)
 
-| Binding | Kind | Purpose |
-| --- | --- | --- |
-| `LABELS_KV` | KV Namespace | Stores signed label records |
+| Binding         | Kind           | Purpose                            |
+| --------------- | -------------- | ---------------------------------- |
+| `LABELS_KV`     | KV Namespace   | Stores signed label records        |
 | `BROADCAST_HUB` | Durable Object | Manages WebSocket listener fan-out |
 
 ### Environment variables
 
-| Variable | Value |
-| --- | --- |
-| `LABELER_DID` | `did:plc:m6h36r2hzbnozuhxj4obhkyb` |
-| `LABELER_HANDLE` | `skeeditor.link` |
+| Variable         | Value                              |
+| ---------------- | ---------------------------------- |
+| `LABELER_DID`    | `did:plc:m6h36r2hzbnozuhxj4obhkyb` |
+| `LABELER_HANDLE` | `skeeditor.link`                   |
 
 ---
 

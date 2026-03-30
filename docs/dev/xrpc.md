@@ -9,12 +9,12 @@ All XRPC calls are made from the background service worker. Content scripts and 
 ## Configuration
 
 ```ts
-import { XrpcClient } from "@src/shared/api/xrpc-client";
+import { XrpcClient } from '@src/shared/api/xrpc-client';
 
 const client = new XrpcClient({
-  service: "https://bsky.social", // PDS base URL
-  did: "did:plc:alice", // Authenticated user's DID (optional for unauth reads)
-  accessJwt: "<token>", // Access token from SessionStore
+  service: 'https://bsky.social', // PDS base URL
+  did: 'did:plc:alice', // Authenticated user's DID (optional for unauth reads)
+  accessJwt: '<token>', // Access token from SessionStore
 });
 ```
 
@@ -38,9 +38,9 @@ Fetches a single AT Protocol record.
 
 ```ts
 const result = await client.getRecord({
-  repo: "did:plc:alice",
-  collection: "app.bsky.feed.post",
-  rkey: "3jxyz",
+  repo: 'did:plc:alice',
+  collection: 'app.bsky.feed.post',
+  rkey: '3jxyz',
 });
 
 console.log(result.cid); // CID string — use as swapRecord for the subsequent put
@@ -108,11 +108,7 @@ if (result.success) {
 Types:
 
 ```ts
-type PutRecordWithSwapErrorKind =
-  | "auth"
-  | "conflict"
-  | "network"
-  | "validation";
+type PutRecordWithSwapErrorKind = 'auth' | 'conflict' | 'network' | 'validation';
 
 interface PutRecordWithSwapError {
   kind: PutRecordWithSwapErrorKind;
@@ -141,7 +137,7 @@ type PutRecordWithSwapResult =
 When a conflict occurs and you have all three versions of a record (original, current server, local edits), this utility classifies each top-level field:
 
 ```ts
-import { buildThreeWayMergeAdvisory } from "@src/shared/api/xrpc-client";
+import { buildThreeWayMergeAdvisory } from '@src/shared/api/xrpc-client';
 
 const advisory = buildThreeWayMergeAdvisory(base, current, attempted);
 

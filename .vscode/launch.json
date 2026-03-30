@@ -23,21 +23,12 @@
       "preLaunchTask": "Build Chrome (watch)",
       "sourceMaps": true,
       "webRoot": "${workspaceFolder}/src",
-      "outFiles": [
-        "${workspaceFolder}/dist/chrome/**/*.js"
-      ],
+      "outFiles": ["${workspaceFolder}/dist/chrome/**/*.js"],
       // Only resolve source maps from the extension's own output — suppresses
       // noisy "Could not read source map" warnings from hls.js and other
       // third-party scripts served by bsky.app.
-      "resolveSourceMapLocations": [
-        "${workspaceFolder}/dist/chrome/**",
-        "!**/node_modules/**"
-      ],
-      "skipFiles": [
-        "<node_internals>/**",
-        "${workspaceFolder}/node_modules/**",
-        "${workspaceFolder}/src/lexicons/**"
-      ],
+      "resolveSourceMapLocations": ["${workspaceFolder}/dist/chrome/**", "!**/node_modules/**"],
+      "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**", "${workspaceFolder}/src/lexicons/**"],
       "presentation": {
         "group": "chrome-extension",
         "order": 1
@@ -64,18 +55,9 @@
       "urlFilter": "https://bsky.app/*",
       "sourceMaps": true,
       "webRoot": "${workspaceFolder}/src",
-      "outFiles": [
-        "${workspaceFolder}/dist/chrome/**/*.js"
-      ],
-      "resolveSourceMapLocations": [
-        "${workspaceFolder}/dist/chrome/**",
-        "!**/node_modules/**"
-      ],
-      "skipFiles": [
-        "<node_internals>/**",
-        "${workspaceFolder}/node_modules/**",
-        "${workspaceFolder}/src/lexicons/**"
-      ],
+      "outFiles": ["${workspaceFolder}/dist/chrome/**/*.js"],
+      "resolveSourceMapLocations": ["${workspaceFolder}/dist/chrome/**", "!**/node_modules/**"],
+      "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**", "${workspaceFolder}/src/lexicons/**"],
       "presentation": {
         "group": "chrome-extension",
         "order": 2
@@ -97,18 +79,9 @@
       "targetSelection": "pick",
       "sourceMaps": true,
       "webRoot": "${workspaceFolder}/src",
-      "outFiles": [
-        "${workspaceFolder}/dist/chrome/background.js",
-        "${workspaceFolder}/dist/chrome/chunks/*.js"
-      ],
-      "resolveSourceMapLocations": [
-        "${workspaceFolder}/dist/chrome/**",
-        "!**/node_modules/**"
-      ],
-      "skipFiles": [
-        "<node_internals>/**",
-        "${workspaceFolder}/node_modules/**"
-      ],
+      "outFiles": ["${workspaceFolder}/dist/chrome/background.js", "${workspaceFolder}/dist/chrome/chunks/*.js"],
+      "resolveSourceMapLocations": ["${workspaceFolder}/dist/chrome/**", "!**/node_modules/**"],
+      "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"],
       "presentation": {
         "group": "chrome-extension",
         "order": 3
@@ -127,13 +100,8 @@
       "url": "chrome-extension://*/popup.html",
       "sourceMaps": true,
       "webRoot": "${workspaceFolder}/src",
-      "outFiles": [
-        "${workspaceFolder}/dist/chrome/**/*.js"
-      ],
-      "resolveSourceMapLocations": [
-        "${workspaceFolder}/dist/chrome/**",
-        "!**/node_modules/**"
-      ],
+      "outFiles": ["${workspaceFolder}/dist/chrome/**/*.js"],
+      "resolveSourceMapLocations": ["${workspaceFolder}/dist/chrome/**", "!**/node_modules/**"],
       "presentation": {
         "group": "chrome-extension",
         "order": 4
@@ -156,21 +124,12 @@
       "urlFilter": "https://bsky.app/*",
       "sourceMaps": true,
       "webRoot": "${workspaceFolder}/src",
-      "outFiles": [
-        "${workspaceFolder}/dist/chrome/content-scripts/*.js"
-      ],
-      "resolveSourceMapLocations": [
-        "${workspaceFolder}/dist/chrome/content-scripts/**",
-        "!**/node_modules/**"
-      ],
+      "outFiles": ["${workspaceFolder}/dist/chrome/content-scripts/*.js"],
+      "resolveSourceMapLocations": ["${workspaceFolder}/dist/chrome/content-scripts/**", "!**/node_modules/**"],
       "pathMapping": {
         "/src/": "${workspaceFolder}/src/"
       },
-      "skipFiles": [
-        "<node_internals>/**",
-        "${workspaceFolder}/node_modules/**",
-        "${workspaceFolder}/src/lexicons/**"
-      ],
+      "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**", "${workspaceFolder}/src/lexicons/**"],
       "presentation": {
         "group": "chrome-extension",
         "order": 5
@@ -195,19 +154,10 @@
       "preLaunchTask": "Open Chromium (remote debug on 9222)",
       "sourceMaps": true,
       "webRoot": "${workspaceFolder}/src",
-      "outFiles": [
-        "${workspaceFolder}/dist/chrome/**/*.js"
-      ],
-      "resolveSourceMapLocations": [
-        "${workspaceFolder}/dist/chrome/**",
-        "!**/node_modules/**"
-      ],
+      "outFiles": ["${workspaceFolder}/dist/chrome/**/*.js"],
+      "resolveSourceMapLocations": ["${workspaceFolder}/dist/chrome/**", "!**/node_modules/**"],
       "internalConsoleOptions": "openOnSessionStart",
-      "skipFiles": [
-        "<node_internals>/**",
-        "${workspaceFolder}/node_modules/**",
-        "${workspaceFolder}/src/lexicons/**"
-      ],
+      "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**", "${workspaceFolder}/src/lexicons/**"],
       "presentation": {
         "group": "chrome-extension",
         "order": 6
@@ -221,13 +171,7 @@
       "type": "node",
       "request": "launch",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": [
-        "exec",
-        "vitest",
-        "--project",
-        "unit",
-        "--reporter=verbose"
-      ],
+      "runtimeArgs": ["exec", "vitest", "--project", "unit", "--reporter=verbose"],
       "console": "integratedTerminal",
       "sourceMaps": true,
       "presentation": {
@@ -243,13 +187,7 @@
       "type": "node",
       "request": "launch",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": [
-        "exec",
-        "vitest",
-        "--project",
-        "integration",
-        "--reporter=verbose"
-      ],
+      "runtimeArgs": ["exec", "vitest", "--project", "integration", "--reporter=verbose"],
       "console": "integratedTerminal",
       "sourceMaps": true,
       "presentation": {
@@ -264,9 +202,7 @@
   "compounds": [
     {
       "name": "Debug: Full Extension (build + launch)",
-      "configurations": [
-        "Debug: Chrome Extension (launch)"
-      ],
+      "configurations": ["Debug: Chrome Extension (launch)"],
       "stopAll": true,
       "presentation": {
         "group": "chrome-extension",
@@ -277,10 +213,7 @@
     // Requires Chromium launched with --remote-debugging-port=9222.
     {
       "name": "Debug: Attach to Running Extension",
-      "configurations": [
-        "Debug: bsky.app Web Console (attach)",
-        "Debug: Content Script on bsky.app (attach)"
-      ],
+      "configurations": ["Debug: bsky.app Web Console (attach)", "Debug: Content Script on bsky.app (attach)"],
       "stopAll": true,
       "presentation": {
         "group": "chrome-extension",

@@ -43,7 +43,7 @@ The content script displays a conflict UI and waits for user input.
 When all three versions are available, `buildThreeWayMergeAdvisory` classifies each top-level field:
 
 ```ts
-import { buildThreeWayMergeAdvisory } from "@src/shared/api/xrpc-client";
+import { buildThreeWayMergeAdvisory } from '@src/shared/api/xrpc-client';
 
 const advisory = buildThreeWayMergeAdvisory(
   originalRecord, // what we had when the editor opened
@@ -57,11 +57,7 @@ if (!advisory.hasConflicts) {
   await retryPutRecord(merged, result.conflict.currentCid);
 } else {
   // Genuinely conflicting fields — show them to the user
-  showConflictUI(
-    advisory.conflictingFields,
-    currentServerRecord,
-    localEditedRecord,
-  );
+  showConflictUI(advisory.conflictingFields, currentServerRecord, localEditedRecord);
 }
 ```
 
@@ -95,10 +91,10 @@ interface PutRecordMergeAdvisory {
 ## Example: simple conflict UI
 
 ```ts
-import { sendMessage } from "@src/shared/messages";
+import { sendMessage } from '@src/shared/messages';
 
 const result = await sendMessage({
-  type: "PUT_RECORD",
+  type: 'PUT_RECORD',
   repo,
   collection,
   rkey,
@@ -106,16 +102,16 @@ const result = await sendMessage({
   swapRecord: originalCid,
 });
 
-if (result.type === "PUT_RECORD_CONFLICT") {
+if (result.type === 'PUT_RECORD_CONFLICT') {
   const choice = await showConflictDialog({
     currentValue: result.conflict?.currentValue,
     editedValue: editedRecord,
   });
 
-  if (choice === "force-save" && result.conflict) {
+  if (choice === 'force-save' && result.conflict) {
     // Retry with the server's current CID as the new swap target
     await sendMessage({
-      type: "PUT_RECORD",
+      type: 'PUT_RECORD',
       repo,
       collection,
       rkey,

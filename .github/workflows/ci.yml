@@ -302,7 +302,7 @@ jobs:
       - name: Run Firefox devnet E2E tests
         run: task test:e2e:firefox:devnet
         env:
-          FIREFOX_EXTENSION_E2E: "1"
+          FIREFOX_EXTENSION_E2E: '1'
 
       - name: Stop devnet stack
         if: always()
@@ -312,6 +312,7 @@ jobs:
     name: Release automation smoke test
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    if: github.event_name == 'push'
     needs:
       - quality
       - build

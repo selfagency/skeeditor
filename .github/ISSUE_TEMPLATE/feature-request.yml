@@ -1,6 +1,6 @@
 name: 💡 Feature Request
 description: Have an idea for something Skeeditor could do? We'd love to hear it!
-labels: ["enhancement"]
+labels: ['enhancement']
 body:
   - type: markdown
     attributes:

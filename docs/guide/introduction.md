@@ -16,11 +16,11 @@ For the full technical details on how things work under the hood, check out the 
 
 ## Supported browsers
 
-| Browser | Status                | Minimum version    |
-| ------- | --------------------- | ------------------ |
-| Chrome  | ✅ Supported          | 120+               |
-| Firefox | ✅ Supported          | 125+               |
-| Safari  | 🔜 Coming soon        | macOS 14+ (Sonoma) |
+| Browser | Status         | Minimum version    |
+| ------- | -------------- | ------------------ |
+| Chrome  | ✅ Supported   | 120+               |
+| Firefox | ✅ Supported   | 125+               |
+| Safari  | 🔜 Coming soon | macOS 14+ (Sonoma) |
 
 ## 🚀 Current status
 

@@ -52,7 +52,7 @@ Use **feature detection**, never `navigator.userAgent`. The `detectPlatform()` f
 | Neither                                        | Chrome  |
 
 ```ts
-import { platform } from "@src/platform";
+import { platform } from '@src/platform';
 
 if (platform.isFirefox) {
   // Firefox-specific path
@@ -113,7 +113,7 @@ manifest: ctx => ({
       gecko: { id: 'skeeditor@selfagency.dev', strict_min_version: '125.0' },
     },
   }),
-})
+});
 ```
 
 WXT writes the final `manifest.json` to `dist/<browser>/manifest.json` during each build. There is no `manifests/` directory or `scripts/merge-manifest.ts` — those belong to the previous (pre-WXT) build system.

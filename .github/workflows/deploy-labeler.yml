@@ -5,8 +5,8 @@ on:
     branches:
       - main
     paths:
-      - "packages/labeler/**"
-      - "pnpm-lock.yaml"
+      - 'packages/labeler/**'
+      - 'pnpm-lock.yaml'
   workflow_dispatch:
 
 permissions:
