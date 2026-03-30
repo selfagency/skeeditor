@@ -92,12 +92,14 @@ The setting is stored locally in the extension and takes effect immediately.
 
 ## Labeler consent
 
-After signing in for the first time, Skeeditor will ask whether you want to subscribe to the **Skeeditor labeler** (`@skeeditor.link`). The labeler is a core part of how Skeeditor communicates that a post has been edited. When you subscribe:
+After signing in for the first time, Skeeditor may show a labeler consent prompt if your account is not yet subscribed to the **Skeeditor labeler** (`@skeeditor.link`). The labeler is a core part of how Skeeditor communicates that a post has been edited. When you subscribe:
 
-- Posts you edit through Skeeditor will be marked with an **"edited"** label visible to other Bluesky users who also subscribe to the labeler.
+- Posts you edit through Skeeditor can be marked with an **"edited"** label visible to other Bluesky users who also subscribe to the labeler.
 - The label is informational only — it does not suppress or hide the post.
 
-You can choose **Subscribe** to opt in or **Not now** to decline. Declining has no effect on the editing functionality, but without the labeler subscription other users will have no way to see that a post was edited.
+The popup does not auto-subscribe your account. Use **Open labeler profile**, which opens Bluesky so you can subscribe there. Use **Not now** to dismiss the prompt for now.
+
+Dismissing has no effect on editing functionality. Without labeler subscription, other users will not see an edited label for your changes.
 
 You can manage your labeler subscriptions at any time from your [Bluesky moderation settings](https://bsky.app/moderation).
 

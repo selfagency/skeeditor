@@ -112,14 +112,15 @@ class AuthPopup extends HTMLElement {
       case 'authenticated': {
         const labelerBanner = this.showLabelerPrompt
           ? `<div class="rounded-lg border border-indigo-500/30 bg-indigo-950/50 p-3">
-              <p class="text-xs text-indigo-200">Subscribe to the skeeditor labeler to see
-              <strong>Edited</strong> labels on posts in Bluesky.</p>
+              <p class="text-xs text-indigo-200">Labeler subscription is managed on Bluesky.
+              This opens Bluesky so you can subscribe there and see
+              <strong>Edited</strong> labels on posts.</p>
               <a id="subscribe-labeler" href="${escapeHTML(LABELER_SUBSCRIBE_URL)}" target="_blank" rel="noopener noreferrer"
                 class="mt-2 flex w-full items-center justify-center gap-1 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400">
-                Subscribe to labeler
+                Open labeler profile
               </a>
               <button id="dismiss-labeler-prompt" type="button"
-                class="mt-1.5 w-full text-center text-xs text-indigo-400 hover:text-indigo-200">Dismiss</button>
+                class="mt-1.5 w-full text-center text-xs text-indigo-400 hover:text-indigo-200">Not now</button>
             </div>`
           : '';
 
