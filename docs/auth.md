@@ -71,4 +71,28 @@ PKCE `state` and `codeVerifier` values are stored in `browser.storage.session` w
 
 On Firefox, where `browser.storage.session` may be unavailable, the fallback is `browser.storage.local`.  To prevent a stale verifier from surviving a browser restart, the service worker clears `pendingAuth` from local storage on every startup.
 
+## Security Considerations
+
+### DPoP Key Storage Risk
+
+**Important Security Note:** The extension stores DPoP private keys as JWK in `browser.storage.local` due to Manifest V3 service worker limitations. This is a necessary trade-off for maintaining persistent authentication sessions.
+
+**Risk Assessment:**
+
+- **Attack Vector:** Malicious extensions with `storage` permission could potentially access the DPoP key
+- **Impact Window:** Limited to the access token lifetime (typically 15 minutes)
+- **Scope:** Extension-specific storage namespace prevents access from web pages or other origins
+
+**Mitigation Strategies:**
+
+- Short-lived access tokens (15 minutes) limit exposure window
+- Minimal permission set reduces attack surface
+- Future enhancement: Implement DPoP key rotation mechanism
+
+**User Awareness:** Users should be cautious about installing untrusted extensions that request broad storage permissions, as they could potentially access sensitive authentication data.
+
+### Token Refresh Security
+
+The token refresh mechanism includes in-flight request deduplication to prevent race conditions and ensure consistent token state across concurrent refresh attempts.
+
 

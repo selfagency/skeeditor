@@ -83,10 +83,11 @@ function enqueue(event: string, data?: Record<string, unknown>): void {
 
 export interface SkeeLogger {
   debug(event: string, data?: Record<string, unknown>): void;
+  error(event: string, data?: Record<string, unknown>): void;
 }
 
 /** No-op logger used when debug mode is off. */
-const _noop: SkeeLogger = { debug() {} };
+const _noop: SkeeLogger = { debug() {}, error() {} };
 
 /**
  * Returns a namespaced debug logger.  All output is a no-op unless debug mode
@@ -99,6 +100,9 @@ export function createLogger(namespace: string): SkeeLogger {
   return {
     debug(event: string, data?: Record<string, unknown>): void {
       enqueue(`skeeditor:debug:${namespace}:${event}`, data);
+    },
+    error(event: string, data?: Record<string, unknown>): void {
+      enqueue(`skeeditor:error:${namespace}:${event}`, data);
     },
   };
 }

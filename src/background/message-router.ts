@@ -457,16 +457,19 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
       const code = message['code'];
       const callbackState = message['state'];
       if (!isNonEmptyString(code) || !isNonEmptyString(callbackState)) {
+        log.error('AUTH_CALLBACK: Invalid payload - missing code or state');
         return { error: 'Invalid AUTH_CALLBACK payload' };
       }
 
       const pending = await deps.getAuthState();
       if (pending === null) {
+        log.error('AUTH_CALLBACK: No pending auth state found');
         return { error: 'No pending auth state' };
       }
 
       // CSRF protection: verify the state matches what was stored before the redirect
       if (pending.state !== callbackState) {
+        log.error('AUTH_CALLBACK: CSRF protection - state mismatch detected');
         await deps.clearAuthState();
         return { error: 'State mismatch' };
       }
@@ -475,6 +478,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
         // Retrieve the PDS URL that was stored when the sign-in was initiated;
         // fall back to getCurrentPdsUrl() for backward compatibility.
         const pdsUrl = pending.pdsUrl ?? (await getCurrentPdsUrl());
+        log.debug('AUTH_CALLBACK: Exchanging code for tokens with PDS', { pdsUrl });
         const tokens = await deps.exchangeCode(
           getOAuthTokenUrl(pdsUrl),
           code,
@@ -484,12 +488,15 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
         );
         // Validate required token fields before persisting a session
         if (!isNonEmptyString(tokens.access_token)) {
+          log.error('AUTH_CALLBACK: Invalid token response - missing access token');
           return { error: 'Invalid token response from authorization server: missing access token' };
         }
         if (!isNonEmptyString(tokens.sub) || !/^did:[a-z]+:.+$/u.test(tokens.sub)) {
+          log.error('AUTH_CALLBACK: Invalid token response - missing or invalid subject DID');
           return { error: 'Invalid token response from authorization server: missing or invalid subject DID' };
         }
         if (!isNonEmptyString(tokens.refresh_token)) {
+          log.error('AUTH_CALLBACK: Invalid token response - missing refresh token');
           return { error: 'Invalid token response from authorization server: missing refresh token' };
         }
         if (
