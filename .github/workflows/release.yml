@@ -392,24 +392,29 @@ jobs:
           FIREFOX_API_KEY: ${{ secrets.FIREFOX_API_KEY }}
           FIREFOX_API_SECRET: ${{ secrets.FIREFOX_API_SECRET }}
           EDGE_PUBLISH_COMMAND: ${{ secrets.EDGE_PUBLISH_COMMAND }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          PUBLISH_CHROME: ${{ inputs.publish_chrome }}
+          PUBLISH_FIREFOX: ${{ inputs.publish_firefox }}
+          PUBLISH_EDGE: ${{ inputs.publish_edge }}
+          SKIP_SAFARI: ${{ inputs.skip_safari }}
         run: |
           set -euo pipefail
 
           ARGS=(--skip-checks --skip-tests --pre-built)
 
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
+          if [ "$DRY_RUN" = "true" ]; then
             ARGS+=("--dry-run")
           fi
-          if [ "${{ inputs.publish_chrome }}" = "true" ]; then
+          if [ "$PUBLISH_CHROME" = "true" ]; then
             ARGS+=("--publish-chrome")
           fi
-          if [ "${{ inputs.publish_firefox }}" = "true" ]; then
+          if [ "$PUBLISH_FIREFOX" = "true" ]; then
             ARGS+=("--publish-firefox")
           fi
-          if [ "${{ inputs.publish_edge }}" = "true" ]; then
+          if [ "$PUBLISH_EDGE" = "true" ]; then
             ARGS+=("--publish-edge")
           fi
-          if [ "${{ inputs.skip_safari }}" = "true" ]; then
+          if [ "$SKIP_SAFARI" = "true" ]; then
             ARGS+=("--skip-safari")
           fi
 
