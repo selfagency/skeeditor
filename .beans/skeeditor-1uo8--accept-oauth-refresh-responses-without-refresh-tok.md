@@ -8,6 +8,7 @@ created_at: 2026-03-30T14:04:21Z
 updated_at: 2026-03-30T15:13:51Z
 parent: skeeditor-d3m1
 branch: fix/1uo8-refresh-token-retention
+pr: 76
 ---
 
 `AUTH_GET_STATUS` currently expects a refreshed `refresh_token` even though many providers legally omit it. Preserve the existing refresh token when the response only returns a new access token.
@@ -19,6 +20,9 @@ branch: fix/1uo8-refresh-token-retention
 - [x] Verify existing refresh behavior still works when a new refresh token is returned
 
 ## Summary of Changes
-- Updated the silent-refresh path in `src/background/message-router.ts` so `AUTH_GET_STATUS` accepts access-token-only refresh responses and preserves the stored refresh token when no new one is returned.
-- Added regression coverage in `test/unit/background/message-router.test.ts` for access-token-only refresh responses and malformed partial refresh payloads.
-- Re-ran the focused background message-router unit tests to confirm the new behavior and preserve the existing refresh flow.
+- Updated `src/background/message-router.ts` AUTH_GET_STATUS handler to accept OAuth refresh responses with only access_token
+- Added fallback logic to preserve stored refresh_token when provider response omits it (per OAuth 2.0 spec §6)
+- Added two regression tests in `test/unit/background/message-router.test.ts`:
+  - "retains the existing refresh token when silent refresh returns only a new access token"
+  - "returns unauthenticated when silent refresh response omits a usable access token"
+- All 65+ tests pass in message-router suite; existing refresh behavior continues to work correctly

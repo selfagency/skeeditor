@@ -8,6 +8,7 @@ created_at: 2026-03-30T14:12:53Z
 updated_at: 2026-03-30T14:12:53Z
 parent: skeeditor-d3m1
 branch: fix/uukf-lint-staged-precommit
+pr: 75
 ---
 
 The current `lint-staged` integration shells out to `task precommit -- <absolute paths>`, but the Taskfile logic mishandles those arguments and causes the Husky pre-commit hook to fail with `Expected at least one target file`. Fix the pre-commit path handling so staged-file formatting/linting works reliably.
