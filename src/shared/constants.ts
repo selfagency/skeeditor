@@ -8,10 +8,12 @@ export const APP_BSKY_FEED_POST_COLLECTION = 'app.bsky.feed.post';
 
 export interface ExtensionSettings {
   editTimeLimit: number | null;
+  postDateStrategy: 'preserve' | 'update';
 }
 
 const DEFAULT_SETTINGS: ExtensionSettings = {
   editTimeLimit: null,
+  postDateStrategy: 'update',
 };
 
 const getStorage = (): typeof browser.storage.local => {
@@ -31,13 +33,27 @@ export const isValidEditTimeLimit = (value: unknown): value is number | null => 
   );
 };
 
-const isExtensionSettings = (value: unknown): value is ExtensionSettings => {
-  return (
-    value !== null &&
-    typeof value === 'object' &&
-    'editTimeLimit' in value &&
-    isValidEditTimeLimit((value as Record<string, unknown>)['editTimeLimit'])
-  );
+export const isValidPostDateStrategy = (value: unknown): value is ExtensionSettings['postDateStrategy'] => {
+  return value === 'preserve' || value === 'update';
+};
+
+const normalizeExtensionSettings = (value: unknown): ExtensionSettings => {
+  if (value === null || typeof value !== 'object') {
+    return DEFAULT_SETTINGS;
+  }
+
+  const raw = value as Record<string, unknown>;
+  const editTimeLimit = isValidEditTimeLimit(raw['editTimeLimit'])
+    ? raw['editTimeLimit']
+    : DEFAULT_SETTINGS.editTimeLimit;
+  const postDateStrategy = isValidPostDateStrategy(raw['postDateStrategy'])
+    ? raw['postDateStrategy']
+    : DEFAULT_SETTINGS.postDateStrategy;
+
+  return {
+    editTimeLimit,
+    postDateStrategy,
+  };
 };
 
 // Get the current PDS URL from storage or use default.
@@ -95,12 +111,12 @@ export async function getSettings(): Promise<ExtensionSettings> {
   const storage = getStorage();
   const result = await storage.get('settings');
   const raw = (result as { settings?: unknown }).settings;
-  return isExtensionSettings(raw) ? raw : DEFAULT_SETTINGS;
+  return normalizeExtensionSettings(raw);
 }
 
 export async function setSettings(settings: ExtensionSettings): Promise<void> {
   const storage = getStorage();
-  await storage.set({ settings });
+  await storage.set({ settings: normalizeExtensionSettings(settings) });
 }
 
 // AT Protocol OAuth endpoints (will be resolved dynamically based on current PDS URL)

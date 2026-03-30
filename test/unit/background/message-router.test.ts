@@ -275,24 +275,30 @@ describe('handleMessage', () => {
 
   describe('settings', () => {
     it('returns stored settings for GET_SETTINGS', async () => {
-      vi.spyOn(constants, 'getSettings').mockResolvedValue({ editTimeLimit: 5 });
+      vi.spyOn(constants, 'getSettings').mockResolvedValue({ editTimeLimit: 5, postDateStrategy: 'update' });
 
       const result = await handleMessage({ type: 'GET_SETTINGS' }, makeDeps());
 
-      expect(result).toEqual({ editTimeLimit: 5 });
+      expect(result).toEqual({ editTimeLimit: 5, postDateStrategy: 'update' });
     });
 
     it('persists settings for SET_SETTINGS', async () => {
       const setSettingsSpy = vi.spyOn(constants, 'setSettings').mockResolvedValue(undefined);
 
-      const result = await handleMessage({ type: 'SET_SETTINGS', settings: { editTimeLimit: 0.5 } }, makeDeps());
+      const result = await handleMessage(
+        { type: 'SET_SETTINGS', settings: { editTimeLimit: 0.5, postDateStrategy: 'update' } },
+        makeDeps(),
+      );
 
-      expect(setSettingsSpy).toHaveBeenCalledWith({ editTimeLimit: 0.5 });
+      expect(setSettingsSpy).toHaveBeenCalledWith({ editTimeLimit: 0.5, postDateStrategy: 'update' });
       expect(result).toEqual({ ok: true });
     });
 
     it('rejects invalid settings payloads', async () => {
-      const result = await handleMessage({ type: 'SET_SETTINGS', settings: { editTimeLimit: 10 } }, makeDeps());
+      const result = await handleMessage(
+        { type: 'SET_SETTINGS', settings: { editTimeLimit: 10, postDateStrategy: 'update' } },
+        makeDeps(),
+      );
 
       expect(result).toEqual({ error: 'Invalid settings payload' });
     });

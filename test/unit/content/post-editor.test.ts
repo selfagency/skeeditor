@@ -20,10 +20,11 @@ describe('post-editor', () => {
     expect(nextRecord).toMatchObject({
       $type: 'app.bsky.feed.post',
       text: 'Updated text with #tag',
-      createdAt: '2026-03-18T12:00:00.000Z',
       embed: currentRecord.embed,
       langs: ['en'],
     });
+    expect(nextRecord.createdAt).not.toBe('2026-03-18T12:00:00.000Z');
+    expect(nextRecord.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
     expect(nextRecord.facets).toHaveLength(1);
     expect(nextRecord.labels).toBeUndefined();
     expect(nextRecord.tags).toBeDefined();

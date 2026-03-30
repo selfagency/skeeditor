@@ -20,6 +20,10 @@ function setupDOM(): void {
     <input id="add-pds-url" type="url" value="https://bsky.social" />
     <button id="add-account"></button>
     <input id="edit-time-limit" type="number" />
+    <select id="post-date-strategy">
+      <option value="update">Update</option>
+      <option value="preserve">Preserve</option>
+    </select>
     <button id="save-settings">Save Settings</button>
   `;
 }
@@ -37,7 +41,7 @@ function mockSendMessage(accounts: AuthListAccountsAccount[]): void {
   vi.mocked(browser.runtime.sendMessage).mockImplementation(async (msg: unknown) => {
     const type = (msg as { type?: string })?.type;
     if (type === 'AUTH_LIST_ACCOUNTS') return { accounts };
-    if (type === 'GET_SETTINGS') return { editTimeLimit: null };
+    if (type === 'GET_SETTINGS') return { editTimeLimit: null, postDateStrategy: 'update' };
     return { ok: true };
   });
 }
@@ -80,7 +84,7 @@ describe('options page', () => {
               makeAccount({ did: 'did:plc:user2', isActive: false }),
             ],
           };
-        if (type === 'GET_SETTINGS') return { editTimeLimit: null };
+        if (type === 'GET_SETTINGS') return { editTimeLimit: null, postDateStrategy: 'update' };
         return { ok: true };
       });
 
@@ -95,7 +99,7 @@ describe('options page', () => {
       vi.mocked(browser.runtime.sendMessage).mockImplementation(async (msg: unknown) => {
         const type = (msg as { type?: string })?.type;
         if (type === 'AUTH_LIST_ACCOUNTS') return { accounts: [makeAccount({ handle: 'alice.bsky.social' })] };
-        if (type === 'GET_SETTINGS') return { editTimeLimit: null };
+        if (type === 'GET_SETTINGS') return { editTimeLimit: null, postDateStrategy: 'update' };
         return { ok: true };
       });
 
@@ -116,7 +120,7 @@ describe('options page', () => {
               makeAccount({ did: 'did:plc:user2', isActive: false }),
             ],
           };
-        if (type === 'GET_SETTINGS') return { editTimeLimit: null };
+        if (type === 'GET_SETTINGS') return { editTimeLimit: null, postDateStrategy: 'update' };
         return { ok: true };
       });
 
@@ -138,7 +142,7 @@ describe('options page', () => {
               makeAccount({ did: 'did:plc:user2', isActive: false }),
             ],
           };
-        if (type === 'GET_SETTINGS') return { editTimeLimit: null };
+        if (type === 'GET_SETTINGS') return { editTimeLimit: null, postDateStrategy: 'update' };
         return { ok: true };
       });
 
@@ -153,7 +157,7 @@ describe('options page', () => {
       vi.mocked(browser.runtime.sendMessage).mockImplementation(async (msg: unknown) => {
         const type = (msg as { type?: string })?.type;
         if (type === 'AUTH_LIST_ACCOUNTS') throw new Error('Network error');
-        if (type === 'GET_SETTINGS') return { editTimeLimit: null };
+        if (type === 'GET_SETTINGS') return { editTimeLimit: null, postDateStrategy: 'update' };
         return { ok: true };
       });
 
@@ -182,7 +186,7 @@ describe('options page', () => {
               makeAccount({ did: 'did:plc:user2', isActive: false }),
             ],
           };
-        if (type === 'GET_SETTINGS') return { editTimeLimit: null };
+        if (type === 'GET_SETTINGS') return { editTimeLimit: null, postDateStrategy: 'update' };
         return { ok: true };
       });
 
@@ -209,7 +213,7 @@ describe('options page', () => {
       vi.mocked(browser.runtime.sendMessage).mockImplementation(async (msg: unknown) => {
         const type = (msg as { type?: string })?.type;
         if (type === 'AUTH_LIST_ACCOUNTS') return { accounts: [makeAccount({ did: 'did:plc:testuser123' })] };
-        if (type === 'GET_SETTINGS') return { editTimeLimit: null };
+        if (type === 'GET_SETTINGS') return { editTimeLimit: null, postDateStrategy: 'update' };
         return { ok: true };
       });
 
@@ -299,7 +303,7 @@ describe('options page', () => {
       vi.mocked(browser.runtime.sendMessage).mockImplementation(async (msg: unknown) => {
         const type = (msg as { type?: string })?.type;
         if (type === 'AUTH_LIST_ACCOUNTS') return { accounts: [] };
-        if (type === 'GET_SETTINGS') return { editTimeLimit: 2.5 };
+        if (type === 'GET_SETTINGS') return { editTimeLimit: 2.5, postDateStrategy: 'update' };
         return { ok: true };
       });
 
@@ -320,7 +324,7 @@ describe('options page', () => {
 
       expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({
         type: 'SET_SETTINGS',
-        settings: { editTimeLimit: 2 },
+        settings: { editTimeLimit: 2, postDateStrategy: 'update' },
       });
     });
 
@@ -335,7 +339,7 @@ describe('options page', () => {
 
       expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({
         type: 'SET_SETTINGS',
-        settings: { editTimeLimit: null },
+        settings: { editTimeLimit: null, postDateStrategy: 'update' },
       });
     });
 
@@ -343,7 +347,7 @@ describe('options page', () => {
       vi.mocked(browser.runtime.sendMessage).mockImplementation(async (msg: unknown) => {
         const type = (msg as { type?: string })?.type;
         if (type === 'AUTH_LIST_ACCOUNTS') return { accounts: [] };
-        if (type === 'GET_SETTINGS') return { editTimeLimit: null };
+        if (type === 'GET_SETTINGS') return { editTimeLimit: null, postDateStrategy: 'update' };
         if (type === 'SET_SETTINGS') return { error: 'Storage full' };
         return { ok: true };
       });
