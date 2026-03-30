@@ -142,12 +142,18 @@ task webext:run:firefox
 
 ```sh
 task build:safari
+task build:safari:swift
+# Open the Xcode project under xcode/, build, and enable in Safari → Settings → Extensions
+```
+
+To run the converter manually instead:
+
+```sh
 xcrun safari-web-extension-converter dist/safari \
-  --project-location ./safari-xcode \
+  --project-location ./xcode \
   --app-name skeeditor \
-  --bundle-identifier dev.selfagency.skeeditor \
+  --bundle-identifier agency.self.skeeditor \
   --swift
-# Open the Xcode project, build, and enable in Safari → Settings → Extensions
 ```
 
 To allow unsigned extensions during development: Safari → Settings → Advanced → Show features for web developers → Developer → Allow unsigned extensions.

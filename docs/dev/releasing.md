@@ -151,9 +151,9 @@ To run the converter manually instead:
 
 ```sh
 xcrun safari-web-extension-converter dist/safari \
-  --project-location ./safari-xcode \
+  --project-location ./xcode \
   --app-name skeeditor \
-  --bundle-identifier dev.selfagency.skeeditor \
+  --bundle-identifier agency.self.skeeditor \
   --swift
 ```
 

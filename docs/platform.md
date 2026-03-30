@@ -51,9 +51,9 @@ combining `manifests/base.json` with the per-browser overlay at
 
    ```sh
    xcrun safari-web-extension-converter dist/safari \
-     --project-location ./safari-xcode \
+     --project-location ./xcode \
      --app-name skeeditor \
-     --bundle-identifier dev.selfagency.skeeditor \
+     --bundle-identifier agency.self.skeeditor \
      --swift
    ```
 

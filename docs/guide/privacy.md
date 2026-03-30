@@ -2,9 +2,13 @@
 
 ## What data Skeeditor stores
 
-Skeeditor stores exactly one thing in your browser's extension storage (`browser.storage.local`):
+Skeeditor stores some data in your browser's extension storage (`browser.storage.local`) to keep you signed in and remember your preferences. Specifically:
 
-- **Your OAuth session token** — a short-lived access token plus a refresh token, both issued by Bluesky's authorization server (`bsky.social`). These are standard OAuth 2.0 credentials.
+- **OAuth sessions and account state.** For each account you sign in with, Skeeditor stores the OAuth access and refresh tokens issued by Bluesky's authorization server (`bsky.social`), plus the minimal metadata needed for multi-account support (such as the list of sessions and which account is currently active).
+- **Per-account service configuration.** For each DID, Skeeditor stores the URL of the personal data server (PDS) you use.
+- **Editor settings.** Your local preferences (for example, the edit time limit) so the editor behaves the same way each time you use it.
+- **Pending labeler consent.** A short-lived flag indicating whether Skeeditor should prompt you to opt in to the optional Skeeditor labeler.
+- **DPoP key material.** Public/secret key pairs used to generate OAuth DPoP proofs, stored only in extension storage and used solely as required by the OAuth protocol.
 
 Extension storage is isolated per-extension and per-browser-profile. It is not accessible by web pages, other extensions, or any server.
 
@@ -28,15 +32,15 @@ Skeeditor never asks for, receives, or stores your Bluesky password. The OAuth f
 
 When you use Skeeditor, your browser makes requests to:
 
-| Endpoint                                              | Purpose                                               |
-| ----------------------------------------------------- | ----------------------------------------------------- |
-| `https://bsky.social/oauth/authorize`                 | Initial OAuth authorization redirect                  |
-| `https://bsky.social/oauth/token`                     | Exchange authorization code for tokens; token refresh |
-| `https://bsky.social/xrpc/com.atproto.repo.getRecord` | Fetch the current post record                         |
-| `https://bsky.social/xrpc/com.atproto.repo.putRecord` | Write the edited post record back                     |
-| `https://labeler.skeeditor.link`                      | Labeler service — applies "edited" labels to posts    |
+| Endpoint | Purpose |
+| --- | --- |
+| Your Bluesky auth server (typically `bsky.social`) `/oauth/authorize` | Initial OAuth authorization redirect |
+| Your Bluesky auth server `/oauth/token` | Exchange authorization code for tokens; token refresh |
+| Your PDS (typically `bsky.social` or `*.bsky.network`) `/xrpc/com.atproto.repo.getRecord` | Fetch the current post record |
+| Your PDS `/xrpc/com.atproto.repo.putRecord` | Write the edited post record back |
+| `https://labeler.skeeditor.link` | Labeler service — applies "edited" labels to posts |
 
-All requests go to Bluesky's own servers or the Skeeditor labeler over HTTPS. No intermediate proxy, analytics endpoint, or third-party server is involved at any point. The labeler connection only occurs if you have subscribed to the Skeeditor labeler (`@skeeditor.link`) through your Bluesky moderation settings.
+All requests go to your Bluesky auth server and PDS (or the Skeeditor labeler) over HTTPS. The exact server hostnames depend on your account configuration — most users connect to `bsky.social` and `*.bsky.network`. No intermediate proxy, analytics endpoint, or third-party server is involved at any point. The labeler connection only occurs if you have subscribed to the Skeeditor labeler (`@skeeditor.link`) through your Bluesky moderation settings.
 
 ---
 

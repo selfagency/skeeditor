@@ -285,15 +285,15 @@ Safari requires every extension to ship as a **macOS app wrapper**. The build sc
 task build:safari
 ```
 
-This runs Vite for the `safari` target and then executes the converter. The Xcode project lands at **`dist/safari-xcode/`**.
+This runs Vite for the `safari` target and then executes the converter. The Xcode project lands at **`xcode/`**.
 
 If you need to run the converter step manually (e.g. after changing the manifest overlay):
 
 ```sh
 xcrun safari-web-extension-converter dist/safari \
-  --project-location ./dist/safari-xcode \
+  --project-location ./xcode \
   --app-name skeeditor \
-  --bundle-identifier dev.selfagency.skeeditor \
+  --bundle-identifier agency.self.skeeditor \
   --swift \
   --force
 ```
@@ -301,12 +301,12 @@ xcrun safari-web-extension-converter dist/safari \
 #### 2. Open and run the Xcode project
 
 ```sh
-open dist/safari-xcode/skeeditor.xcodeproj
+open xcode/skeeditor.xcodeproj
 ```
 
 In Xcode:
 
-1. Select the **Skeeditor** scheme (macOS target, not iOS).
+1. Select the **skeeditor** scheme (macOS target, not iOS).
 2. Press **⌘R** (or **Product → Run**).
 
 A small macOS app launches — its only purpose is to register the extension with the system. You can quit it immediately after it opens.

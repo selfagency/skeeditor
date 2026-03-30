@@ -73,7 +73,7 @@ AT Protocol requires the client to be identified by a **client ID that is a vali
 ```json
 {
   "client_id": "https://docs.skeeditor.link/oauth/client-metadata.json",
-  "client_name": "Skeeditor",
+  "client_name": "skeeditor",
   "client_uri": "https://docs.skeeditor.link",
   "redirect_uris": ["https://docs.skeeditor.link/callback.html"],
   "response_types": ["code"],
