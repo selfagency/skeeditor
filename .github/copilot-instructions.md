@@ -55,8 +55,8 @@ Can't find it? Ask the user — never fabricate an API.
 ## Tool Priority (Strict)
 
 1. **VS Code commands/UI** — typed, safe, no shell injection risk.
-2. **Chat participants** — `@beans`, `@github`.
-3. **MCP tools** — structured, auditable.
+2. **MCP tools** — structured, auditable.
+3. **Chat participants** — `@beans`, `@github`
 4. **CLI** — last resort only; always use arg arrays, never string interpolation.
 
 Specifics: PRs via GitHub extension; Git via Source Control panel; Beans via extension or `@beans`.
