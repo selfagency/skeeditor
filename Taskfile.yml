@@ -87,7 +87,7 @@ tasks:
     cmds:
       - task: 'build:chrome'
       - task: 'build:firefox'
-      - task: 'build:safari'
+      - task: 'build:safari:swift'
 
   build:browser:
     internal: true
@@ -119,6 +119,14 @@ tasks:
       - task: 'build:browser'
         vars:
           BROWSER: safari
+
+  build:safari:swift:
+    desc: Build the Safari extension bundle
+    cmds:
+      - task: 'build:browser'
+        vars:
+          BROWSER: safari
+      - cmd: xcrun safari-web-extension-converter dist/safari --project-location ./xcode --app-name skeeditor --bundle-identifier agency.self.skeeditor --swift
 
   build:watch:
     desc: Watch-build the Chrome extension
