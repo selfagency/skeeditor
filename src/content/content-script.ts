@@ -953,7 +953,7 @@ const moveEditedBadgeNearArchived = (postElement: HTMLElement): void => {
 };
 
 /** Intercept all "Edited" and "Archived post" buttons not yet processed by skeeditor. */
-const interceptArchivedPostButtons = (): void => {
+const interceptArchivedPostButtons = (posts?: PostInfo[]): void => {
   if (currentDid === null && currentHandle === null) return;
 
   const archivedButtons = document.querySelectorAll<HTMLElement>(
@@ -1053,7 +1053,7 @@ const interceptArchivedPostButtons = (): void => {
   }
 
   // Also keep the Edited badge visually aligned next to Archived post when both exist.
-  for (const post of findPosts(document)) {
+  for (const post of posts ?? findPosts(document)) {
     moveEditedBadgeNearArchived(post.element);
   }
 };
@@ -1078,7 +1078,7 @@ const scanForPosts = (): void => {
 
   // Intercept "Archived post" button clicks to show our edit history modal.
   // (and edited badges on own posts)
-  interceptArchivedPostButtons();
+  interceptArchivedPostButtons(posts);
 
   console.log(`${APP_NAME}: scanning for posts, currentDid=${currentDid}, currentHandle=${currentHandle}`);
 

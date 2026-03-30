@@ -15,9 +15,9 @@ Main branch CI is failing after merge with:
 - unit test regression: test/unit/content/content-script-debounce.test.ts expecting one synchronous findPosts call
 
 ## Todo
-- [ ] Reproduce failures on current main locally
-- [ ] Fix listRecords call to match @atproto/lex client API
-- [ ] Fix cursor optional typing return shape for exactOptionalPropertyTypes
-- [ ] Fix/align debounce synchronous findPosts behavior or test setup
-- [ ] Run task typecheck and task test:coverage:ci
+- [x] Reproduce failures on current main locally
+- [x] Fix listRecords call to match @atproto/lex client API
+- [x] Fix cursor optional typing return shape for exactOptionalPropertyTypes
+- [x] Fix/align debounce synchronous findPosts behavior or test setup
+- [x] Run task typecheck and task test:coverage:ci
 - [ ] Commit and open hotfix PR
