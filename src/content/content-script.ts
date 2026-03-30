@@ -10,6 +10,7 @@ import type {
 } from '../shared/messages';
 import { sendMessage } from '../shared/messages';
 import { EditModal } from './edit-modal';
+import { EditHistoryModal } from './edit-history-modal';
 import {
   getCached,
   getCacheSize,
@@ -29,6 +30,8 @@ import './toast';
 
 const POST_MARKER_ATTRIBUTE = 'data-skeeditor-processed';
 const EDIT_BUTTON_ATTRIBUTE = 'data-skeeditor-edit-button';
+const ARCHIVED_BUTTON_ATTRIBUTE = 'data-skeeditor-archived-intercepted';
+const EDITED_BUTTON_ATTRIBUTE = 'data-skeeditor-edited-intercepted';
 const ACTION_AREA_WAIT_TIMEOUT = 3000;
 
 const log = createLogger('content');
@@ -501,6 +504,7 @@ let runtimeMessageHandler: ((msg: unknown) => void) | null = null;
 let scanScheduled = false;
 let scanTimer: ReturnType<typeof setTimeout> | null = null;
 let activeModal: EditModal | null = null;
+let activeHistoryModal: EditHistoryModal | null = null;
 // Monotonically-increasing scan generation. Async fetch functions capture the
 // generation at dispatch time and abort their apply phase if a newer scan has
 // since fired, preventing stale results from overwriting fresher DOM state.
@@ -695,6 +699,7 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
 
   const settingsResponse = await sendMessage({ type: 'GET_SETTINGS' });
   const editTimeLimit = 'error' in settingsResponse ? null : settingsResponse.editTimeLimit;
+  const postDateStrategy = 'error' in settingsResponse ? 'update' : settingsResponse.postDateStrategy;
 
   if (exceedsEditTimeLimit(currentRecord.createdAt, editTimeLimit)) {
     modal.open(initialRecordText);
@@ -705,7 +710,9 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
 
   modal.open(initialRecordText, undefined, async text => {
     const uploadedMedia = modal.getUploadedMedia();
-    const updatedRecord = buildUpdatedPostRecord(currentRecord, text, uploadedMedia);
+    const updatedRecord = buildUpdatedPostRecord(currentRecord, text, uploadedMedia, {
+      updateCreatedAt: postDateStrategy === 'update',
+    });
 
     // Upload media files if any
     if (uploadedMedia.length > 0) {
@@ -910,6 +917,147 @@ const injectEditButton = (postElement: HTMLElement): void => {
   void waitForActionArea(postElement).then(finalizeInjection);
 };
 
+const getOrCreateHistoryModal = (): EditHistoryModal => {
+  if (activeHistoryModal !== null && activeHistoryModal.element.isConnected) {
+    return activeHistoryModal;
+  }
+  const modal = new EditHistoryModal();
+  modal.element.setAttribute('data-skeeditor-history-modal', 'true');
+  activeHistoryModal = modal;
+  return modal;
+};
+
+/** Extract the display date from the "Archived post" button text.
+ *  Button text is: "Archived from Mar 28, 2026, 11:31 PM" — strip the prefix. */
+const parseArchivedDateText = (button: HTMLElement): string => {
+  const text = button.textContent ?? '';
+  const prefix = 'Archived from ';
+  const idx = text.indexOf(prefix);
+  return idx !== -1 ? text.slice(idx + prefix.length).trim() : text.trim();
+};
+
+const moveEditedBadgeNearArchived = (postElement: HTMLElement): void => {
+  const archivedButton = postElement.querySelector<HTMLElement>('button[aria-label="Archived post"]');
+  const editedButton = postElement.querySelector<HTMLElement>('button[aria-label="Edited"]');
+
+  if (!archivedButton || !editedButton || archivedButton === editedButton) {
+    return;
+  }
+
+  const archivedParent = archivedButton.parentElement;
+  if (!archivedParent) return;
+
+  if (editedButton.parentElement !== archivedParent || editedButton.nextElementSibling !== archivedButton) {
+    archivedParent.insertBefore(editedButton, archivedButton);
+  }
+};
+
+/** Intercept all "Edited" and "Archived post" buttons not yet processed by skeeditor. */
+const interceptArchivedPostButtons = (): void => {
+  if (currentDid === null && currentHandle === null) return;
+
+  const archivedButtons = document.querySelectorAll<HTMLElement>(
+    `button[aria-label="Archived post"]:not([${ARCHIVED_BUTTON_ATTRIBUTE}])`,
+  );
+  const editedButtons = document.querySelectorAll<HTMLElement>(
+    `button[aria-label="Edited"]:not([${EDITED_BUTTON_ATTRIBUTE}])`,
+  );
+
+  const buttons = [...archivedButtons, ...editedButtons];
+
+  for (const btn of buttons) {
+    const isArchivedButton = btn.getAttribute('aria-label') === 'Archived post';
+    btn.setAttribute(isArchivedButton ? ARCHIVED_BUTTON_ATTRIBUTE : EDITED_BUTTON_ATTRIBUTE, 'true');
+
+    btn.addEventListener(
+      'click',
+      async event => {
+        // Find the post container to get the AT-URI + repo.
+        const postElement =
+          btn.closest<HTMLElement>('[data-at-uri]') ??
+          btn.closest<HTMLElement>('[data-uri]') ??
+          btn.closest<HTMLElement>('[data-testid^="postThreadItem"]') ??
+          btn.closest<HTMLElement>('[data-testid^="feedItem"]') ??
+          btn.closest<HTMLElement>('article');
+
+        if (!postElement) {
+          // Unknown context — preserve native Bluesky behavior.
+          return;
+        }
+
+        const info = extractPostInfo(postElement);
+        if (!info) {
+          // Unknown context — preserve native Bluesky behavior.
+          return;
+        }
+
+        // Only hijack badges on the current user's own posts.
+        if (info.repo !== currentDid && info.repo !== currentHandle) {
+          return;
+        }
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+
+        const archivedButton = isArchivedButton
+          ? btn
+          : (postElement.querySelector<HTMLElement>('button[aria-label="Archived post"]') ?? null);
+        const originalDate = archivedButton ? parseArchivedDateText(archivedButton) : 'Unknown original date';
+        const modal = getOrCreateHistoryModal();
+        modal.open(originalDate);
+
+        try {
+          // Resolve to DID form so listRecords targets the right repo.
+          const repo = info.repo === currentHandle && currentDid !== null ? currentDid : info.repo;
+          const postUri = `at://${repo}/${info.collection}/${info.rkey}`;
+
+          // Fetch all postVersion records for this user and filter by postUri.
+          // listRecords doesn't support field-level filtering so we do it client-side.
+          const response = await sendMessage({
+            type: 'LIST_RECORDS',
+            repo,
+            collection: 'agency.self.skeeditor.postVersion',
+            limit: 100,
+          });
+
+          if ('error' in response) {
+            modal.showError('Could not load edit history.');
+            return;
+          }
+
+          const versions = response.records
+            .filter(r => (r.value as Record<string, unknown>)['postUri'] === postUri)
+            .sort((a, b) => {
+              const aDate = String((a.value as Record<string, unknown>)['createdAt'] ?? '');
+              const bDate = String((b.value as Record<string, unknown>)['createdAt'] ?? '');
+              return aDate.localeCompare(bDate);
+            })
+            .map(r => ({
+              text: String((r.value as Record<string, unknown>)['text'] ?? ''),
+              editedAt: String((r.value as Record<string, unknown>)['createdAt'] ?? ''),
+            }));
+
+          // User asked for original version in this modal.
+          if (versions.length > 0) {
+            modal.showVersions([versions[0]!]);
+          } else {
+            modal.showVersions([]);
+          }
+        } catch (err) {
+          console.error(`${APP_NAME}: failed to load edit history`, err);
+          modal.showError('Could not load edit history.');
+        }
+      },
+      true,
+    ); // capture phase so we beat Bluesky's own handler
+  }
+
+  // Also keep the Edited badge visually aligned next to Archived post when both exist.
+  for (const post of findPosts(document)) {
+    moveEditedBadgeNearArchived(post.element);
+  }
+};
+
 const scanForPosts = (): void => {
   // Increment generation so any in-flight async fetches from a previous scan
   // will discard their results rather than apply stale text.
@@ -927,6 +1075,10 @@ const scanForPosts = (): void => {
 
   // Always re-apply persisted text edits — React may have re-rendered since last time.
   applyEditedPostsFromCache(posts);
+
+  // Intercept "Archived post" button clicks to show our edit history modal.
+  // (and edited badges on own posts)
+  interceptArchivedPostButtons();
 
   console.log(`${APP_NAME}: scanning for posts, currentDid=${currentDid}, currentHandle=${currentHandle}`);
 

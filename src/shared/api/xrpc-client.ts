@@ -77,6 +77,25 @@ export interface PutRecordWithSwapParams extends PutRecordParams {
   swapRecord: NonNullable<PutRecordParams['swapRecord']>;
 }
 
+export interface ListRecordsParams {
+  repo: string;
+  collection: string;
+  limit?: number;
+  cursor?: string;
+  reverse?: boolean;
+}
+
+export interface ListRecordsRecord {
+  uri: string;
+  cid: string;
+  value: Record<string, unknown>;
+}
+
+export interface ListRecordsResult {
+  records: ListRecordsRecord[];
+  cursor?: string;
+}
+
 export interface PutRecordMergeAdvisory {
   hasConflicts: boolean;
   clientChanges: string[];
@@ -459,6 +478,39 @@ export class XrpcClient {
    * @returns `{ blobRef: { $link: string }, mimeType: string }`
    * @throws `XrpcClientError` on any XRPC or network failure
    */
+  /**
+   * List records in a collection from the PDS.
+   *
+   * @param params - `{ repo, collection, limit?, cursor?, reverse? }`
+   * @returns `{ records, cursor? }`
+   * @throws `XrpcClientError` on any XRPC or network failure
+   */
+  public async listRecords(params: ListRecordsParams): Promise<ListRecordsResult> {
+    const { repo, collection, limit, cursor, reverse } = params;
+
+    try {
+      const query: Record<string, unknown> = { repo, collection };
+      if (limit !== undefined) query['limit'] = limit;
+      if (cursor !== undefined) query['cursor'] = cursor;
+      if (reverse !== undefined) query['reverse'] = reverse;
+
+      const response = await this._client.call('com.atproto.repo.listRecords', query, undefined, {
+        encoding: 'application/json',
+      });
+      const body = response.body as {
+        records: Array<{ uri: string; cid: string; value: Record<string, unknown> }>;
+        cursor?: string;
+      };
+
+      return {
+        records: body.records.map(r => ({ uri: r.uri, cid: r.cid, value: r.value })),
+        cursor: body.cursor,
+      };
+    } catch (err) {
+      throw mapXrpcError(err, 'listRecords');
+    }
+  }
+
   public async uploadBlob(params: { data: Blob | File }): Promise<{ blobRef: l.BlobRef; mimeType: string }> {
     const { data } = params;
 

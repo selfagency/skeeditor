@@ -24,6 +24,7 @@ import {
   getOAuthTokenUrl,
   getSettings,
   isValidEditTimeLimit,
+  isValidPostDateStrategy,
   LABELER_DID,
   LABELER_EMIT_URL,
   setCurrentPdsUrl,
@@ -216,6 +217,12 @@ async function fetchHandleFromSession(pdsUrl: string, accessToken: string): Prom
 // ── Dependency injection types ────────────────────────────────────────────────
 
 interface XrpcInterface {
+  listRecords: (params: {
+    repo: string;
+    collection: string;
+    limit?: number;
+    cursor?: string;
+  }) => Promise<{ records: Array<{ uri: string; cid: string; value: Record<string, unknown> }>; cursor?: string }>;
   getRecord: (params: { repo: string; collection: string; rkey: string }) => Promise<GetRecordResult>;
   createRecord: (
     params: import('../shared/api/xrpc-client').CreateRecordParams,
@@ -284,6 +291,7 @@ const KNOWN_TYPES = new Set([
   'AUTH_SIGN_OUT_ACCOUNT',
   'GET_SETTINGS',
   'SET_SETTINGS',
+  'LIST_RECORDS',
   'GET_RECORD',
   'CREATE_RECORD',
   'PUT_RECORD',
@@ -403,14 +411,15 @@ function isUploadBlobPayload(message: unknown): message is { data: ArrayBuffer; 
 
 function isValidSettingsPayload(
   msg: IncomingMessage,
-): msg is IncomingMessage & { settings: { editTimeLimit: number | null } } {
+): msg is IncomingMessage & { settings: { editTimeLimit: number | null; postDateStrategy: 'preserve' | 'update' } } {
   const settings = msg['settings'];
   if (settings === null || typeof settings !== 'object' || Array.isArray(settings)) {
     return false;
   }
 
   const editTimeLimit = (settings as Record<string, unknown>)['editTimeLimit'];
-  return isValidEditTimeLimit(editTimeLimit);
+  const postDateStrategy = (settings as Record<string, unknown>)['postDateStrategy'];
+  return isValidEditTimeLimit(editTimeLimit) && isValidPostDateStrategy(postDateStrategy);
 }
 
 // ── Handler ──────────────────────────────────────────────────────────────────
@@ -709,6 +718,42 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
           message: errorMessage,
           requiresReauth: !!isAuthError,
         } satisfies import('../shared/messages').PutRecordErrorResponse;
+      }
+    }
+
+    case 'LIST_RECORDS': {
+      if (!isNonEmptyString(message['repo']) || !isNonEmptyString(message['collection'])) {
+        return { error: 'Invalid LIST_RECORDS payload' };
+      }
+      const stored = await deps.store.get();
+      const valid = await deps.store.isAccessTokenValid();
+      if (stored === null || !valid) {
+        return { error: 'Not authenticated' };
+      }
+
+      if (message['repo'] !== stored.did) {
+        return { error: 'LIST_RECORDS repo must match the active account DID' };
+      }
+
+      try {
+        const pdsUrl = await getCurrentPdsUrl(stored.did);
+        const client = deps.createXrpc({
+          service: pdsUrl,
+          did: stored.did,
+          accessJwt: stored.accessToken,
+          ...(stored.dpopEnabled !== undefined && { dpopEnabled: stored.dpopEnabled }),
+        });
+        const limit = typeof message['limit'] === 'number' ? message['limit'] : undefined;
+        const cursor = typeof message['cursor'] === 'string' ? message['cursor'] : undefined;
+        return await client.listRecords({
+          repo: message['repo'] as string,
+          collection: message['collection'] as string,
+          ...(limit !== undefined && { limit }),
+          ...(cursor !== undefined && { cursor }),
+        });
+      } catch (err) {
+        console.error('[skeeditor] LIST_RECORDS failed:', err);
+        return { error: err instanceof Error ? err.message : 'Failed to list records' };
       }
     }
 

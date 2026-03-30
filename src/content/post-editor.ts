@@ -55,10 +55,12 @@ export function buildUpdatedPostRecord(
   currentRecord: EditablePostRecord,
   text: string,
   mediaFiles?: File[],
+  options?: { updateCreatedAt?: boolean },
 ): EditablePostRecord {
   const nextRecord: EditablePostRecord = {
     ...currentRecord,
     text,
+    createdAt: options?.updateCreatedAt === false ? currentRecord.createdAt : new Date().toISOString(),
   };
 
   const facets = buildFacets(text, { resolveMentionDid: buildMentionDidResolver(currentRecord) });

@@ -99,6 +99,22 @@ export interface CreateRecordSuccessResponse {
 
 export type CreateRecordResponse = CreateRecordSuccessResponse | PutRecordErrorResponse;
 
+export interface ListRecordsRequest {
+  type: 'LIST_RECORDS';
+  repo: string;
+  collection: string;
+  limit?: number;
+  cursor?: string;
+}
+
+export interface ListRecordsRecord {
+  uri: string;
+  cid: string;
+  value: Record<string, unknown>;
+}
+
+export type ListRecordsResponse = { records: ListRecordsRecord[]; cursor?: string } | { error: string };
+
 export interface GetRecordRequest {
   type: 'GET_RECORD';
   repo: string;
@@ -199,6 +215,7 @@ export type MessageRequest =
   | GetSettingsRequest
   | SetSettingsRequest
   | CreateRecordRequest
+  | ListRecordsRequest
   | GetRecordRequest
   | PutRecordRequest
   | UploadBlobRequest
@@ -241,19 +258,21 @@ export type ResponseFor<T extends MessageRequest> = T extends AuthGetStatusReque
             ? OkResponse
             : T extends CreateRecordRequest
               ? CreateRecordResponse
-              : T extends GetRecordRequest
-                ? GetRecordResponse
-                : T extends PutRecordRequest
-                  ? PutRecordResponse
-                  : T extends UploadBlobRequest
-                    ? UploadBlobResponse
-                    : T extends SetPdsUrlRequest
-                      ? SetPdsUrlResponse
-                      : T extends GetPdsUrlRequest
-                        ? GetPdsUrlResponse
-                        : T extends CheckLabelerSubscriptionRequest
-                          ? CheckLabelerSubscriptionResponse
-                          : never;
+              : T extends ListRecordsRequest
+                ? ListRecordsResponse
+                : T extends GetRecordRequest
+                  ? GetRecordResponse
+                  : T extends PutRecordRequest
+                    ? PutRecordResponse
+                    : T extends UploadBlobRequest
+                      ? UploadBlobResponse
+                      : T extends SetPdsUrlRequest
+                        ? SetPdsUrlResponse
+                        : T extends GetPdsUrlRequest
+                          ? GetPdsUrlResponse
+                          : T extends CheckLabelerSubscriptionRequest
+                            ? CheckLabelerSubscriptionResponse
+                            : never;
 
 /**
  * Type-safe wrapper around `browser.runtime.sendMessage`.

@@ -10,6 +10,7 @@ const accountsList = document.querySelector<HTMLDivElement>('#accounts-list');
 const addPdsUrlInput = document.querySelector<HTMLInputElement>('#add-pds-url');
 const addAccountButton = document.querySelector<HTMLButtonElement>('#add-account');
 const editTimeLimitInput = document.querySelector<HTMLInputElement>('#edit-time-limit');
+const postDateStrategySelect = document.querySelector<HTMLSelectElement>('#post-date-strategy');
 const saveButton = document.querySelector<HTMLButtonElement>('#save-settings');
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -115,11 +116,12 @@ async function handleRemoveAccount(did: string): Promise<void> {
 // ── Settings ───────────────────────────────────────────────────────────────────
 
 async function loadSettings(): Promise<void> {
-  if (!editTimeLimitInput) return;
+  if (!editTimeLimitInput || !postDateStrategySelect) return;
   try {
     const response = await sendMessage({ type: 'GET_SETTINGS' });
     if (!('error' in response)) {
       editTimeLimitInput.value = response.editTimeLimit === null ? '' : String(response.editTimeLimit);
+      postDateStrategySelect.value = response.postDateStrategy;
     }
   } catch (error) {
     console.error('Error loading settings:', error);
@@ -127,7 +129,8 @@ async function loadSettings(): Promise<void> {
 }
 
 async function saveSettings(): Promise<void> {
-  if (!editTimeLimitInput || !saveButton) return;
+  if (!editTimeLimitInput || !postDateStrategySelect || !saveButton) return;
+  const postDateStrategy = postDateStrategySelect.value === 'preserve' ? 'preserve' : 'update';
 
   const rawEditTimeLimit = editTimeLimitInput.value.trim();
   const editTimeLimit = rawEditTimeLimit.length === 0 ? null : Number.parseFloat(rawEditTimeLimit);
@@ -147,15 +150,15 @@ async function saveSettings(): Promise<void> {
   saveButton.textContent = 'Saving…';
 
   try {
-    const response = await sendMessage({ type: 'SET_SETTINGS', settings: { editTimeLimit } });
+    const response = await sendMessage({ type: 'SET_SETTINGS', settings: { editTimeLimit, postDateStrategy } });
     if (!('ok' in response && response.ok)) {
       setStatus(('error' in response ? response.error : null) ?? 'Failed to save settings.', 'error');
       return;
     }
     setStatus(
       editTimeLimit === null
-        ? 'Settings saved. Edit time limit disabled.'
-        : `Settings saved. Edit time limit: ${editTimeLimit} minutes.`,
+        ? `Settings saved. Edit time limit disabled. Date mode: ${postDateStrategy}.`
+        : `Settings saved. Edit time limit: ${editTimeLimit} minutes. Date mode: ${postDateStrategy}.`,
       'success',
     );
   } catch (error) {

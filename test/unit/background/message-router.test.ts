@@ -57,6 +57,16 @@ const makeStoreMock = (session: StoredSession | null = null) => ({
 });
 
 const makeXrpcMock = () => ({
+  listRecords: vi.fn().mockResolvedValue({
+    records: [
+      {
+        uri: 'at://did:plc:testuser/agency.self.skeeditor.postVersion/abc',
+        cid: 'bafyreiabc',
+        value: { $type: 'agency.self.skeeditor.postVersion', text: 'original' },
+      },
+    ],
+    cursor: 'next-cursor',
+  }),
   getRecord: vi.fn<() => Promise<GetRecordResult>>().mockResolvedValue({
     value: { $type: 'app.bsky.feed.post', text: 'hello' },
     cid: 'bafyreiabc',
@@ -275,24 +285,30 @@ describe('handleMessage', () => {
 
   describe('settings', () => {
     it('returns stored settings for GET_SETTINGS', async () => {
-      vi.spyOn(constants, 'getSettings').mockResolvedValue({ editTimeLimit: 5 });
+      vi.spyOn(constants, 'getSettings').mockResolvedValue({ editTimeLimit: 5, postDateStrategy: 'update' });
 
       const result = await handleMessage({ type: 'GET_SETTINGS' }, makeDeps());
 
-      expect(result).toEqual({ editTimeLimit: 5 });
+      expect(result).toEqual({ editTimeLimit: 5, postDateStrategy: 'update' });
     });
 
     it('persists settings for SET_SETTINGS', async () => {
       const setSettingsSpy = vi.spyOn(constants, 'setSettings').mockResolvedValue(undefined);
 
-      const result = await handleMessage({ type: 'SET_SETTINGS', settings: { editTimeLimit: 0.5 } }, makeDeps());
+      const result = await handleMessage(
+        { type: 'SET_SETTINGS', settings: { editTimeLimit: 0.5, postDateStrategy: 'update' } },
+        makeDeps(),
+      );
 
-      expect(setSettingsSpy).toHaveBeenCalledWith({ editTimeLimit: 0.5 });
+      expect(setSettingsSpy).toHaveBeenCalledWith({ editTimeLimit: 0.5, postDateStrategy: 'update' });
       expect(result).toEqual({ ok: true });
     });
 
     it('rejects invalid settings payloads', async () => {
-      const result = await handleMessage({ type: 'SET_SETTINGS', settings: { editTimeLimit: 10 } }, makeDeps());
+      const result = await handleMessage(
+        { type: 'SET_SETTINGS', settings: { editTimeLimit: 10, postDateStrategy: 'update' } },
+        makeDeps(),
+      );
 
       expect(result).toEqual({ error: 'Invalid settings payload' });
     });
@@ -423,6 +439,79 @@ describe('handleMessage', () => {
   });
 
   describe('GET_RECORD', () => {
+    describe('LIST_RECORDS', () => {
+      it('rejects invalid payloads', async () => {
+        const deps = makeDeps({ store: makeStoreMock(makeSession()) });
+
+        const result = await handleMessage(
+          { type: 'LIST_RECORDS', repo: '', collection: 'agency.self.skeeditor.postVersion' },
+          deps,
+        );
+
+        expect(result).toEqual({ error: 'Invalid LIST_RECORDS payload' });
+      });
+
+      it('returns Not authenticated when no valid session exists', async () => {
+        const deps = makeDeps({ store: makeStoreMock(null) });
+
+        const result = await handleMessage(
+          { type: 'LIST_RECORDS', repo: 'did:plc:testuser', collection: 'agency.self.skeeditor.postVersion' },
+          deps,
+        );
+
+        expect(result).toEqual({ error: 'Not authenticated' });
+      });
+
+      it('rejects repo values that do not match the active account DID', async () => {
+        const session = makeSession({ did: 'did:plc:active' });
+        const deps = makeDeps({ store: makeStoreMock(session) });
+
+        const result = await handleMessage(
+          { type: 'LIST_RECORDS', repo: 'did:plc:other', collection: 'agency.self.skeeditor.postVersion' },
+          deps,
+        );
+
+        expect(result).toEqual({ error: 'LIST_RECORDS repo must match the active account DID' });
+      });
+
+      it('passes through listRecords params on success', async () => {
+        const session = makeSession({ did: 'did:plc:testuser' });
+        const xrpc = makeXrpcMock();
+        const deps = makeDeps({
+          store: makeStoreMock(session),
+          createXrpc: vi.fn().mockReturnValue(xrpc),
+        });
+
+        const result = await handleMessage(
+          {
+            type: 'LIST_RECORDS',
+            repo: 'did:plc:testuser',
+            collection: 'agency.self.skeeditor.postVersion',
+            limit: 25,
+            cursor: 'abc-cursor',
+          },
+          deps,
+        );
+
+        expect(xrpc.listRecords).toHaveBeenCalledWith({
+          repo: 'did:plc:testuser',
+          collection: 'agency.self.skeeditor.postVersion',
+          limit: 25,
+          cursor: 'abc-cursor',
+        });
+        expect(result).toEqual({
+          records: [
+            {
+              uri: 'at://did:plc:testuser/agency.self.skeeditor.postVersion/abc',
+              cid: 'bafyreiabc',
+              value: { $type: 'agency.self.skeeditor.postVersion', text: 'original' },
+            },
+          ],
+          cursor: 'next-cursor',
+        });
+      });
+    });
+
     it('returns Not authenticated when no valid session exists', async () => {
       const deps = makeDeps({ store: makeStoreMock(null) });
 
