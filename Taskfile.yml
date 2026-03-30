@@ -320,3 +320,18 @@ tasks:
   release:smoke:
     desc: Smoke-test release automation in CI/local dry-run mode
     cmd: node scripts/release.mjs --dry-run --skip-checks --skip-tests --skip-safari --artifacts-dir release-artifacts-ci
+
+  precommit:
+    desc: Run linters before committing
+    vars:
+      STAGED_SCRIPTS:
+        sh: echo "{{.CLI_ARGS}}" | tr ' ' '\n' | grep -E '\.(ts|js|cjs|mjs)$' | tr '\n' ' ' | sed 's/[[:space:]]*$//' || true
+    cmds:
+      - cmd: |
+          {{.TASK_EXE}} typecheck
+          {{.TASK_EXE}} test:unit
+          {{.TASK_EXE}} test:integration
+        if: '[ -n "{{.STAGED_SCRIPTS | trim}}" ]'
+      - cmd: ./node_modules/.bin/oxlint --fix {{.STAGED_SCRIPTS}}
+        if: '[ -n "{{.STAGED_SCRIPTS | trim}}" ]'
+      - task: format
