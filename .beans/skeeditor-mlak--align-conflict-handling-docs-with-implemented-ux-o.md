@@ -5,10 +5,8 @@ status: completed
 type: feature
 priority: normal
 created_at: 2026-03-30T14:04:21Z
-updated_at: 2026-03-30T23:02:24Z
+updated_at: 2026-03-30T23:09:47Z
 parent: skeeditor-d3m1
-branch: feat/mlak-align-conflict-handling-docs-ux
-pr: 90
 ---
 
 Conflict docs promise Reload / Force save and merge-advisory style actions, while the current modal only shows a message. Bring the implementation and documentation back into alignment.
@@ -39,3 +37,7 @@ Rationale:
 - Updated end-user conflict guidance in `docs/guide/usage.md` and `docs/guide/faq.md` to remove Force-save language.
 - Updated developer conflict docs (`docs/dev/conflicts.md`, `docs/putrecord-conflict-handling.md`) to describe current warning-only behavior and frame merge/force-save as optional future enhancement.
 - Updated smoke checklist in `docs/dev/testing.md` to validate warning-only reload/retry conflict behavior.
+
+### PR review follow-up
+- Updated `test/unit/docs/conflict-docs-alignment.test.ts` to resolve docs paths from a stable repo root derived from `import.meta.url` instead of `process.cwd()`.
+- Hardened regex checks to catch additional wording variants (e.g., `force-save`, `force save`, and `compare and retry`).
