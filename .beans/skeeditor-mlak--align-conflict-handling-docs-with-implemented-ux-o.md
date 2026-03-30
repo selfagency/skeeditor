@@ -7,6 +7,8 @@ priority: normal
 created_at: 2026-03-30T14:04:21Z
 updated_at: 2026-03-30T23:02:24Z
 parent: skeeditor-d3m1
+branch: feat/mlak-align-conflict-handling-docs-ux
+pr: 90
 ---
 
 Conflict docs promise Reload / Force save and merge-advisory style actions, while the current modal only shows a message. Bring the implementation and documentation back into alignment.
