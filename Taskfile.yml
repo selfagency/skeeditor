@@ -334,4 +334,4 @@ tasks:
         if: '[ -n "{{.STAGED_SCRIPTS | trim}}" ]'
       - cmd: ./node_modules/.bin/oxlint --fix {{.STAGED_SCRIPTS}}
         if: '[ -n "{{.STAGED_SCRIPTS | trim}}" ]'
-      - task: format
+      - cmd: ./node_modules/.bin/oxfmt --write {{.CLI_ARGS}}
