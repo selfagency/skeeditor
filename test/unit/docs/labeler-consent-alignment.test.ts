@@ -13,6 +13,7 @@ describe('labeler consent docs alignment', () => {
 
     expect(usageGuide).toContain('Open labeler profile');
     expect(usageGuide).toContain('opens Bluesky');
+    expect(usageGuide).not.toMatch(/after\s+signing\s+in\s+for\s+the\s+first\s+time/i);
     expect(usageGuide).not.toMatch(/choose\s+\*\*subscribe\*\*\s+to\s+opt\s+in/i);
   });
 

@@ -92,7 +92,7 @@ The setting is stored locally in the extension and takes effect immediately.
 
 ## Labeler consent
 
-After signing in for the first time, Skeeditor may show a labeler consent prompt if your account is not yet subscribed to the **Skeeditor labeler** (`@skeeditor.link`). The labeler is a core part of how Skeeditor communicates that a post has been edited. When you subscribe:
+After you sign in, Skeeditor may show a labeler consent prompt if your account is not yet subscribed to the **Skeeditor labeler** (`@skeeditor.link`). The labeler is a core part of how Skeeditor communicates that a post has been edited. When you subscribe:
 
 - Posts you edit through Skeeditor can be marked with an **"edited"** label visible to other Bluesky users who also subscribe to the labeler.
 - The label is informational only — it does not suppress or hide the post.
