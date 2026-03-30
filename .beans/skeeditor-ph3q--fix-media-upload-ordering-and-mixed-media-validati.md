@@ -8,6 +8,7 @@ created_at: 2026-03-30T14:04:21Z
 updated_at: 2026-03-30T20:16:41Z
 parent: skeeditor-d3m1
 branch: fix/ph3q-media-upload-ordering
+pr: 87
 ---
 
 Media uploads currently depend on selection order and can mis-map uploaded blobs to embeds. Enforce valid media combinations and ensure blob assignment always matches the embed placeholders.
