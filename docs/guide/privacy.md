@@ -47,6 +47,8 @@ When labeler integration is active, Skeeditor sends the OAuth **access token** i
 
 All requests go over HTTPS/WSS to the hosts above. There are no analytics endpoints, hidden relay proxies, or advertising SDK calls.
 
+When notifying the labeler after a successful edit, Skeeditor forwards your OAuth **access token** in the `Authorization: Bearer` header so the labeler can verify your identity against your PDS. Your **refresh token is never sent** to the labeler or to any server other than your Bluesky authorization server.
+
 ---
 
 ## Security model
