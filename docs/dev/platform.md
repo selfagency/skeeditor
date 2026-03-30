@@ -1,6 +1,6 @@
 # Cross-Browser Platform
 
-skeeditor targets Chrome, Firefox, and Safari using a shared `src/` codebase. Browser-specific differences are isolated in `src/platform/<browser>/` shims. The manifest is generated per-browser by WXT from `wxt.config.ts` — no separate overlay files are required.
+Skeeditor targets Chrome, Firefox, and Safari using a shared `src/` codebase. Browser-specific differences are isolated in `src/platform/<browser>/` shims. The manifest is generated per-browser by WXT from `wxt.config.ts` — no separate overlay files are required.
 
 ---
 
@@ -75,11 +75,11 @@ if (platform.isFirefox) {
 
 ### `browser.identity`
 
-Not available on Firefox or Safari. skeeditor uses `browser.tabs.create` for the OAuth redirect tab — this works cross-browser.
+Not available on Firefox or Safari. Skeeditor uses `browser.tabs.create` for the OAuth redirect tab — this works cross-browser.
 
 ### Side panel / sidebar
 
-- Chrome 114+: `browser.sidePanel` (not currently used by skeeditor)
+- Chrome 114+: `browser.sidePanel` (not currently used by Skeeditor)
 - Firefox: `browser.sidebarAction` (different API, Firefox-only)
 - Safari: no equivalent
 

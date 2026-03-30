@@ -1,41 +1,21 @@
 # Architecture
 
-skeeditor is a standard Manifest V3 browser extension built with [WXT](https://wxt.dev/). Understanding the three extension contexts and how they communicate is the key to understanding the codebase.
+Skeeditor is a standard Manifest V3 browser extension built with [WXT](https://wxt.dev/). Understanding the three extension contexts and how they communicate is the key to understanding the codebase.
 
 ## The three extension contexts
 
-```text
-┌───────────────────────────────────────────────────────────────────┐
-│  Browser                                                           │
-│                                                                    │
-│  ┌─────────────────────┐    messages    ┌─────────────────────┐  │
-│  │  Content Script     │◄──────────────►│ Background Worker   │  │
-│  │  (bsky.app page)    │                │ (service worker)    │  │
-│  │                     │                │                     │  │
-│  │  • Detects posts    │                │ • Stores sessions   │  │
-│  │  • Injects Edit btn │                │ • Makes XRPC calls  │  │
-│  │  • Shows modal      │                │ • Refreshes tokens  │  │
-│  └─────────────────────┘                │ • Labeler checks    │  │
-│                                         └─────────────────────┘  │
-│                                                   ▲              │
-│  ┌──────────────────────┐    messages              │              │
-│  │  Popup               │──────────────────────────┘              │
-│  │  (toolbar button)    │                                         │
-│  │                      │                                         │
-│  │  • Sign In / Out     │                                         │
-│  │  • Account switching │                                         │
-│  │  • Auth status       │                                         │
-│  │  • Labeler consent   │                                         │
-│  │  • Options link      │                                         │
-│  └──────────────────────┘                                         │
-│                                                                    │
-│  ┌──────────────────────┐                                         │
-│  │  Options Page        │    messages    ┌─────────────────────┐  │
-│  │  (full tab)          │◄──────────────►│ Background Worker   │  │
-│  │                      │                │                     │  │
-│  │  • Edit time limit   │                │ • GET/SET_SETTINGS  │  │
-│  └──────────────────────┘                └─────────────────────┘  │
-└───────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph Browser
+        CS["Content Script<br/>(bsky.app page)<br/>• Detects posts<br/>• Injects Edit btn<br/>• Shows modal"]
+        BG["Background Worker<br/>(service worker)<br/>• Stores sessions<br/>• Makes XRPC calls<br/>• Refreshes tokens<br/>• Labeler checks"]
+        PU["Popup<br/>(toolbar button)<br/>• Sign In / Out<br/>• Account switching<br/>• Auth status<br/>• Labeler consent<br/>• Options link"]
+        OP["Options Page<br/>(full tab)<br/>• Edit time limit"]
+    end
+
+    CS <-->|"messages"| BG
+    PU -->|"messages"| BG
+    OP <-->|"messages (GET/SET_SETTINGS)"| BG
 ```
 
 ### Content script (`src/entrypoints/content.ts`, `src/content/`)
@@ -85,65 +65,36 @@ Settings are persisted in `browser.storage.local` under `"settings"` via the `GE
 
 ## Data flow: editing a post
 
-```text
-User clicks Edit
-      │
-      ▼
-content-script: post-detector extracts PostInfo (at-uri + text)
-      │
-      ▼
-content-script: post-editor sends GET_RECORD → background
-      │
-      ▼
-background: XrpcClient.getRecord(at-uri) → bsky.social
-      │
-      ▼
-background → content-script: record { text, facets, cid }
-      │
-      ▼
-content-script: edit-modal opens, user types
-      │
-      ▼
-User clicks Save
-      │
-      ▼
-content-script: detectFacets(newText), sends PUT_RECORD { record, swapCid } → background
-      │
-      ▼
-background: XrpcClient.putRecordWithSwap(params) → bsky.social
-      │
-      ▼
-SUCCESS → content-script updates DOM
-CONFLICT → content-script shows conflict UI
-ERROR    → content-script shows error message
+```mermaid
+flowchart TD
+    A["User clicks Edit"] --> B["post-detector extracts PostInfo\n(at-uri + text)"]
+    B --> C["post-editor sends GET_RECORD → background"]
+    C --> D["background: XrpcClient.getRecord(at-uri) → bsky.social"]
+    D --> E["background → content-script:\nrecord { text, facets, cid }"]
+    E --> F["edit-modal opens, user types"]
+    F --> G["User clicks Save"]
+    G --> H["detectFacets(newText)\nsends PUT_RECORD { record, swapCid } → background"]
+    H --> I["background: XrpcClient.putRecordWithSwap → bsky.social"]
+    I --> J{"Result"}
+    J -->|"Success"| K["content-script updates DOM"]
+    J -->|"Conflict"| L["content-script shows conflict UI"]
+    J -->|"Error"| M["content-script shows error message"]
 ```
 
 ## Data flow: sign-in and labeler check
 
-```text
-User clicks Sign In in popup
-      │
-      ▼
-Popup: AUTH_SIGN_IN → background
-      │
-      ▼
-Background: opens callback tab (OAuth PKCE + DPoP)
-      │
-      ▼
-callback.html: AUTH_CALLBACK { code, state } → background
-      │
-      ▼
-background: exchanges code for tokens, persists session keyed by DID
-      │
-      ▼
-background: CHECK_LABELER_SUBSCRIPTION
-  ├── already subscribed → done
-  └── not subscribed → sets consent-pending flag in storage
-        │
-        ▼
-      Popup re-opens → shows labeler consent dialog
-        ├── Accept → subscribes user to LABELER_DID
-        └── Decline → clears flag, no subscription
+```mermaid
+flowchart TD
+    A["User clicks Sign In in popup"] --> B["Popup: AUTH_SIGN_IN → background"]
+    B --> C["Background: opens callback tab\n(OAuth PKCE + DPoP)"]
+    C --> D["callback.html: AUTH_CALLBACK\n{ code, state } → background"]
+    D --> E["Exchanges code for tokens,\npersists session keyed by DID"]
+    E --> F{"CHECK_LABELER_SUBSCRIPTION"}
+    F -->|"Already subscribed"| G["Done"]
+    F -->|"Not subscribed"| H["Sets consent-pending flag in storage"]
+    H --> I["Popup re-opens →\nshows labeler consent dialog"]
+    I -->|"Accept"| J["Subscribes user to LABELER_DID"]
+    I -->|"Decline"| K["Clears flag, no subscription"]
 ```
 
 ---
@@ -182,4 +133,4 @@ Browser API differences are isolated in `src/platform/<browser>/`. Shared code a
 
 ### Labeler subscription is opt-in
 
-The consent dialog after sign-in is informational — subscribing to the skeeditor labeler is never automatic. Users who decline will simply not see "edited" labels on posts.
+The consent dialog after sign-in is informational — subscribing to the Skeeditor labeler is never automatic. Users who decline will simply not see "edited" labels on posts.

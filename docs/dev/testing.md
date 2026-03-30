@@ -1,6 +1,6 @@
 # Testing
 
-skeeditor has three test layers: unit, integration, and end-to-end. Each targets a different scope and uses a different tool.
+Skeeditor has three test layers: unit, integration, and end-to-end. Each targets a different scope and uses a different tool.
 
 ---
 
@@ -306,7 +306,7 @@ open dist/safari-xcode/skeeditor.xcodeproj
 
 In Xcode:
 
-1. Select the **skeeditor** scheme (macOS target, not iOS).
+1. Select the **Skeeditor** scheme (macOS target, not iOS).
 2. Press **⌘R** (or **Product → Run**).
 
 A small macOS app launches — its only purpose is to register the extension with the system. You can quit it immediately after it opens.
@@ -321,7 +321,7 @@ Safari blocks unsigned extensions by default during development. Enable loading 
 #### 4. Enable the extension
 
 1. **Safari → Settings → Extensions**.
-2. Find **skeeditor** in the list and check the checkbox to enable it.
+2. Find **Skeeditor** in the list and check the checkbox to enable it.
 3. Grant access to `bsky.app` when prompted (choose **Allow on Every Website** or **Allow on bsky.app**).
 
 #### 5. Test on bsky.app
@@ -334,11 +334,11 @@ Navigate to `https://bsky.app`. The extension should inject its content script. 
 
 #### 7. Debug the background service worker
 
-In the Develop menu, look for an entry like **Develop → (your Mac name) → skeeditor – Background Page**. If it is not visible, reload the extension in Settings → Extensions (toggle off/on). The Web Inspector attached to the background context allows console inspection and breakpoints.
+In the Develop menu, look for an entry like **Develop → (your Mac name) → Skeeditor – Background Page**. If it is not visible, reload the extension in Settings → Extensions (toggle off/on). The Web Inspector attached to the background context allows console inspection and breakpoints.
 
 #### 8. Debug the popup
 
-Click the extension icon to open the popup, then go to **Develop → (your Mac name) → skeeditor – popup.html**. This attaches Web Inspector to the popup document.
+Click the extension icon to open the popup, then go to **Develop → (your Mac name) → Skeeditor – popup.html**. This attaches Web Inspector to the popup document.
 
 #### 9. Rebuilding
 

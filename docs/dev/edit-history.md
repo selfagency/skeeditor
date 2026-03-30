@@ -2,7 +2,7 @@
 
 ## Overview
 
-The skeeditor extension now tracks edit history by storing content fingerprints in the post's `tags` field. This enables future implementation of an edit history modal that can show the evolution of a post to users who have the extension installed.
+The Skeeditor extension now tracks edit history by storing content fingerprints in the post's `tags` field. This enables future implementation of an edit history modal that can show the evolution of a post to users who have the extension installed.
 
 ## Implementation Details
 

@@ -1,6 +1,6 @@
 # Message Protocol
 
-All cross-context communication in skeeditor (content script ↔ background, popup ↔ background) goes through `browser.runtime.sendMessage`.
+All cross-context communication in Skeeditor (content script ↔ background, popup ↔ background) goes through `browser.runtime.sendMessage`.
 
 ---
 

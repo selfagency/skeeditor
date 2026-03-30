@@ -1,6 +1,6 @@
 # Facets & Rich Text
 
-AT Protocol encodes rich text (links, @mentions, #hashtags) as **facets** — structured annotations that record the byte offsets of each decorated span within the post text. skeeditor recalculates facets automatically whenever a post is saved.
+AT Protocol encodes rich text (links, @mentions, #hashtags) as **facets** — structured annotations that record the byte offsets of each decorated span within the post text. Skeeditor recalculates facets automatically whenever a post is saved.
 
 ---
 

@@ -1,6 +1,6 @@
 # Conflict Handling
 
-When you edit a post, skeeditor fetches the current record and holds its CID. When you click Save, it writes the new record using `putRecordWithSwap` — which instructs the PDS to reject the write if the record has changed since you fetched it.
+When you edit a post, Skeeditor fetches the current record and holds its CID. When you click Save, it writes the new record using `putRecordWithSwap` — which instructs the PDS to reject the write if the record has changed since you fetched it.
 
 This prevents silent data loss when a post is edited from two places simultaneously (e.g. two browser sessions, or another app).
 
@@ -8,7 +8,7 @@ This prevents silent data loss when a post is edited from two places simultaneou
 
 ## How conflicts are detected
 
-skeeditor passes `swapRecord: <original-cid>` in the `PUT_RECORD` message. The PDS returns HTTP 409 if the record's current CID no longer matches. `XrpcClient.putRecordWithSwap` maps this to:
+Skeeditor passes `swapRecord: <original-cid>` in the `PUT_RECORD` message. The PDS returns HTTP 409 if the record's current CID no longer matches. `XrpcClient.putRecordWithSwap` maps this to:
 
 ```ts
 { success: false, error: { kind: 'conflict', ... }, conflict?: { currentCid, currentValue } }

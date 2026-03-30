@@ -1,12 +1,12 @@
 # Labeler Services
 
-skeeditor operates its own AT Protocol labeler service that applies an **"edited"** label to posts the user has edited through the extension. This lets other users see at a glance that a post has been modified.
+Skeeditor operates its own AT Protocol labeler service that applies an **"edited"** label to posts the user has edited through the extension. This lets other users see at a glance that a post has been modified.
 
 ---
 
 ## Overview
 
-After a user edits a post, skeeditor writes the updated record to their PDS and simultaneously has the labeler service apply an `edited` label to that AT-URI. Users who have subscribed to the skeeditor labeler will see a badge on edited posts in the Bluesky app.
+After a user edits a post, Skeeditor writes the updated record to their PDS and simultaneously has the labeler service apply an `edited` label to that AT-URI. Users who have subscribed to the Skeeditor labeler will see a badge on edited posts in the Bluesky app.
 
 ---
 
@@ -57,24 +57,18 @@ The labeler service runs as a [Cloudflare Worker](https://workers.cloudflare.com
 
 Subscribing to the labeler is optional. On first sign-in, the extension checks whether the user has already subscribed and shows a **consent dialog** in the popup if they have not.
 
-```text
-AUTH_CALLBACK completes successfully
-  │
-  ▼
-Background: sends CHECK_LABELER_SUBSCRIPTION message to itself
-  → calls checkAndScheduleLabelerPrompt()
-  → fetches the user's labeler preferences from the PDS
-  │
-  ├── User already subscribed → no UI shown
-  │
-  └── User not subscribed → sets a flag in extension storage
-        │
-        ▼
-      Popup next opens → sees flag → shows consent dialog
-        │
-        ├── User accepts → extension adds LABELER_DID to user's labeler preferences
-        │
-        └── User declines → flag cleared, user subscribed to nothing
+```mermaid
+flowchart TD
+    A["AUTH_CALLBACK completes successfully"] --> B["Background: CHECK_LABELER_SUBSCRIPTION
+    → checkAndScheduleLabelerPrompt()
+    → fetches user's labeler preferences from PDS"]
+    B -->|"Already subscribed"| C["No UI shown"]
+    B -->|"Not subscribed"| D["Sets flag in extension storage"]
+    D --> E["Popup next opens → sees flag →
+    shows consent dialog"]
+    E -->|"Accept"| F["Extension adds LABELER_DID
+    to user's labeler preferences"]
+    E -->|"Decline"| G["Flag cleared, no subscription"]
 ```
 
 The `CHECK_LABELER_SUBSCRIPTION` message is fire-and-forget from the perspective of the popup. A network error during the check is silently swallowed — it must never block or delay the sign-in flow.
@@ -83,7 +77,7 @@ The `CHECK_LABELER_SUBSCRIPTION` message is fire-and-forget from the perspective
 
 ## Label structure
 
-Labels applied by the skeeditor labeler follow the AT Protocol label specification:
+Labels applied by the Skeeditor labeler follow the AT Protocol label specification:
 
 ```ts
 {
