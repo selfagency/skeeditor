@@ -388,14 +388,18 @@ function isValidPutRecordPayload(msg: IncomingMessage): msg is IncomingMessage &
   return true;
 }
 
-function isUploadBlobPayload(message: unknown): message is { data: Blob | File; repo: string } {
+function isUploadBlobPayload(
+  message: unknown,
+): message is { data: ArrayBuffer; mimeType: string; repo: string } {
   return (
     typeof message === 'object' &&
     message !== null &&
     'data' in message &&
+    'mimeType' in message &&
     'repo' in message &&
     typeof message['repo'] === 'string' &&
-    (message['data'] instanceof Blob || message['data'] instanceof File)
+    typeof message['mimeType'] === 'string' &&
+    message['data'] instanceof ArrayBuffer
   );
 }
 
@@ -846,8 +850,9 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
           accessJwt: stored.accessToken,
           ...(stored.dpopEnabled !== undefined && { dpopEnabled: stored.dpopEnabled }),
         });
+        const blob = new Blob([message.data], { type: message.mimeType });
         const result = await client.uploadBlob({
-          data: message.data,
+          data: blob,
           repo: message.repo,
         });
         return result;

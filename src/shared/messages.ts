@@ -142,7 +142,9 @@ export type PutRecordResponse = PutRecordSuccessResponse | PutRecordErrorRespons
 
 export interface UploadBlobRequest {
   type: 'UPLOAD_BLOB';
-  data: Blob | File;
+  /** ArrayBuffer — File/Blob must be serialized before crossing the extension message boundary. */
+  data: ArrayBuffer;
+  mimeType: string;
   repo: string;
 }
 
