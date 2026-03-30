@@ -1,15 +1,16 @@
 ---
 # skeeditor-osoo
 title: Fix white popup background and remove bug report icon
-status: in-progress
+status: completed
 type: fix
 priority: high
 created_at: 2026-03-30T05:07:59Z
-updated_at: 2026-03-30T05:08:21Z
+updated_at: 2026-03-30T05:09:51Z
 ---
 
 ---
 branch: fix/osoo-white-popup-bg
+pr: 73
 ---
 
 ## Problem
@@ -24,8 +25,8 @@ Additionally, the bug report SVG icon looks indistinguishable and should be remo
 - [x] Add `@source "./entrypoints/**/*.html"` to global.css so Tailwind v4 scans HTML files
 - [x] Rebuild and verify all popup body classes appear in built CSS
 - [x] Run auth-popup unit tests (21/21 pass)
-- [ ] Create branch, commit, push
-- [ ] Open PR
+- [x] Create branch, commit, push
+- [x] Open PR (#73)
 
 ## Summary of Changes
 
