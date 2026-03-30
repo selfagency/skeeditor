@@ -1,12 +1,13 @@
 ---
 # skeeditor-mlak
 title: Align conflict-handling docs with implemented UX or add modal actions
-status: todo
+status: in-progress
 type: feature
 priority: normal
 created_at: 2026-03-30T14:04:21Z
-updated_at: 2026-03-30T14:04:21Z
+updated_at: 2026-03-30T22:52:50Z
 parent: skeeditor-d3m1
+branch: feat/mlak-align-conflict-handling-docs-ux
 ---
 
 Conflict docs promise Reload / Force save and merge-advisory style actions, while the current modal only shows a message. Bring the implementation and documentation back into alignment.
