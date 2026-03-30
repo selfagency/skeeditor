@@ -42,6 +42,8 @@ When you use Skeeditor, your browser makes requests to:
 
 All requests go to your Bluesky auth server and PDS (or the Skeeditor labeler) over HTTPS. The exact server hostnames depend on your account configuration — most users connect to `bsky.social` and `*.bsky.network`. No intermediate proxy, analytics endpoint, or third-party server is involved at any point. The labeler connection only occurs if you have subscribed to the Skeeditor labeler (`@skeeditor.link`) through your Bluesky moderation settings.
 
+When notifying the labeler after a successful edit, Skeeditor forwards your OAuth **access token** in the `Authorization: Bearer` header so the labeler can verify your identity against your PDS. Your **refresh token is never sent** to the labeler or to any server other than your Bluesky authorization server.
+
 ---
 
 ## Security model

@@ -837,6 +837,120 @@ describe('handleMessage', () => {
       expect(sensitiveCall).toBeUndefined();
       consoleSpy.mockRestore();
     });
+
+    it('triggers a labeler emit after a successful putRecordWithSwap', async () => {
+      const session = makeSession();
+      const xrpc = makeXrpcMock();
+      const deps = makeDeps({
+        store: makeStoreMock(session),
+        createXrpc: vi.fn().mockReturnValue(xrpc),
+      });
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        text: vi.fn().mockResolvedValue(''),
+      } as unknown as Response);
+
+      await handleMessage(
+        {
+          type: 'PUT_RECORD',
+          repo: 'did:plc:alice',
+          collection: 'app.bsky.feed.post',
+          rkey: 'abc',
+          record: { $type: 'app.bsky.feed.post', text: 'edited' },
+          swapRecord: 'bafyreiabc',
+        },
+        deps,
+      );
+
+      expect(fetchSpy).toHaveBeenCalledWith(constants.LABELER_EMIT_URL, expect.any(Object));
+    });
+
+    it('triggers a labeler emit after a successful putRecord (no swap)', async () => {
+      const session = makeSession();
+      const xrpc = makeXrpcMock();
+      const deps = makeDeps({
+        store: makeStoreMock(session),
+        createXrpc: vi.fn().mockReturnValue(xrpc),
+      });
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        text: vi.fn().mockResolvedValue(''),
+      } as unknown as Response);
+
+      await handleMessage(
+        {
+          type: 'PUT_RECORD',
+          repo: 'did:plc:alice',
+          collection: 'app.bsky.feed.post',
+          rkey: 'abc',
+          record: { $type: 'app.bsky.feed.post', text: 'edited' },
+        },
+        deps,
+      );
+
+      expect(fetchSpy).toHaveBeenCalledWith(constants.LABELER_EMIT_URL, expect.any(Object));
+    });
+
+    it('forwards only the access token in the Authorization header of the labeler emit', async () => {
+      const session = makeSession();
+      const xrpc = makeXrpcMock();
+      const deps = makeDeps({
+        store: makeStoreMock(session),
+        createXrpc: vi.fn().mockReturnValue(xrpc),
+      });
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        text: vi.fn().mockResolvedValue(''),
+      } as unknown as Response);
+
+      await handleMessage(
+        {
+          type: 'PUT_RECORD',
+          repo: 'did:plc:alice',
+          collection: 'app.bsky.feed.post',
+          rkey: 'abc',
+          record: { $type: 'app.bsky.feed.post', text: 'edited' },
+          swapRecord: 'bafyreiabc',
+        },
+        deps,
+      );
+
+      const [, init] = fetchSpy.mock.calls[0]!;
+      const headers = (init as RequestInit).headers as Record<string, string>;
+      expect(headers['Authorization']).toBe(`Bearer ${session.accessToken}`);
+    });
+
+    it('does not include the refresh token in the labeler emit payload', async () => {
+      const session = makeSession();
+      const xrpc = makeXrpcMock();
+      const deps = makeDeps({
+        store: makeStoreMock(session),
+        createXrpc: vi.fn().mockReturnValue(xrpc),
+      });
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        text: vi.fn().mockResolvedValue(''),
+      } as unknown as Response);
+
+      await handleMessage(
+        {
+          type: 'PUT_RECORD',
+          repo: 'did:plc:alice',
+          collection: 'app.bsky.feed.post',
+          rkey: 'abc',
+          record: { $type: 'app.bsky.feed.post', text: 'edited' },
+          swapRecord: 'bafyreiabc',
+        },
+        deps,
+      );
+
+      const [, init] = fetchSpy.mock.calls[0]!;
+      const body = JSON.parse((init as RequestInit).body as string) as Record<string, unknown>;
+      expect(body).not.toHaveProperty('refreshToken');
+      expect(Object.values(body)).not.toContain(session.refreshToken);
+      const headers = (init as RequestInit).headers as Record<string, string>;
+      expect(headers['Authorization']).toBe(`Bearer ${session.accessToken}`);
+    });
   });
 
   describe('CREATE_RECORD', () => {
