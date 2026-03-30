@@ -1,13 +1,12 @@
 ---
 # skeeditor-us9f
 title: Align privacy, FAQ, installation, and auth docs with real network behavior
-status: in-progress
+status: completed
 type: task
 priority: critical
 created_at: 2026-03-30T14:04:21Z
-updated_at: 2026-03-30T14:04:21Z
+updated_at: 2026-03-30T19:45:39Z
 parent: skeeditor-d3m1
-branch: docs/us9f-network-auth-doc-alignment
 ---
 
 User-facing docs currently understate third-party network calls, requested permissions, and auth behavior. Update docs so privacy, permissions, and network claims match the actual implementation.
