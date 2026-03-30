@@ -1,20 +1,69 @@
 import type { EmitPayload } from './types.ts';
 
 /**
+ * Resolves a DID to its PDS (Personal Data Server) endpoint URL by fetching
+ * the DID document and locating the `#atproto_pds` service entry.
+ *
+ * Supports:
+ * - `did:plc`  → https://plc.directory/{did}
+ * - `did:web`  → https://{domain}/.well-known/did.json
+ */
+async function resolvePdsEndpoint(did: string, fetchFn: typeof fetch): Promise<string | null> {
+  let didDocUrl: string;
+
+  if (did.startsWith('did:plc:')) {
+    didDocUrl = `https://plc.directory/${did}`;
+  } else if (did.startsWith('did:web:')) {
+    const domain = did.slice('did:web:'.length);
+    didDocUrl = `https://${domain}/.well-known/did.json`;
+  } else {
+    return null;
+  }
+
+  let didDoc: unknown;
+  try {
+    const resp = await fetchFn(didDocUrl);
+    if (!resp.ok) return null;
+    didDoc = await resp.json();
+  } catch {
+    return null;
+  }
+
+  if (typeof didDoc !== 'object' || didDoc === null) return null;
+
+  const services = (didDoc as Record<string, unknown>)['service'];
+  if (!Array.isArray(services)) return null;
+
+  for (const svc of services) {
+    if (
+      typeof svc === 'object' &&
+      svc !== null &&
+      (svc as Record<string, unknown>)['id'] === '#atproto_pds' &&
+      typeof (svc as Record<string, unknown>)['serviceEndpoint'] === 'string'
+    ) {
+      return (svc as Record<string, unknown>)['serviceEndpoint'] as string;
+    }
+  }
+
+  return null;
+}
+
+/**
  * Validates the Authorization header on /emit requests.
  *
  * Checks that:
  * 1. The header is a valid Bearer token (ATProto access JWT).
  * 2. The JWT `sub` claim matches the `did` field in the emit payload.
- *
- * We do NOT cryptographically verify the JWT signature here — the JWT is a
- * bearer credential issued by the PDS, and we trust it as a DID consistency
- * check only. Full DID-doc-based verification is a Phase 2 concern.
+ * 3. The authenticated DID owns the AT URI repo.
+ * 4. The token is cryptographically valid — verified by calling
+ *    `com.atproto.server.getSession` against the subject's PDS. A forged or
+ *    tampered token will be rejected by the PDS with a 4xx response.
  */
-export function validateEmitAuth(
+export async function validateEmitAuth(
   authHeader: string | null,
   payload: EmitPayload,
-): { valid: true } | { valid: false; reason: string } {
+  fetchFn: typeof fetch = fetch,
+): Promise<{ valid: true } | { valid: false; reason: string }> {
   if (authHeader === null) {
     return { valid: false, reason: 'Missing Authorization header' };
   }
@@ -66,6 +115,26 @@ export function validateEmitAuth(
 
   if (sub !== repoDid) {
     return { valid: false, reason: 'Authenticated DID does not own the AT URI repo' };
+  }
+
+  // Cryptographic verification: resolve the subject DID to its PDS endpoint
+  // and call com.atproto.server.getSession. The PDS will reject any token
+  // whose signature does not verify against its own signing key.
+  const pdsEndpoint = await resolvePdsEndpoint(sub, fetchFn);
+  if (pdsEndpoint === null) {
+    return { valid: false, reason: 'Could not resolve PDS endpoint for DID' };
+  }
+
+  try {
+    const sessionResp = await fetchFn(`${pdsEndpoint}/xrpc/com.atproto.server.getSession`, {
+      headers: { Authorization: authHeader },
+    });
+
+    if (!sessionResp.ok) {
+      return { valid: false, reason: 'Token rejected by issuer' };
+    }
+  } catch {
+    return { valid: false, reason: 'Failed to verify token with PDS' };
   }
 
   return { valid: true };
