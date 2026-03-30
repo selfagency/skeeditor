@@ -61,7 +61,10 @@ for (let i = 2; i < process.argv.length; i += 1) {
 const rootDir = process.cwd();
 const artifactsDir = resolve(rootDir, options.artifactsDir);
 
-const taskExecutable = process.platform === 'win32' ? resolve(rootDir, 'node_modules/.bin/task.cmd') : resolve(rootDir, 'node_modules/.bin/task');
+const taskExecutable =
+  process.platform === 'win32'
+    ? resolve(rootDir, 'node_modules/.bin/task.cmd')
+    : resolve(rootDir, 'node_modules/.bin/task');
 
 function logStep(message) {
   process.stdout.write(`\n[release] ${message}\n`);
@@ -77,7 +80,9 @@ async function run(command, args, extraEnv = {}) {
 }
 
 async function runTask(taskName, args = [], extraEnv = {}) {
-  const taskPath = await stat(taskExecutable).then(() => taskExecutable).catch(() => 'task');
+  const taskPath = await stat(taskExecutable)
+    .then(() => taskExecutable)
+    .catch(() => 'task');
   await run(taskPath, [taskName, ...args], extraEnv);
 }
 
@@ -133,7 +138,10 @@ async function buildArtifacts(version) {
     });
   }
 
-  await writeFile(join(artifactsDir, 'release-manifest.json'), JSON.stringify({ version, artifacts: manifest }, null, 2));
+  await writeFile(
+    join(artifactsDir, 'release-manifest.json'),
+    JSON.stringify({ version, artifacts: manifest }, null, 2),
+  );
   process.stdout.write(`[release] Artifacts written to ${artifactsDir}\n`);
 
   return { chromeZip, firefoxZip, edgeZip };
@@ -152,7 +160,9 @@ async function publishChrome(chromeZip) {
   const refreshToken = process.env['CHROME_REFRESH_TOKEN'];
 
   if (!extensionId || !clientId || !clientSecret || !refreshToken) {
-    throw new Error('Missing Chrome credentials. Required: CHROME_EXTENSION_ID, CHROME_CLIENT_ID, CHROME_CLIENT_SECRET, CHROME_REFRESH_TOKEN');
+    throw new Error(
+      'Missing Chrome credentials. Required: CHROME_EXTENSION_ID, CHROME_CLIENT_ID, CHROME_CLIENT_SECRET, CHROME_REFRESH_TOKEN',
+    );
   }
 
   logStep('Publishing to Chrome Web Store');
@@ -225,7 +235,21 @@ async function publishFirefox() {
   }
 
   logStep('Signing Firefox build via web-ext');
-  await run('pnpm', ['exec', 'web-ext', 'sign', '--source-dir', 'dist/firefox', '--api-key', apiKey, '--api-secret', apiSecret, '--channel', 'listed', '--artifacts-dir', join(options.artifactsDir, 'amo-signed')]);
+  await run('pnpm', [
+    'exec',
+    'web-ext',
+    'sign',
+    '--source-dir',
+    'dist/firefox',
+    '--api-key',
+    apiKey,
+    '--api-secret',
+    apiSecret,
+    '--channel',
+    'listed',
+    '--artifacts-dir',
+    join(options.artifactsDir, 'amo-signed'),
+  ]);
   process.stdout.write('[release] Firefox signing completed\n');
 }
 
@@ -284,7 +308,9 @@ async function main() {
   await publishEdge(edgeZip);
 
   const files = await readdir(artifactsDir);
-  process.stdout.write(`\n[release] Done. Artifacts:\n${files.map(f => `  - ${join(options.artifactsDir, f)}`).join('\n')}\n`);
+  process.stdout.write(
+    `\n[release] Done. Artifacts:\n${files.map(f => `  - ${join(options.artifactsDir, f)}`).join('\n')}\n`,
+  );
   process.stdout.write(`[release] Firefox package prepared at ${firefoxZip}\n`);
 }
 
