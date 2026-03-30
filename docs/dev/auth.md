@@ -188,4 +188,6 @@ Helper functions `getOAuthAuthorizeUrl(pdsUrl)` and `getOAuthTokenUrl(pdsUrl)` i
 - **Always verify `state`** in the OAuth callback. A mismatch means a CSRF attempt — the handler returns an error immediately.
 - **No client secret.** Public browser extension clients use `token_endpoint_auth_method: "none"`. PKCE replaces the client secret.
 - **DPoP** binds access tokens to an ephemeral private key, limiting the impact of token theft.
-- **Pending auth state** (PKCE verifier + state) is stored ephemerally in `browser.storage.local` under `"pendingAuth"` and removed immediately after the code exchange completes.
+- **Pending auth state** (PKCE verifier + state) is stored under `"pendingAuth"` in `browser.storage.session` when available, with a numeric `createdAt` timestamp.
+- When `browser.storage.session` is unavailable, the fallback is `browser.storage.local`; stale local `pendingAuth` entries older than 5 minutes (and legacy entries without `createdAt`) are removed on background startup.
+- `pendingAuth` is removed immediately after callback handling completes.

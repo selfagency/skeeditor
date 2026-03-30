@@ -13,6 +13,7 @@ import type {
 import { XrpcClient } from '../shared/api/xrpc-client';
 import type { AuthorizationRequest, TokenResponse } from '../shared/auth/auth-client';
 import { buildAuthorizationRequest, exchangeCodeForTokens, refreshAccessToken } from '../shared/auth/auth-client';
+import { getAuthStateStorageArea } from '../shared/auth/auth-state-storage';
 import type { StoredSession } from '../shared/auth/session-store';
 import { sessionStore } from '../shared/auth/session-store';
 import {
@@ -970,11 +971,11 @@ export function createDefaultDeps(): RouterDeps {
       // Prefer browser.storage.session (cleared automatically on browser restart/SW termination).
       // Fall back to browser.storage.local on Firefox where storage.session may be unavailable.
       // On startup the SW clears any stale local pendingAuth from a previous lifecycle (see entrypoints/background.ts).
-      const storage = browser.storage.session ?? browser.storage.local;
+      const storage = getAuthStateStorageArea();
       await storage.set({ pendingAuth: { state, codeVerifier, pdsUrl, createdAt: Date.now() } });
     },
     getAuthState: async (): Promise<{ state: string; codeVerifier: string; pdsUrl?: string } | null> => {
-      const storage = browser.storage.session ?? browser.storage.local;
+      const storage = getAuthStateStorageArea();
       const result = await storage.get('pendingAuth');
       const raw: unknown = (result as Record<string, unknown>)['pendingAuth'];
       if (
@@ -996,7 +997,7 @@ export function createDefaultDeps(): RouterDeps {
       return null;
     },
     clearAuthState: async (): Promise<void> => {
-      const storage = browser.storage.session ?? browser.storage.local;
+      const storage = getAuthStateStorageArea();
       await storage.remove('pendingAuth');
     },
     exchangeCode: async (tokenEndpoint, code, codeVerifier, clientId, redirectUri) => {

@@ -68,9 +68,9 @@ DPoP private keys are generated via `crypto.subtle.generateKey` with `{ extracta
 
 ### PKCE state persistence
 
-PKCE `state` and `codeVerifier` values are stored in `browser.storage.session` when available (Chrome MV3). Session storage is cleared automatically when the browser closes or the service worker is terminated, so a stale verifier cannot be replayed across restarts.
+PKCE `state` and `codeVerifier` values are stored in `browser.storage.session` when available (Chrome MV3). The stored `pendingAuth` record includes a numeric `createdAt` timestamp. Session storage is cleared automatically when the browser closes or the service worker is terminated, so a stale verifier cannot be replayed across restarts.
 
-On Firefox, where `browser.storage.session` may be unavailable, the fallback is `browser.storage.local`. To prevent a stale verifier from surviving a browser restart, the service worker clears `pendingAuth` from local storage on every startup.
+On browsers where `browser.storage.session` is unavailable, the fallback is `browser.storage.local`. On startup, the service worker removes stale local `pendingAuth` records older than 5 minutes and also removes legacy records missing `createdAt`.
 
 ## Security Considerations
 
