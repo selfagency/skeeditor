@@ -5,10 +5,8 @@ status: completed
 type: bug
 priority: high
 created_at: 2026-03-30T14:04:21Z
-updated_at: 2026-03-30T21:59:03Z
+updated_at: 2026-03-30T22:39:36Z
 parent: skeeditor-d3m1
-branch: fix/wuj5-pendingauth-ttl-metadata-mismatch
-pr: 89
 ---
 
 Startup cleanup expects `pendingAuth.createdAt`, but the stored auth state currently omits that field. Make TTL cleanup real or simplify the flow so comments, code, and docs agree.
@@ -27,3 +25,8 @@ Startup cleanup expects `pendingAuth.createdAt`, but the stored auth state curre
 - Verified with targeted auth/background unit tests:
   - `test/unit/background/message-router.test.ts`
   - `test/unit/background/service-worker.test.ts`
+
+### Review follow-up updates
+- Centralized auth-state storage selection by introducing `src/shared/auth/auth-state-storage.ts` and reusing it in both `src/entrypoints/background.ts` and `src/background/message-router.ts`.
+- Added regression coverage to ensure startup cleanup does **not** remove fresh local `pendingAuth` records within TTL.
+- Added coverage that `createDefaultDeps()` falls back to `browser.storage.local` when `browser.storage.session` exists but is unusable.
