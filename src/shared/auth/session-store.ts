@@ -21,6 +21,12 @@ export interface StoredSession {
    * Optional for backward-compatibility with sessions created before this field existed.
    */
   authServerUrl?: string;
+  /**
+   * Whether this session uses DPoP proof-of-possession (RFC 9449).
+   * When false, XRPC requests use plain Bearer tokens.
+   * Optional for backward-compatibility; defaults to true when absent.
+   */
+  dpopEnabled?: boolean;
 }
 
 /** Non-sensitive session metadata safe to expose in popup context (no tokens) */
@@ -45,7 +51,8 @@ function isStoredSession(value: unknown): value is StoredSession {
     Number.isFinite(expiresAt) &&
     expiresAt > 0 &&
     typeof obj['scope'] === 'string' &&
-    typeof obj['did'] === 'string'
+    typeof obj['did'] === 'string' &&
+    (obj['dpopEnabled'] === undefined || typeof obj['dpopEnabled'] === 'boolean')
   );
 }
 

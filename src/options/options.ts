@@ -1,5 +1,5 @@
-import { EDIT_TIME_LIMIT_MAX, EDIT_TIME_LIMIT_MIN } from '../shared/constants';
 import '../shared/components/account-card';
+import { EDIT_TIME_LIMIT_MAX, EDIT_TIME_LIMIT_MIN } from '../shared/constants';
 import type { AuthListAccountsAccount } from '../shared/messages';
 import { sendMessage } from '../shared/messages';
 
