@@ -21,7 +21,7 @@ Skeeditor never asks for, receives, or stores your Bluesky password. The OAuth f
 ## What data Skeeditor never collects
 
 - **No analytics.** There are no tracking scripts, no telemetry endpoints, no crash reporters. The extension makes zero outbound network requests to any analytics provider.
-- **No third-party services.** The extension only contacts Bluesky servers and, optionally, the Skeeditor labeler (see below).
+- **No analytics or ad-tech services.** The extension does not call telemetry, tracking, or ad endpoints. It only calls Bluesky infrastructure plus clearly documented extension services (Skeeditor labeler and Slingshot read acceleration).
 - **No browsing history.** Skeeditor only activates on `bsky.app`. It does not read your history, open tabs list, or any other site's data.
 - **No clipboard access.** The editor pre-fills from the on-page post text. The extension never programmatically reads or writes your clipboard.
 - **No records kept.** We do not log, store, or retain any information about your posts, edits, or authentication — not even during the OAuth flow through our callback page.
@@ -32,15 +32,20 @@ Skeeditor never asks for, receives, or stores your Bluesky password. The OAuth f
 
 When you use Skeeditor, your browser makes requests to:
 
-| Endpoint                                                                                  | Purpose                                               |
-| ----------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| Your Bluesky auth server (typically `bsky.social`) `/oauth/authorize`                     | Initial OAuth authorization redirect                  |
-| Your Bluesky auth server `/oauth/token`                                                   | Exchange authorization code for tokens; token refresh |
-| Your PDS (typically `bsky.social` or `*.bsky.network`) `/xrpc/com.atproto.repo.getRecord` | Fetch the current post record                         |
-| Your PDS `/xrpc/com.atproto.repo.putRecord`                                               | Write the edited post record back                     |
-| `https://labeler.skeeditor.link`                                                          | Labeler service — applies "edited" labels to posts    |
+- Your Bluesky auth server (typically `bsky.social`) `/oauth/authorize` for initial OAuth authorization
+- Your Bluesky auth server `/oauth/token` for token exchange and refresh
+- Your PDS (typically `bsky.social` or `*.bsky.network`) `/xrpc/com.atproto.repo.getRecord` and `/xrpc/com.atproto.repo.putRecord` for record reads/writes
+- `https://slingshot.microcosm.blue/xrpc/com.atproto.repo.getRecord` for edited-post read acceleration
+- `https://labeler.skeeditor.link/xrpc/tools.skeeditor.emitLabel` for label emits after successful edits
+- `wss://labeler.skeeditor.link/xrpc/com.atproto.label.subscribeLabels` for real-time edited-label subscription updates
+- `https://plc.directory/<did>` for `did:plc` document resolution in DID helper flows
+- `https://public.api.bsky.app/...` and `https://api.bsky.app/...` for fallback DID→handle lookups
+- `https://docs.skeeditor.link/oauth/client-metadata.json` for OAuth client metadata
+- `https://docs.skeeditor.link/callback.html` for the hosted OAuth callback page
 
-All requests go to your Bluesky auth server and PDS (or the Skeeditor labeler) over HTTPS. The exact server hostnames depend on your account configuration — most users connect to `bsky.social` and `*.bsky.network`. No intermediate proxy, analytics endpoint, or third-party server is involved at any point. The labeler connection only occurs if you have subscribed to the Skeeditor labeler (`@skeeditor.link`) through your Bluesky moderation settings.
+When labeler integration is active, Skeeditor sends the OAuth **access token** in an `Authorization: Bearer` header to the labeler emit endpoint so the labeler can validate the token with the user's PDS before accepting an emit. Skeeditor does **not** send refresh tokens to the labeler.
+
+All requests go over HTTPS/WSS to the hosts above. There are no analytics endpoints, hidden relay proxies, or advertising SDK calls.
 
 ---
 

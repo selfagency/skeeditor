@@ -82,7 +82,12 @@ No. Skeeditor collects absolutely no user data, telemetry, analytics, or identif
 
 ### Does Skeeditor send my posts to any server other than Bluesky?
 
-No. All network requests go to your Bluesky PDS (typically `bsky.social`) and, if you subscribe, the Skeeditor labeler at `labeler.skeeditor.link`. There are no intermediate proxies, analytics endpoints, or other third-party servers. See [Privacy & Security](./privacy) for the full list of network destinations.
+It can, in two specific cases:
+
+- **Skeeditor labeler (`labeler.skeeditor.link`)** — if labeler integration is active, successful edits trigger a labeler emit call.
+- **Slingshot (`slingshot.microcosm.blue`)** — used as a public read-acceleration layer for resolving edited post text in some content-script paths.
+
+Outside those cases, write operations (`putRecord`) and authenticated record reads go to your Bluesky PDS. There are no analytics endpoints or hidden proxy services. See [Privacy & Security](./privacy) for the full network list.
 
 ### Is Skeeditor open source?
 
