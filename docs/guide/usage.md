@@ -60,7 +60,7 @@ The editor modal contains:
 
 - A **text area** pre-filled with the full current text of the post.
 - A **character counter** that tracks the 300-grapheme limit.
-- An **Add Media** button to attach or remove images and videos.
+- An **Add Media** button to attach new images and videos.
 - A **Save** button to write the changes back to your Bluesky repository.
 - A **Cancel** button to close without saving.
 

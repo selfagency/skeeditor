@@ -44,9 +44,9 @@ No. Skeeditor stores your refresh token and automatically renews it in the backg
 
 300 graphemes — same as a new Bluesky post. This means the limit is based on user-perceived characters, not code points or bytes.
 
-### Can I add or remove images and videos?
+### Can I add images and videos?
 
-Yes. The edit modal includes an **Add Media** button that lets you attach new images or videos, and you can remove existing media from the post. Existing embeds (images, videos, external link cards) are preserved when you save unless you explicitly remove them.
+Yes. The edit modal includes an **Add Media** button that lets you attach new images or videos to a post. Existing embeds (images, videos, external link cards) are preserved automatically when you save. Removing existing media from a post is not yet supported — you can only add new media or replace all existing media with new attachments.
 
 ### I edited a post but the page still shows the old text. Why?
 
