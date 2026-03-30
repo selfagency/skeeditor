@@ -47,10 +47,315 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
-    name: Build/package/publish release
+  quality:
+    name: Quality checks
+    if: ${{ !inputs.skip_checks }}
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Task
+        uses: go-task/setup-task@v1
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: task install:ci
+
+      - name: Check formatting
+        run: task format:check
+
+      - name: Lint sources
+        run: task lint
+
+      - name: Type-check project
+        run: task typecheck
+
+  unit-tests:
+    name: Unit tests
+    if: ${{ !inputs.skip_checks && !inputs.skip_tests }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Task
+        uses: go-task/setup-task@v1
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: task install:ci
+
+      - name: Run unit tests
+        run: task test:unit
+
+  integration-tests:
+    name: Integration tests
+    if: ${{ !inputs.skip_checks && !inputs.skip_tests }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Task
+        uses: go-task/setup-task@v1
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: task install:ci
+
+      - name: Run integration tests
+        run: task test:integration
+
+  build:
+    name: Build extension artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Task
+        uses: go-task/setup-task@v1
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: task install:ci
+
+      - name: Build extension (all browsers)
+        run: task build:chrome && task build:firefox
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-dist
+          path: dist
+          if-no-files-found: error
+
+  e2e-chromium:
+    name: Playwright Chromium E2E
+    if: ${{ !inputs.skip_checks && !inputs.skip_tests }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs:
+      - quality
+      - unit-tests
+      - integration-tests
+      - build
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Task
+        uses: go-task/setup-task@v1
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: task install:ci
+
+      - name: Get Playwright version
+        id: pw-version
+        run: echo "version=$(pnpm list @playwright/test --json | jq -r '.[0].dependencies["@playwright/test"].version')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-v${{ steps.pw-version.outputs.version }}
+          restore-keys: playwright-chromium-${{ runner.os }}-
+
+      - name: Install Playwright Chromium with system dependencies
+        run: task playwright:install:chromium
+
+      - name: Download built extension artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: extension-dist
+          path: dist
+
+      - name: Run Chromium extension smoke tests
+        run: task test:e2e:chromium
+
+  e2e-chromium-devnet:
+    name: Playwright Chromium E2E (devnet)
+    if: ${{ !inputs.skip_checks && !inputs.skip_tests }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs:
+      - quality
+      - unit-tests
+      - integration-tests
+      - build
+    steps:
+      - name: Checkout repository (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Task
+        uses: go-task/setup-task@v1
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: task install:ci
+
+      - name: Get Playwright version
+        id: pw-version
+        run: echo "version=$(pnpm list @playwright/test --json | jq -r '.[0].dependencies["@playwright/test"].version')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-v${{ steps.pw-version.outputs.version }}
+          restore-keys: playwright-chromium-${{ runner.os }}-
+
+      - name: Install Playwright Chromium with system dependencies
+        run: task playwright:install:chromium
+
+      - name: Download built extension artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: extension-dist
+          path: dist
+
+      - name: Start devnet stack
+        run: task devnet:up
+
+      - name: Run Chromium devnet E2E tests
+        run: task test:e2e:chromium:devnet
+
+      - name: Stop devnet stack
+        if: always()
+        run: task devnet:down
+
+  e2e-firefox-devnet:
+    name: Playwright Firefox E2E (devnet)
+    if: ${{ !inputs.skip_checks && !inputs.skip_tests }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs:
+      - quality
+      - unit-tests
+      - integration-tests
+      - build
+    steps:
+      - name: Checkout repository (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Task
+        uses: go-task/setup-task@v1
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: task install:ci
+
+      - name: Get Playwright version
+        id: pw-version
+        run: echo "version=$(pnpm list @playwright/test --json | jq -r '.[0].dependencies["@playwright/test"].version')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-firefox-${{ runner.os }}-v${{ steps.pw-version.outputs.version }}
+          restore-keys: playwright-firefox-${{ runner.os }}-
+
+      - name: Install Playwright Firefox with system dependencies
+        run: task playwright:install:firefox
+
+      - name: Download built extension artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: extension-dist
+          path: dist
+
+      - name: Start devnet stack
+        run: task devnet:up
+
+      - name: Run Firefox devnet E2E tests
+        run: task test:e2e:firefox:devnet
+        env:
+          FIREFOX_EXTENSION_E2E: '1'
+
+      - name: Stop devnet stack
+        if: always()
+        run: task devnet:down
+
+  publish:
+    name: Package and publish release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs:
+      - build
+      - quality
+      - unit-tests
+      - integration-tests
+      - e2e-chromium
+      - e2e-chromium-devnet
+      - e2e-firefox-devnet
+    if: always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -72,6 +377,12 @@ jobs:
       - name: Install dependencies
         run: task install:ci
 
+      - name: Download built extension artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: extension-dist
+          path: dist
+
       - name: Run release script
         env:
           CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
@@ -84,7 +395,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          ARGS=()
+          ARGS=(--skip-checks --skip-tests --pre-built)
 
           if [ "${{ inputs.dry_run }}" = "true" ]; then
             ARGS+=("--dry-run")
@@ -97,12 +408,6 @@ jobs:
           fi
           if [ "${{ inputs.publish_edge }}" = "true" ]; then
             ARGS+=("--publish-edge")
-          fi
-          if [ "${{ inputs.skip_checks }}" = "true" ]; then
-            ARGS+=("--skip-checks")
-          fi
-          if [ "${{ inputs.skip_tests }}" = "true" ]; then
-            ARGS+=("--skip-tests")
           fi
           if [ "${{ inputs.skip_safari }}" = "true" ]; then
             ARGS+=("--skip-safari")

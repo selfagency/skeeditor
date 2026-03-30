@@ -25,6 +25,7 @@ function redactArgs(args) {
  * skipChecks: boolean;
  * skipTests: boolean;
  * skipSafari: boolean;
+ * preBuilt: boolean;
  * artifactsDir: string;
  * versionOverride?: string;
  * }} ReleaseOptions */
@@ -38,6 +39,7 @@ const options = {
   skipChecks: false,
   skipTests: false,
   skipSafari: false,
+  preBuilt: false,
   artifactsDir: 'release-artifacts',
 };
 
@@ -51,6 +53,7 @@ for (let i = 2; i < process.argv.length; i += 1) {
   else if (arg === '--skip-checks') options.skipChecks = true;
   else if (arg === '--skip-tests') options.skipTests = true;
   else if (arg === '--skip-safari') options.skipSafari = true;
+  else if (arg === '--pre-built') options.preBuilt = true;
   else if (arg === '--artifacts-dir') {
     const next = process.argv[i + 1];
     if (!next) throw new Error('--artifacts-dir requires a value');
@@ -121,11 +124,15 @@ async function fileSha256(filePath) {
 }
 
 async function buildArtifacts(version) {
-  logStep('Building browser targets');
-  await runTask('build:chrome');
-  await runTask('build:firefox');
-  if (!options.skipSafari) {
-    await runTask('build:safari');
+  if (options.preBuilt) {
+    logStep('Using pre-built browser targets (--pre-built)');
+  } else {
+    logStep('Building browser targets');
+    await runTask('build:chrome');
+    await runTask('build:firefox');
+    if (!options.skipSafari) {
+      await runTask('build:safari');
+    }
   }
 
   await runTask('webext:lint:firefox');
