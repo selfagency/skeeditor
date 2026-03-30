@@ -195,7 +195,23 @@ tasks:
 
   test:coverage:
     desc: Run unit and integration tests with coverage
-    cmd: ./node_modules/.bin/vitest run --coverage --project unit --project integration {{.CLI_ARGS}}
+    cmds:
+      - task: 'lex:build'
+      - cmd: ./node_modules/.bin/vitest run --coverage --project unit --project integration {{.CLI_ARGS}}
+
+  test:coverage:ci:
+    desc: Run unit and integration tests with coverage and JUnit output for CI
+    cmds:
+      - task: 'lex:build'
+      - cmd: >-
+          ./node_modules/.bin/vitest run
+          --coverage
+          --reporter=default
+          --reporter=junit
+          --outputFile=test-report.junit.xml
+          --project unit
+          --project integration
+          {{.CLI_ARGS}}
 
   test:e2e:
     desc: Run Playwright end-to-end tests

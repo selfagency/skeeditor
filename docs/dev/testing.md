@@ -12,6 +12,7 @@ task test:unit          # unit only
 task test:integration   # integration only
 task test:e2e           # Playwright E2E (Chrome + Firefox)
 task test:watch         # Vitest in watch mode (unit + integration)
+task test:coverage:ci   # coverage + JUnit XML for CI / Codecov
 ```
 
 For a coverage report:
@@ -19,6 +20,15 @@ For a coverage report:
 ```sh
 task test:coverage
 ```
+
+For the same coverage + JUnit output used in CI:
+
+```sh
+task test:coverage:ci
+```
+
+This writes a coverage report to `coverage/` and a JUnit file to
+`test-report.junit.xml`.
 
 ---
 
@@ -373,7 +383,12 @@ Run through this on each browser before opening a PR:
 | `src/content/`    | ≥ 80% line coverage |
 | `src/background/` | ≥ 80% line coverage |
 
-Coverage is enforced in CI. A PR that reduces coverage below threshold will fail.
+Coverage is reported in CI so regressions are visible in both workflow artifacts
+and Codecov.
+
+The CI workflow also runs `task test:coverage:ci`, uploads `coverage/**` and
+`test-report.junit.xml` as workflow artifacts, and submits both coverage and
+test-result data to Codecov when `CODECOV_TOKEN` is available.
 
 ---
 
