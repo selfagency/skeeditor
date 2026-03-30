@@ -1,9 +1,10 @@
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-const repoRoot = resolve(import.meta.dirname, '../../..');
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 
 function readRepoFile(relativePath: string): string {
   return readFileSync(resolve(repoRoot, relativePath), 'utf8');

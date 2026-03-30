@@ -46,60 +46,8 @@ jobs:
       - name: Type-check project
         run: task typecheck
 
-  unit-tests:
-    name: Unit tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Task
-        uses: go-task/setup-task@v1
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20.19.0
-          cache: pnpm
-
-      - name: Install dependencies
-        run: task install:ci
-
-      - name: Run unit tests
-        run: task test:unit
-
-  integration-tests:
-    name: Integration tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Task
-        uses: go-task/setup-task@v1
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20.19.0
-          cache: pnpm
-
-      - name: Install dependencies
-        run: task install:ci
-
-      - name: Run integration tests
-        run: task test:integration
-
-  coverage:
-    name: Coverage and test reporting
+  tests:
+    name: Unit, integration tests and coverage
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -123,7 +71,7 @@ jobs:
       - name: Install dependencies
         run: task install:ci
 
-      - name: Run coverage tests with JUnit output
+      - name: Run tests with coverage and JUnit output
         run: task test:coverage:ci
 
       - name: Upload coverage artifacts
@@ -190,9 +138,7 @@ jobs:
     timeout-minutes: 20
     needs:
       - quality
-      - unit-tests
-      - integration-tests
-      - coverage
+      - tests
       - build
     steps:
       - name: Checkout repository
@@ -242,9 +188,7 @@ jobs:
     timeout-minutes: 30
     needs:
       - quality
-      - unit-tests
-      - integration-tests
-      - coverage
+      - tests
       - build
     steps:
       - name: Checkout repository (with submodules)
@@ -303,9 +247,7 @@ jobs:
     timeout-minutes: 30
     needs:
       - quality
-      - unit-tests
-      - integration-tests
-      - coverage
+      - tests
       - build
     steps:
       - name: Checkout repository (with submodules)
