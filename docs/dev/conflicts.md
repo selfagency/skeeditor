@@ -20,7 +20,7 @@ The background router returns this to the content script as:
 { type: 'PUT_RECORD_CONFLICT', error: ..., conflict?: { currentCid, currentValue } }
 ```
 
-The content script displays a conflict UI and waits for user input.
+The content script currently displays a conflict warning message in the edit modal and does not auto-retry.
 
 ---
 
@@ -31,14 +31,15 @@ The content script displays a conflict UI and waits for user input.
 3. User edits; click Save.
 4. Submit with `swapRecord` set to the original `cid`.
 5. On success: close modal, update the post DOM.
-6. On `PUT_RECORD_CONFLICT`:
-   - Show the user that the post changed on the server.
-   - Offer **Reload** (discard local edits, reload the current server version) or **Force save** (overwrite the server version).
-   - If you have the original record, current server record, and the local edits, you can use `buildThreeWayMergeAdvisory` to automatically merge non-conflicting fields and present only genuinely conflicting fields to the user.
+6. On `PUT_RECORD_CONFLICT`, follow this behavior.
+
+- Show the user that the post changed on the server.
+- Keep the modal open and show a warning instructing the user to reload the post/page and retry the edit from the latest server state.
+- Do not silently overwrite server-side changes.
 
 ---
 
-## Three-way merge advisory
+## Optional future enhancement: three-way merge advisory
 
 When all three versions are available, `buildThreeWayMergeAdvisory` classifies each top-level field:
 
@@ -79,16 +80,14 @@ interface PutRecordMergeAdvisory {
 
 ## Error handling by kind
 
-| Error kind   | Recommended action                                       |
-| ------------ | -------------------------------------------------------- |
-| `conflict`   | Show compare/retry UI; require explicit user action      |
-| `validation` | Show "fix-the-input" message; do not retry automatically |
-| `auth`       | Prompt the user to re-authenticate via the popup         |
-| `network`    | Allow retry with backoff; preserve the draft locally     |
+- `conflict`: Show warning, require reload + explicit retry from latest state.
+- `validation`: Show a fix-the-input message; do not retry automatically.
+- `auth`: Prompt the user to re-authenticate via the popup.
+- `network`: Allow retry with backoff and preserve the draft locally.
 
 ---
 
-## Example: simple conflict UI
+## Example: current conflict UI behavior
 
 ```ts
 import { sendMessage } from '@src/shared/messages';
@@ -103,21 +102,7 @@ const result = await sendMessage({
 });
 
 if (result.type === 'PUT_RECORD_CONFLICT') {
-  const choice = await showConflictDialog({
-    currentValue: result.conflict?.currentValue,
-    editedValue: editedRecord,
-  });
-
-  if (choice === 'force-save' && result.conflict) {
-    // Retry with the server's current CID as the new swap target
-    await sendMessage({
-      type: 'PUT_RECORD',
-      repo,
-      collection,
-      rkey,
-      record: editedRecord,
-      swapRecord: result.conflict.currentCid,
-    });
-  }
+  showError('This post changed while you were editing. Please reload and try again.');
+  return;
 }
 ```

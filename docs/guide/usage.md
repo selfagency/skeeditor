@@ -109,8 +109,8 @@ If the post was updated elsewhere (for example, by another device or app) after 
 
 The warning describes what happened and asks you to:
 
-- **Reload** — discard your edits and reload the current version of the post, or
-- **Force save** — overwrite the post with your edited version regardless.
+- **Reload** the post/page to fetch the latest server version.
+- Re-open the editor and re-apply your changes against the latest text.
 
 See [Conflict Handling](../dev/conflicts) in the developer docs for the full technical details.
 
