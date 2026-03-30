@@ -148,7 +148,7 @@ The labeler worker:
 4. Resolves the subject DID to its PDS endpoint:
    - `did:plc` → queries `https://plc.directory/{did}` for the DID document.
    - `did:web` → queries `https://{domain}/.well-known/did.json`.
-     Locates the `#atproto_pds` service entry to find the PDS URL.
+   Locates the `#atproto_pds` service entry to find the PDS URL.
 5. Calls `GET {pds}/xrpc/com.atproto.server.getSession` with the bearer token.
    The PDS cryptographically verifies the JWT signature. A forged or tampered
    token is rejected with a 4xx response, which the labeler treats as auth failure.
