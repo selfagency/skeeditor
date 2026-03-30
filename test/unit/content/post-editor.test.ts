@@ -3,6 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { buildUpdatedPostRecord, type EditablePostRecord } from '@src/content/post-editor';
 
 describe('post-editor', () => {
+  const baseRecord: EditablePostRecord = {
+    $type: 'app.bsky.feed.post' as const,
+    text: 'Original text',
+    createdAt: '2026-03-18T12:00:00.000Z',
+  };
+
+  const createFile = (name: string, type: string): File => new File(['x'], name, { type });
+
   it('should preserve the existing record fields while updating text and facets', () => {
     const currentRecord: EditablePostRecord = {
       $type: 'app.bsky.feed.post' as const,
@@ -187,5 +195,61 @@ describe('post-editor', () => {
     expect(nextRecord.tags).toContain('existing-tag');
     expect(nextRecord.tags).toContain('another-tag');
     expect(nextRecord.tags?.find(tag => tag.startsWith('skeeditor-edit-'))).toBeDefined();
+  });
+
+  it('should build an image embed preserving image order for uploads', () => {
+    const mediaFiles = [
+      createFile('first.jpg', 'image/jpeg'),
+      createFile('second.png', 'image/png'),
+      createFile('third.webp', 'image/webp'),
+    ];
+
+    const nextRecord = buildUpdatedPostRecord(baseRecord, 'Updated text', mediaFiles);
+
+    expect(nextRecord.embed?.$type).toBe('app.bsky.embed.images');
+    if (!nextRecord.embed || nextRecord.embed.$type !== 'app.bsky.embed.images') {
+      throw new Error('Expected images embed');
+    }
+    expect(nextRecord.embed.images.map(image => image.alt)).toEqual(['first.jpg', 'second.png', 'third.webp']);
+  });
+
+  it('should build a video embed when one video is selected', () => {
+    const mediaFiles = [createFile('clip.mp4', 'video/mp4')];
+
+    const nextRecord = buildUpdatedPostRecord(baseRecord, 'Updated text', mediaFiles);
+
+    expect(nextRecord.embed?.$type).toBe('app.bsky.embed.video');
+    if (!nextRecord.embed || nextRecord.embed.$type !== 'app.bsky.embed.video') {
+      throw new Error('Expected video embed');
+    }
+    expect(nextRecord.embed.alt).toBe('clip.mp4');
+  });
+
+  it('should reject mixed image and video selections', () => {
+    const mediaFiles = [createFile('photo.jpg', 'image/jpeg'), createFile('clip.mp4', 'video/mp4')];
+
+    expect(() => buildUpdatedPostRecord(baseRecord, 'Updated text', mediaFiles)).toThrow(
+      'Cannot mix images and video in one post',
+    );
+  });
+
+  it('should reject more than four images', () => {
+    const mediaFiles = [
+      createFile('1.jpg', 'image/jpeg'),
+      createFile('2.jpg', 'image/jpeg'),
+      createFile('3.jpg', 'image/jpeg'),
+      createFile('4.jpg', 'image/jpeg'),
+      createFile('5.jpg', 'image/jpeg'),
+    ];
+
+    expect(() => buildUpdatedPostRecord(baseRecord, 'Updated text', mediaFiles)).toThrow(
+      'You can attach up to 4 images',
+    );
+  });
+
+  it('should reject selecting more than one video', () => {
+    const mediaFiles = [createFile('a.mp4', 'video/mp4'), createFile('b.mp4', 'video/mp4')];
+
+    expect(() => buildUpdatedPostRecord(baseRecord, 'Updated text', mediaFiles)).toThrow('You can attach only 1 video');
   });
 });
