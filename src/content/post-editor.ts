@@ -96,11 +96,11 @@ export function normalizeMediaFiles(mediaFiles: File[]): File[] {
   }
 
   if (imageFiles.length > MAX_IMAGE_COUNT) {
-    throw new Error('You can attach up to 4 images');
+    throw new Error(`You can attach up to ${MAX_IMAGE_COUNT} images`);
   }
 
   if (videoFiles.length > MAX_VIDEO_COUNT) {
-    throw new Error('You can attach only 1 video');
+    throw new Error(`You can attach only ${MAX_VIDEO_COUNT} video`);
   }
 
   if (imageFiles.length > 0) {
