@@ -489,23 +489,29 @@ export class XrpcClient {
     const { repo, collection, limit, cursor, reverse } = params;
 
     try {
-      const query: Record<string, unknown> = { repo, collection };
-      if (limit !== undefined) query['limit'] = limit;
-      if (cursor !== undefined) query['cursor'] = cursor;
-      if (reverse !== undefined) query['reverse'] = reverse;
+      const options: Record<string, unknown> = { repo };
+      if (limit !== undefined) options.limit = limit;
+      if (cursor !== undefined) options.cursor = cursor;
+      if (reverse !== undefined) options.reverse = reverse;
 
-      const response = await this._client.call('com.atproto.repo.listRecords', query, undefined, {
-        encoding: 'application/json',
-      });
+      const response = await this._client.listRecords(
+        collection as `${string}.${string}.${string}`,
+        options as Parameters<Client['listRecords']>[1],
+      );
       const body = response.body as {
         records: Array<{ uri: string; cid: string; value: Record<string, unknown> }>;
         cursor?: string;
       };
 
-      return {
+      const result: ListRecordsResult = {
         records: body.records.map(r => ({ uri: r.uri, cid: r.cid, value: r.value })),
-        cursor: body.cursor,
       };
+
+      if (body.cursor !== undefined) {
+        result.cursor = body.cursor;
+      }
+
+      return result;
     } catch (err) {
       throw mapXrpcError(err, 'listRecords');
     }

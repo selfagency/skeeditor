@@ -234,6 +234,49 @@ describe('XrpcClient', () => {
     });
   });
 
+  describe('listRecords', () => {
+    it('should call the underlying XRPC client with collection and list options', async () => {
+      const mockListRecords = vi.fn().mockResolvedValue({
+        body: {
+          records: [{ uri: 'at://did:plc:abc123/app.bsky.feed.post/3k1', cid: 'bafy1', value: { text: 'one' } }],
+        },
+      });
+      const client = new XrpcClient({ service: 'https://bsky.social' });
+      client._client.listRecords = mockListRecords;
+
+      await client.listRecords({
+        repo: 'did:plc:abc123',
+        collection: 'app.bsky.feed.post',
+        limit: 25,
+        cursor: 'cursor-1',
+        reverse: true,
+      });
+
+      expect(mockListRecords).toHaveBeenCalledWith('app.bsky.feed.post', {
+        repo: 'did:plc:abc123',
+        limit: 25,
+        cursor: 'cursor-1',
+        reverse: true,
+      });
+    });
+
+    it('should omit cursor from result when response cursor is undefined', async () => {
+      const client = new XrpcClient({ service: 'https://bsky.social' });
+      client._client.listRecords = vi.fn().mockResolvedValue({
+        body: {
+          records: [{ uri: 'at://did:plc:abc123/app.bsky.feed.post/3k1', cid: 'bafy1', value: { text: 'one' } }],
+        },
+      });
+
+      const result = await client.listRecords({ repo: 'did:plc:abc123', collection: 'app.bsky.feed.post' });
+
+      expect(result).toEqual({
+        records: [{ uri: 'at://did:plc:abc123/app.bsky.feed.post/3k1', cid: 'bafy1', value: { text: 'one' } }],
+      });
+      expect('cursor' in result).toBe(false);
+    });
+  });
+
   describe('putRecordWithSwap', () => {
     it('should return a success result when the write succeeds', async () => {
       const client = new XrpcClient({ service: 'https://bsky.social' });
