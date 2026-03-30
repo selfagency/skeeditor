@@ -119,11 +119,7 @@ Edit history tags:
 
 ```json
 {
-  "tags": [
-    "skeeditor-edit-a1b2c3d4",
-    "skeeditor-edit-5e6f7g8h",
-    "skeeditor-edit-9i0j1k2l"
-  ],
+  "tags": ["skeeditor-edit-a1b2c3d4", "skeeditor-edit-5e6f7g8h", "skeeditor-edit-9i0j1k2l"],
   "labels": {
     "values": [{ "val": "edited" }]
   }

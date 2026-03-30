@@ -32,13 +32,13 @@ Skeeditor never asks for, receives, or stores your Bluesky password. The OAuth f
 
 When you use Skeeditor, your browser makes requests to:
 
-| Endpoint | Purpose |
-| --- | --- |
-| Your Bluesky auth server (typically `bsky.social`) `/oauth/authorize` | Initial OAuth authorization redirect |
-| Your Bluesky auth server `/oauth/token` | Exchange authorization code for tokens; token refresh |
-| Your PDS (typically `bsky.social` or `*.bsky.network`) `/xrpc/com.atproto.repo.getRecord` | Fetch the current post record |
-| Your PDS `/xrpc/com.atproto.repo.putRecord` | Write the edited post record back |
-| `https://labeler.skeeditor.link` | Labeler service — applies "edited" labels to posts |
+| Endpoint                                                                                  | Purpose                                               |
+| ----------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| Your Bluesky auth server (typically `bsky.social`) `/oauth/authorize`                     | Initial OAuth authorization redirect                  |
+| Your Bluesky auth server `/oauth/token`                                                   | Exchange authorization code for tokens; token refresh |
+| Your PDS (typically `bsky.social` or `*.bsky.network`) `/xrpc/com.atproto.repo.getRecord` | Fetch the current post record                         |
+| Your PDS `/xrpc/com.atproto.repo.putRecord`                                               | Write the edited post record back                     |
+| `https://labeler.skeeditor.link`                                                          | Labeler service — applies "edited" labels to posts    |
 
 All requests go to your Bluesky auth server and PDS (or the Skeeditor labeler) over HTTPS. The exact server hostnames depend on your account configuration — most users connect to `bsky.social` and `*.bsky.network`. No intermediate proxy, analytics endpoint, or third-party server is involved at any point. The labeler connection only occurs if you have subscribed to the Skeeditor labeler (`@skeeditor.link`) through your Bluesky moderation settings.
 

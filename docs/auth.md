@@ -55,11 +55,12 @@ For PDS instances that do not support OAuth, `src/shared/auth/app-password.ts` p
 
 ### DPoP key storage
 
-DPoP private keys are generated via `crypto.subtle.generateKey` with `{ extractable: true }` so they can be serialised as a JWK and persisted in `browser.storage.local`.  This is an unavoidable limitation of Manifest V3 service workers: non-extractable `CryptoKey` objects live in JavaScript memory and are lost when the service worker is terminated (typically within 30 s of inactivity).  Re-generating a new key on every restart would invalidate all existing sessions.
+DPoP private keys are generated via `crypto.subtle.generateKey` with `{ extractable: true }` so they can be serialised as a JWK and persisted in `browser.storage.local`. This is an unavoidable limitation of Manifest V3 service workers: non-extractable `CryptoKey` objects live in JavaScript memory and are lost when the service worker is terminated (typically within 30 s of inactivity). Re-generating a new key on every restart would invalidate all existing sessions.
 
-**Risk:** Another browser extension that holds the `storage` permission could read the exported JWK.  A compromised extension could therefore construct valid DPoP proofs for any request until the access token expires.
+**Risk:** Another browser extension that holds the `storage` permission could read the exported JWK. A compromised extension could therefore construct valid DPoP proofs for any request until the access token expires.
 
 **Mitigations:**
+
 - Access tokens are short-lived (typically 15 min); an attacker gains only a narrow window.
 - The DPoP key is scoped to the extension's private storage namespace — other origins and web pages cannot access it.
 - The extension requests only the minimum permissions needed (`storage`, `activeTab`).
@@ -67,9 +68,9 @@ DPoP private keys are generated via `crypto.subtle.generateKey` with `{ extracta
 
 ### PKCE state persistence
 
-PKCE `state` and `codeVerifier` values are stored in `browser.storage.session` when available (Chrome MV3).  Session storage is cleared automatically when the browser closes or the service worker is terminated, so a stale verifier cannot be replayed across restarts.
+PKCE `state` and `codeVerifier` values are stored in `browser.storage.session` when available (Chrome MV3). Session storage is cleared automatically when the browser closes or the service worker is terminated, so a stale verifier cannot be replayed across restarts.
 
-On Firefox, where `browser.storage.session` may be unavailable, the fallback is `browser.storage.local`.  To prevent a stale verifier from surviving a browser restart, the service worker clears `pendingAuth` from local storage on every startup.
+On Firefox, where `browser.storage.session` may be unavailable, the fallback is `browser.storage.local`. To prevent a stale verifier from surviving a browser restart, the service worker clears `pendingAuth` from local storage on every startup.
 
 ## Security Considerations
 
@@ -94,5 +95,3 @@ On Firefox, where `browser.storage.session` may be unavailable, the fallback is 
 ### Token Refresh Security
 
 The token refresh mechanism includes in-flight request deduplication to prevent race conditions and ensure consistent token state across concurrent refresh attempts.
-
-

@@ -15,13 +15,14 @@ The WXT config file replaces the old `vite.config.ts`, `scripts/build.ts`, and p
 ```ts
 export default defineConfig({
   srcDir: 'src',
-  entrypointsDir: 'entrypoints',   // WXT discovers entrypoints here
+  entrypointsDir: 'entrypoints', // WXT discovers entrypoints here
   outDir: 'dist',
-  outDirTemplate: '{{browser}}',   // e.g. dist/chrome, dist/firefox
-  imports: false,                  // auto-imports disabled; explicit imports required
+  outDirTemplate: '{{browser}}', // e.g. dist/chrome, dist/firefox
+  imports: false, // auto-imports disabled; explicit imports required
   modules: ['@wxt-dev/auto-icons'],
   autoIcons: { baseIconPath: 'assets/icon.svg' },
-  manifest: ctx => ({              // manifest built as a function of the target browser
+  manifest: ctx => ({
+    // manifest built as a function of the target browser
     name: 'Skeeditor',
     version: '0.1.0',
     permissions: ['storage', 'activeTab', 'tabs', 'alarms'],

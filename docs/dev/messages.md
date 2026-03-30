@@ -21,19 +21,19 @@ TypeScript enforces the request/response contract at compile time. You cannot ca
 ### Popup or Web Component
 
 ```ts
-import { sendMessage } from "@src/shared/messages";
+import { sendMessage } from '@src/shared/messages';
 
 // Check auth status
-const status = await sendMessage({ type: "AUTH_GET_STATUS" });
+const status = await sendMessage({ type: 'AUTH_GET_STATUS' });
 if (status.authenticated) {
-  console.log("Signed in as", status.did);
+  console.log('Signed in as', status.did);
 }
 
 // Trigger sign-in
-await sendMessage({ type: "AUTH_SIGN_IN" });
+await sendMessage({ type: 'AUTH_SIGN_IN' });
 
 // Sign out
-await sendMessage({ type: "AUTH_SIGN_OUT" });
+await sendMessage({ type: 'AUTH_SIGN_OUT' });
 ```
 
 ### Content script
@@ -107,9 +107,9 @@ switch (result.type) {
 ```ts
 interface AuthListAccountsAccount {
   did: string;
-  handle?: string;      // may be absent if handle resolution failed
-  expiresAt: number;    // Unix timestamp (ms) when the access token expires
-  isActive: boolean;    // true for the currently active account
+  handle?: string; // may be absent if handle resolution failed
+  expiresAt: number; // Unix timestamp (ms) when the access token expires
+  isActive: boolean; // true for the currently active account
 }
 ```
 
@@ -117,7 +117,7 @@ interface AuthListAccountsAccount {
 
 ```ts
 interface ExtensionSettings {
-  editTimeLimit: number | null;  // minutes (0.5–5), or null to disable the time limit
+  editTimeLimit: number | null; // minutes (0.5–5), or null to disable the time limit
 }
 ```
 

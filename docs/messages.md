@@ -11,76 +11,71 @@ All cross-context communication goes through `browser.runtime.sendMessage`. The 
 ### In the popup or a Web Component
 
 ```typescript
-import { sendMessage } from "../shared/messages";
+import { sendMessage } from '../shared/messages';
 
 // Check auth status
-const status = await sendMessage({ type: "AUTH_GET_STATUS" });
+const status = await sendMessage({ type: 'AUTH_GET_STATUS' });
 if (status.authenticated) {
-  console.log("Signed in as", status.did);
+  console.log('Signed in as', status.did);
 }
 
 // Trigger sign-in
-await sendMessage({ type: "AUTH_SIGN_IN" });
+await sendMessage({ type: 'AUTH_SIGN_IN' });
 
 // Sign out
-await sendMessage({ type: "AUTH_SIGN_OUT" });
+await sendMessage({ type: 'AUTH_SIGN_OUT' });
 ```
 
 ### In a content script
 
 ```typescript
-import { sendMessage } from "../shared/messages";
+import { sendMessage } from '../shared/messages';
 
 // Fetch a record
 const response = await sendMessage({
-  type: "GET_RECORD",
-  repo: "did:plc:alice",
-  collection: "app.bsky.feed.post",
-  rkey: "3jxyz",
+  type: 'GET_RECORD',
+  repo: 'did:plc:alice',
+  collection: 'app.bsky.feed.post',
+  rkey: '3jxyz',
 });
-if ("error" in response) {
-  console.error("Fetch failed:", response.error);
+if ('error' in response) {
+  console.error('Fetch failed:', response.error);
 } else {
-  console.log("Record CID:", response.cid);
+  console.log('Record CID:', response.cid);
 }
 
 // Update a record with optimistic concurrency (all three response variants)
 const result = await sendMessage({
-  type: "PUT_RECORD",
-  repo: "did:plc:alice",
-  collection: "app.bsky.feed.post",
-  rkey: "3jxyz",
-  record: { $type: "app.bsky.feed.post", text: "edited text" },
+  type: 'PUT_RECORD',
+  repo: 'did:plc:alice',
+  collection: 'app.bsky.feed.post',
+  rkey: '3jxyz',
+  record: { $type: 'app.bsky.feed.post', text: 'edited text' },
   swapRecord: response.cid, // fail if server state has diverged
 });
 
 switch (result.type) {
-  case "PUT_RECORD_SUCCESS":
+  case 'PUT_RECORD_SUCCESS':
     // Write succeeded — result.uri and result.cid reflect the updated record.
-    console.log("Saved at", result.uri, "— new CID:", result.cid);
+    console.log('Saved at', result.uri, '— new CID:', result.cid);
     break;
 
-  case "PUT_RECORD_CONFLICT":
+  case 'PUT_RECORD_CONFLICT':
     // The record was modified on the server since we last read it.
     // result.conflict (when present) contains the server's current value and CID
     // so the UI can offer a merge or retry flow.
     if (result.conflict) {
       const { currentCid, currentValue } = result.conflict;
-      console.warn(
-        "Conflict — server CID:",
-        currentCid,
-        "value:",
-        currentValue,
-      );
+      console.warn('Conflict — server CID:', currentCid, 'value:', currentValue);
       // Re-submit with swapRecord: currentCid after user resolves the conflict.
     } else {
-      console.warn("Conflict detected but server details unavailable.");
+      console.warn('Conflict detected but server details unavailable.');
     }
     break;
 
-  case "PUT_RECORD_ERROR":
+  case 'PUT_RECORD_ERROR':
     // Covers auth failures, validation errors, and unexpected XRPC errors.
-    console.error("Save failed:", result.message);
+    console.error('Save failed:', result.message);
     break;
 }
 ```

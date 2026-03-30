@@ -1,6 +1,6 @@
 name: ❓ Question / Help
 description: Stuck or confused? No worries — ask away and we'll help you out!
-labels: ["question"]
+labels: ['question']
 body:
   - type: markdown
     attributes:
@@ -22,7 +22,7 @@ body:
     attributes:
       label: Which browser are you using? (optional)
       description: This helps us narrow things down if it's a browser-specific issue.
-      placeholder: "Chrome 126"
+      placeholder: 'Chrome 126'
 
   - type: textarea
     id: extra

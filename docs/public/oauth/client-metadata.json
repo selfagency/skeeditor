@@ -4,16 +4,9 @@
   "client_name": "skeeditor",
   "client_uri": "https://docs.skeeditor.link",
   "dpop_bound_access_tokens": true,
-  "grant_types": [
-    "authorization_code",
-    "refresh_token"
-  ],
-  "redirect_uris": [
-    "https://docs.skeeditor.link/callback.html"
-  ],
-  "response_types": [
-    "code"
-  ],
+  "grant_types": ["authorization_code", "refresh_token"],
+  "redirect_uris": ["https://docs.skeeditor.link/callback.html"],
+  "response_types": ["code"],
   "scope": "atproto transition:generic",
   "token_endpoint_auth_method": "none"
 }

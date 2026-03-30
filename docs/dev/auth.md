@@ -51,11 +51,7 @@ DPoP key generation and proof-header signing are implemented in `src/shared/auth
 ## PKCE utilities (`src/shared/auth/pkce.ts`)
 
 ```ts
-import {
-  generateCodeVerifier,
-  deriveCodeChallenge,
-  generateState,
-} from "@src/shared/auth/pkce";
+import { generateCodeVerifier, deriveCodeChallenge, generateState } from '@src/shared/auth/pkce';
 
 const codeVerifier = generateCodeVerifier(); // 43-128 char random string
 const codeChallenge = await deriveCodeChallenge(codeVerifier); // SHA-256, base64url-encoded
@@ -143,12 +139,12 @@ Storage layout in `browser.storage.local`:
 
 The popup queries and switches accounts via the message layer — it never reads storage directly.
 
-| Message | Payload | Description |
-| --- | --- | --- |
-| `AUTH_LIST_ACCOUNTS` | — | Returns all signed-in accounts |
-| `AUTH_SWITCH_ACCOUNT` | `did` | Makes a different account active |
-| `AUTH_SIGN_OUT_ACCOUNT` | `did` | Signs out one account without affecting others |
-| `AUTH_GET_STATUS` | — | Returns auth status for the active account |
+| Message                 | Payload | Description                                    |
+| ----------------------- | ------- | ---------------------------------------------- |
+| `AUTH_LIST_ACCOUNTS`    | —       | Returns all signed-in accounts                 |
+| `AUTH_SWITCH_ACCOUNT`   | `did`   | Makes a different account active               |
+| `AUTH_SIGN_OUT_ACCOUNT` | `did`   | Signs out one account without affecting others |
+| `AUTH_GET_STATUS`       | —       | Returns auth status for the active account     |
 
 ---
 
@@ -165,9 +161,9 @@ The popup queries and switches accounts via the message layer — it never reads
 
 ## Required scopes
 
-| Scope | Purpose |
-| --- | --- |
-| `atproto` | Identifies this as an AT Protocol client |
+| Scope                | Purpose                                           |
+| -------------------- | ------------------------------------------------- |
+| `atproto`            | Identifies this as an AT Protocol client          |
 | `transition:generic` | Grants read/write access to records the user owns |
 
 ---
@@ -176,11 +172,11 @@ The popup queries and switches accounts via the message layer — it never reads
 
 The extension discovers OAuth endpoints dynamically from the PDS's well-known document. The default PDS is `https://bsky.social`.
 
-| Endpoint | URL pattern |
-| --- | --- |
-| Discovery | `<pdsUrl>/.well-known/oauth-authorization-server` |
-| Authorization | `<pdsUrl>/oauth/authorize` |
-| Token | `<pdsUrl>/oauth/token` |
+| Endpoint      | URL pattern                                       |
+| ------------- | ------------------------------------------------- |
+| Discovery     | `<pdsUrl>/.well-known/oauth-authorization-server` |
+| Authorization | `<pdsUrl>/oauth/authorize`                        |
+| Token         | `<pdsUrl>/oauth/token`                            |
 
 Helper functions `getOAuthAuthorizeUrl(pdsUrl)` and `getOAuthTokenUrl(pdsUrl)` in `src/shared/constants.ts` construct these URLs.
 
