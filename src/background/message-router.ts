@@ -388,17 +388,15 @@ function isValidPutRecordPayload(msg: IncomingMessage): msg is IncomingMessage &
   return true;
 }
 
-function isUploadBlobPayload(
-  message: unknown,
-): message is { data: ArrayBuffer; mimeType: string; repo: string } {
+function isUploadBlobPayload(message: unknown): message is { data: ArrayBuffer; mimeType: string; repo: string } {
   return (
     typeof message === 'object' &&
     message !== null &&
     'data' in message &&
     'mimeType' in message &&
     'repo' in message &&
-    typeof message['repo'] === 'string' &&
-    typeof message['mimeType'] === 'string' &&
+    isNonEmptyString(message['repo']) &&
+    isNonEmptyString(message['mimeType']) &&
     message['data'] instanceof ArrayBuffer
   );
 }
