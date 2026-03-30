@@ -5,10 +5,8 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-30T14:04:21Z
-updated_at: 2026-03-30T23:35:11Z
+updated_at: 2026-03-30T23:49:58Z
 parent: skeeditor-d3m1
-branch: feat/6dq9-align-labeler-consent-docs-ux
-pr: 91
 ---
 
 Labeler consent docs describe an automatic subscription flow that the popup does not currently perform. Either implement the documented behavior or update docs and UX copy to reflect the manual flow.
