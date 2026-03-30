@@ -1,7 +1,7 @@
 ---
 # skeeditor-1uo8
 title: Accept OAuth refresh responses without refresh_token
-status: in-progress
+status: completed
 type: bug
 priority: high
 created_at: 2026-03-30T14:04:21Z
@@ -17,3 +17,8 @@ branch: fix/1uo8-refresh-token-retention
 - [x] Update background refresh logic to retain the existing refresh token
 - [x] Add coverage for malformed or partial refresh payloads
 - [x] Verify existing refresh behavior still works when a new refresh token is returned
+
+## Summary of Changes
+- Updated the silent-refresh path in `src/background/message-router.ts` so `AUTH_GET_STATUS` accepts access-token-only refresh responses and preserves the stored refresh token when no new one is returned.
+- Added regression coverage in `test/unit/background/message-router.test.ts` for access-token-only refresh responses and malformed partial refresh payloads.
+- Re-ran the focused background message-router unit tests to confirm the new behavior and preserve the existing refresh flow.
