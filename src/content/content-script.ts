@@ -526,7 +526,7 @@ const getOrCreateEditModal = (): EditModal => {
     return activeModal;
   }
 
-  const modal = document.createElement('edit-modal') as EditModal;
+  const modal = new EditModal();
   modal.setAttribute('data-skeeditor-modal', 'true');
   document.body.appendChild(modal);
   activeModal = modal;
@@ -929,7 +929,7 @@ const getOrCreateHistoryModal = (): EditHistoryModal => {
   if (activeHistoryModal !== null && activeHistoryModal.isConnected) {
     return activeHistoryModal;
   }
-  const modal = document.createElement('edit-history-modal') as EditHistoryModal;
+  const modal = new EditHistoryModal();
   modal.setAttribute('data-skeeditor-history-modal', 'true');
   activeHistoryModal = modal;
   return modal;

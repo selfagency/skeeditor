@@ -42,7 +42,17 @@ export class OptionsAccounts extends HTMLElement {
           border-bottom: 1px solid var(--color-border);
         }
         .card-section:last-child { border-bottom: none; }
-        .accounts-list { display: flex; flex-direction: column; gap: 0.5rem; }
+        .accounts-list {
+          list-style: none;
+          margin: 0;
+          padding: 0;
+        }
+        .accounts-list > li {
+          padding: 1rem 1.5rem;
+        }
+        .accounts-list > li:not(:last-child) {
+          border-bottom: 1px solid var(--color-border);
+        }
         .empty-text { margin: 0; font-size: 0.875rem; color: var(--color-text-secondary); }
         .err-text { margin: 0; font-size: 0.875rem; color: var(--color-error); }
         label {
@@ -86,9 +96,9 @@ export class OptionsAccounts extends HTMLElement {
       <div class="card">
         <div class="card-header"><h2>Accounts</h2></div>
         <div class="card-section">
-          <div class="accounts-list" id="accounts-list">
-            <p class="empty-text">Loading accounts…</p>
-          </div>
+          <ul role="list" class="accounts-list" id="accounts-list">
+            <li><p class="empty-text">Loading accounts…</p></li>
+          </ul>
         </div>
         <div class="card-section add-section">
           <h3>Add account</h3>
@@ -134,10 +144,12 @@ export class OptionsAccounts extends HTMLElement {
       console.error('Error loading accounts:', error);
       if (this.accountsList) {
         this.accountsList.innerHTML = '';
+        const li = document.createElement('li');
         const p = document.createElement('p');
         p.className = 'err-text';
         p.textContent = 'Failed to load accounts.';
-        this.accountsList.appendChild(p);
+        li.appendChild(p);
+        this.accountsList.appendChild(li);
       }
     }
   }
@@ -147,15 +159,18 @@ export class OptionsAccounts extends HTMLElement {
 
     if (accounts.length === 0) {
       this.accountsList.innerHTML = '';
+      const li = document.createElement('li');
       const p = document.createElement('p');
       p.className = 'empty-text';
       p.textContent = 'No accounts signed in.';
-      this.accountsList.appendChild(p);
+      li.appendChild(p);
+      this.accountsList.appendChild(li);
       return;
     }
 
     this.accountsList.innerHTML = '';
     for (const account of accounts) {
+      const li = document.createElement('li');
       const card = document.createElement('account-card');
       card.className = 'account-card';
       card.setAttribute('did', account.did);
@@ -163,7 +178,8 @@ export class OptionsAccounts extends HTMLElement {
       card.setAttribute('remove-label', 'Remove');
       if (account.handle) card.setAttribute('handle', account.handle);
       if (account.isActive) card.setAttribute('is-active', 'true');
-      this.accountsList.appendChild(card);
+      li.appendChild(card);
+      this.accountsList.appendChild(li);
     }
   }
 
