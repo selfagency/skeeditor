@@ -127,6 +127,7 @@ describe('XrpcClient', () => {
 
       expect(mockPut).toHaveBeenCalledWith(record, 'rkey1', {
         repo: 'did:plc:abc123',
+        collection: 'app.bsky.feed.post',
         validate: true,
       });
     });
@@ -184,6 +185,7 @@ describe('XrpcClient', () => {
 
       expect(mockPut).toHaveBeenCalledWith(record, 'rkey1', {
         repo: 'did:plc:abc123',
+        collection: 'app.bsky.feed.post',
         validate: true,
         swapRecord: 'bafyold',
       });

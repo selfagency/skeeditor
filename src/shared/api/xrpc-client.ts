@@ -410,9 +410,9 @@ export class XrpcClient {
    * @throws `XrpcClientError` on any XRPC or network failure, including conflicts
    */
   public async putRecord(params: PutRecordParams): Promise<PutRecordResult> {
-    const { repo, collection: _collection, rkey, record, swapRecord, validate = true } = params;
+    const { repo, collection, rkey, record, swapRecord, validate = true } = params;
 
-    const options: Record<string, unknown> = { repo, validate };
+    const options: Record<string, unknown> = { repo, collection, validate };
     if (swapRecord !== undefined) {
       options['swapRecord'] = swapRecord;
     }
