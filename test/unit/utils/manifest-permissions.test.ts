@@ -24,11 +24,18 @@ describe('manifest permission least-privilege audit', () => {
     const devPlatformDoc = readRepoFile('docs/dev/platform.md');
     const installationGuide = readRepoFile('docs/guide/installation.md');
 
-    for (const doc of [authDoc, buildDoc, devPlatformDoc, installationGuide]) {
-      expect(doc).toContain('storage');
-      expect(doc).toContain('tabs');
-      expect(doc).toContain('alarms');
-      expect(doc).not.toContain('activeTab');
-    }
+    expect(authDoc).toContain('(`storage`, `tabs`, `alarms`)');
+    expect(authDoc).not.toContain('activeTab');
+
+    expect(buildDoc).toContain("permissions: ['storage', 'tabs', 'alarms']");
+    expect(buildDoc).not.toContain('activeTab');
+
+    expect(devPlatformDoc).toContain("permissions: ['storage', 'tabs', 'alarms']");
+    expect(devPlatformDoc).not.toContain('activeTab');
+
+    expect(installationGuide).toContain('- `storage`');
+    expect(installationGuide).toContain('- `tabs`');
+    expect(installationGuide).toContain('- `alarms`');
+    expect(installationGuide).not.toContain('activeTab');
   });
 });
