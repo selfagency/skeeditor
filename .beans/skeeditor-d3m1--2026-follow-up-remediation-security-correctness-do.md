@@ -1,11 +1,11 @@
 ---
 # skeeditor-d3m1
 title: '2026 follow-up remediation: security, correctness, docs, and CI coverage'
-status: in-progress
+status: completed
 type: epic
 priority: critical
 created_at: 2026-03-30T14:03:47Z
-updated_at: 2026-03-30T14:03:47Z
+updated_at: 2026-03-31T12:47:38Z
 parent: skeeditor-bmr4
 ---
 
