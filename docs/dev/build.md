@@ -25,7 +25,7 @@ export default defineConfig({
     // manifest built as a function of the target browser
     name: 'Skeeditor',
     version: '0.1.0',
-    permissions: ['storage', 'activeTab', 'tabs', 'alarms'],
+    permissions: ['storage', 'tabs', 'alarms'],
     host_permissions: [
       'https://bsky.app/*',
       'https://*.bsky.network/*',

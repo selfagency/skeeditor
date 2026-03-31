@@ -60,7 +60,6 @@ If you're building Skeeditor from source, you can generate a Safari build with `
 When you install Skeeditor, your browser will ask for these permissions:
 
 - `storage` — stores OAuth sessions, settings, and short-lived prompt/state flags in extension storage
-- `activeTab` — reads the active tab URL to know when you are on `bsky.app`
 - `tabs` — opens and manages auth callback/sign-in tabs during OAuth flow
 - `alarms` — schedules service-worker keepalive/retry timers in MV3 background context
 - `https://bsky.app/*` — injects the edit UI into bsky.app pages and intercepts post navigation

@@ -63,7 +63,7 @@ DPoP private keys are generated via `crypto.subtle.generateKey` with `{ extracta
 
 - Access tokens are short-lived (typically 15 min); an attacker gains only a narrow window.
 - The DPoP key is scoped to the extension's private storage namespace — other origins and web pages cannot access it.
-- The extension requests only the minimum runtime permissions needed (`storage`, `activeTab`, `tabs`, `alarms`) plus scoped host permissions for `bsky.app`, `*.bsky.network`, `docs.skeeditor.link`, and `slingshot.microcosm.blue`.
+- The extension requests only the minimum runtime permissions needed (`storage`, `tabs`, `alarms`) plus scoped host permissions for `bsky.app`, `*.bsky.network`, `docs.skeeditor.link`, and `slingshot.microcosm.blue`.
 - Until browsers expose a service-worker-safe non-extractable key storage API (e.g., via the [Storage Access API](https://privacycg.github.io/storage-access/) or dedicated extension key stores), this trade-off is the accepted practice in the MV3 ecosystem.
 
 ### PKCE state persistence
