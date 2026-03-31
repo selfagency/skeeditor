@@ -8,6 +8,7 @@ created_at: 2026-03-31T03:32:03Z
 updated_at: 2026-03-31T03:48:30Z
 parent: skeeditor-d3m1
 branch: fix/t5lb-timestamp-labeler-hardening
+pr: 94
 ---
 
 Implement the reviewed March 2026 follow-up work for timestamp behavior hardening, client-side post validation, labeler service declaration, labeler DID/public-key consistency, reconnect cursor handling, and the remaining docs drift cleanup.
