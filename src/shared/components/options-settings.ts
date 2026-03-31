@@ -1,0 +1,181 @@
+import { EDIT_TIME_LIMIT_MAX, EDIT_TIME_LIMIT_MIN } from '../constants';
+import { sendMessage } from '../messages';
+
+export class OptionsSettings extends HTMLElement {
+  private readonly root: ShadowRoot;
+  private editTimeLimitInput: HTMLInputElement | null = null;
+  private postDateStrategySelect: HTMLSelectElement | null = null;
+  private saveButton: HTMLButtonElement | null = null;
+
+  public constructor() {
+    super();
+    this.root = this.attachShadow({ mode: 'open' });
+  }
+
+  public connectedCallback(): void {
+    this.render();
+    this.attachHandlers();
+    void this.loadSettings();
+  }
+
+  private render(): void {
+    this.root.innerHTML = `
+      <style>
+        :host { display: block; }
+        .card {
+          overflow: hidden;
+          border-radius: 0.5rem;
+          border: 1px solid rgba(255,255,255,0.1);
+          background: rgba(31,41,55,0.5);
+        }
+        .card-header {
+          padding: 1.25rem 1rem;
+          border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .card-header h2 {
+          margin: 0;
+          font-size: 1rem;
+          font-weight: 600;
+          color: white;
+        }
+        .card-body {
+          padding: 1.25rem 1rem;
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+        }
+        label { display: block; font-size: 0.875rem; font-weight: 500; color: #f3f4f6; }
+        input[type="number"], select {
+          display: block; width: 100%; margin-top: 0.5rem; box-sizing: border-box;
+          border-radius: 0.375rem; padding: 0.375rem 0.75rem;
+          font-size: 0.875rem; color: white;
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.1);
+          outline: none;
+        }
+        input[type="number"]:focus, select:focus {
+          border-color: #6366f1;
+          box-shadow: 0 0 0 1px #6366f1;
+        }
+        input[type="number"]::placeholder { color: #6b7280; }
+        .hint { margin: 0; font-size: 0.875rem; color: #9ca3af; }
+        button.save-btn {
+          align-self: flex-start;
+          border-radius: 0.375rem; padding: 0.5rem 0.75rem;
+          font-size: 0.875rem; font-weight: 600; color: white; cursor: pointer;
+          background: #6366f1; border: none;
+        }
+        button.save-btn:hover { background: #818cf8; }
+        button.save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+      </style>
+      <div class="card">
+        <div class="card-header"><h2>Extension Settings</h2></div>
+        <div class="card-body">
+          <div>
+            <label for="edit-time-limit">Edit time limit (minutes)</label>
+            <input type="number" id="edit-time-limit"
+              min="${EDIT_TIME_LIMIT_MIN}" max="${EDIT_TIME_LIMIT_MAX}" step="0.5"
+              placeholder="Leave blank to disable" />
+          </div>
+          <p class="hint">
+            Leave blank to disable. When set, posts older than the configured window cannot be edited.
+          </p>
+
+          <div>
+            <label for="post-date-strategy">Post date behavior on edit</label>
+            <select id="post-date-strategy">
+              <option value="update">Update post date on edit (recommended)</option>
+              <option value="preserve">Preserve original post date</option>
+            </select>
+          </div>
+          <p class="hint">
+            Tradeoff: updating the post timestamp makes the edit visible in standard Bluesky clients, but Bluesky may
+            flag the post as having a tampered date. Preserving the original timestamp avoids that change, but then only
+            Skeeditor users reliably see the edited text.
+          </p>
+
+          <div>
+            <button class="save-btn" id="save-settings" type="button">Save Settings</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    this.editTimeLimitInput = this.root.getElementById('edit-time-limit') as HTMLInputElement;
+    this.postDateStrategySelect = this.root.getElementById('post-date-strategy') as HTMLSelectElement;
+    this.saveButton = this.root.getElementById('save-settings') as HTMLButtonElement;
+  }
+
+  private attachHandlers(): void {
+    this.saveButton?.addEventListener('click', () => void this.saveSettings());
+  }
+
+  private async loadSettings(): Promise<void> {
+    if (!this.editTimeLimitInput || !this.postDateStrategySelect) return;
+    try {
+      const response = await sendMessage({ type: 'GET_SETTINGS' });
+      if (!('error' in response)) {
+        this.editTimeLimitInput.value = response.editTimeLimit === null ? '' : String(response.editTimeLimit);
+        this.postDateStrategySelect.value = response.postDateStrategy;
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    }
+  }
+
+  private async saveSettings(): Promise<void> {
+    if (!this.editTimeLimitInput || !this.postDateStrategySelect || !this.saveButton) return;
+
+    const postDateStrategy = this.postDateStrategySelect.value === 'preserve' ? 'preserve' : 'update';
+    const rawEditTimeLimit = this.editTimeLimitInput.value.trim();
+    const editTimeLimit = rawEditTimeLimit.length === 0 ? null : Number.parseFloat(rawEditTimeLimit);
+
+    if (
+      editTimeLimit !== null &&
+      (!Number.isFinite(editTimeLimit) || editTimeLimit < EDIT_TIME_LIMIT_MIN || editTimeLimit > EDIT_TIME_LIMIT_MAX)
+    ) {
+      this.emitStatus(
+        `Edit time limit must be between ${EDIT_TIME_LIMIT_MIN} and ${EDIT_TIME_LIMIT_MAX} minutes, or left blank to disable.`,
+        'error',
+      );
+      return;
+    }
+
+    this.saveButton.disabled = true;
+    this.saveButton.textContent = 'Saving…';
+
+    try {
+      const response = await sendMessage({ type: 'SET_SETTINGS', settings: { editTimeLimit, postDateStrategy } });
+      if (!('ok' in response && response.ok)) {
+        this.emitStatus(('error' in response ? response.error : null) ?? 'Failed to save settings.', 'error');
+        return;
+      }
+      this.emitStatus(
+        editTimeLimit === null
+          ? `Settings saved. Edit time limit disabled. Date mode: ${postDateStrategy}.`
+          : `Settings saved. Edit time limit: ${editTimeLimit} minutes. Date mode: ${postDateStrategy}.`,
+        'success',
+      );
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      this.emitStatus('Error saving settings.', 'error');
+    } finally {
+      this.saveButton.disabled = false;
+      this.saveButton.textContent = 'Save Settings';
+    }
+  }
+
+  private emitStatus(message: string, type: 'info' | 'success' | 'error'): void {
+    this.dispatchEvent(
+      new CustomEvent('status-update', {
+        detail: { message, type },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+}
+
+if (!customElements.get('options-settings')) {
+  customElements.define('options-settings', OptionsSettings);
+}

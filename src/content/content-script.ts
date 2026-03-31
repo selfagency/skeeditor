@@ -522,13 +522,13 @@ let navigationToken = 0;
 const FEED_CONTAINER_SELECTORS = ['[data-testid="feed"]', '[data-testid="feedPage-feed"]', 'main', '[role="main"]'];
 
 const getOrCreateEditModal = (): EditModal => {
-  if (activeModal !== null && activeModal.element.isConnected) {
+  if (activeModal !== null && activeModal.isConnected) {
     return activeModal;
   }
 
-  const modal = new EditModal();
-  modal.element.setAttribute('data-skeeditor-modal', 'true');
-  document.body.appendChild(modal.element);
+  const modal = document.createElement('edit-modal') as EditModal;
+  modal.setAttribute('data-skeeditor-modal', 'true');
+  document.body.appendChild(modal);
   activeModal = modal;
 
   return modal;
@@ -926,11 +926,11 @@ const injectEditButton = (postElement: HTMLElement): void => {
 };
 
 const getOrCreateHistoryModal = (): EditHistoryModal => {
-  if (activeHistoryModal !== null && activeHistoryModal.element.isConnected) {
+  if (activeHistoryModal !== null && activeHistoryModal.isConnected) {
     return activeHistoryModal;
   }
-  const modal = new EditHistoryModal();
-  modal.element.setAttribute('data-skeeditor-history-modal', 'true');
+  const modal = document.createElement('edit-history-modal') as EditHistoryModal;
+  modal.setAttribute('data-skeeditor-history-modal', 'true');
   activeHistoryModal = modal;
   return modal;
 };

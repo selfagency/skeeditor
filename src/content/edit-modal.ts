@@ -44,8 +44,8 @@ const EDIT_MODAL_TEMPLATE = `
 // Bluesky's post limit is 300 graphemes (user-perceived characters)
 const MAX_POST_LENGTH = 300;
 
-export class EditModal {
-  public readonly element: HTMLElement;
+export class EditModal extends HTMLElement {
+  private readonly shadow: ShadowRoot;
   private textarea: HTMLTextAreaElement | null = null;
   private charCount: HTMLElement | null = null;
   private saveButton: HTMLButtonElement | null = null;
@@ -70,35 +70,42 @@ export class EditModal {
   private handleKeydownBound = this.handleKeydown.bind(this);
   private handleUploadBound = this.handleUpload.bind(this);
 
+  /** @deprecated Use the element directly – this alias exists for backward compatibility. */
+  public get element(): this {
+    return this;
+  }
+
   public constructor() {
-    this.element = document.createElement('edit-modal');
-    this.element.attachShadow({ mode: 'open' });
+    super();
+    this.shadow = this.attachShadow({ mode: 'open' });
+  }
+
+  public connectedCallback(): void {
     this.initialize();
   }
 
   private initialize(): void {
     if (this.textarea) return;
-    const shadow = this.element.shadowRoot!;
-    shadow.innerHTML = EDIT_MODAL_TEMPLATE;
-    this.element.style.display = 'none';
-    this.textarea = shadow.querySelector<HTMLTextAreaElement>('textarea');
-    this.charCount = shadow.querySelector<HTMLElement>('.char-count');
-    this.saveButton = shadow.querySelector<HTMLButtonElement>('.save-button');
-    this.uploadButton = shadow.querySelector<HTMLButtonElement>('.upload-button');
-    this.fileInput = shadow.querySelector<HTMLInputElement>('input[type="file"]');
-    this.mediaPreview = shadow.querySelector<HTMLElement>('.media-preview');
-    this.statusMessage = shadow.querySelector<HTMLElement>('.status-message');
+    this.shadow.innerHTML = EDIT_MODAL_TEMPLATE;
+    this.style.display = 'none';
+    this.textarea = this.shadow.querySelector<HTMLTextAreaElement>('textarea');
+    this.charCount = this.shadow.querySelector<HTMLElement>('.char-count');
+    this.saveButton = this.shadow.querySelector<HTMLButtonElement>('.save-button');
+    this.uploadButton = this.shadow.querySelector<HTMLButtonElement>('.upload-button');
+    this.fileInput = this.shadow.querySelector<HTMLInputElement>('input[type="file"]');
+    this.mediaPreview = this.shadow.querySelector<HTMLElement>('.media-preview');
+    this.statusMessage = this.shadow.querySelector<HTMLElement>('.status-message');
 
     if (this.textarea) {
       this.textarea.addEventListener('input', this.handleInputBound);
     }
 
-    const closeButton = shadow.querySelector<HTMLButtonElement>('.close-button');
+    const closeButton = this.shadow.querySelector<HTMLButtonElement>('.close-button');
     if (closeButton) {
       closeButton.addEventListener('click', this.closeBound);
     }
 
-    const cancelButton = shadow.querySelector<HTMLButtonElement>('.cancel-button');
+    const cancelButton = this.shadow.querySelector<HTMLButtonElement>('.cancel-button');
     if (cancelButton) {
       cancelButton.addEventListener('click', this.closeBound);
     }
@@ -120,7 +127,7 @@ export class EditModal {
     // without this, typing in the textarea triggers those shortcuts (e.g. 'n'
     // opens a new-post dialog). Events are still handled by our own handler
     // before propagation is stopped.
-    this.element.addEventListener('keydown', this.handleKeydownBound);
+    this.addEventListener('keydown', this.handleKeydownBound);
   }
 
   public open(text: string, onCancel?: () => void, onSave?: (text: string) => void | Promise<void>): void {
@@ -131,8 +138,8 @@ export class EditModal {
     this.onSave = onSave ?? undefined;
     this.previouslyFocused = document.activeElement;
 
-    if (!this.element.isConnected) {
-      document.body.appendChild(this.element);
+    if (!this.isConnected) {
+      document.body.appendChild(this);
     }
 
     if (this.textarea) {
@@ -146,10 +153,10 @@ export class EditModal {
     this.hideStatusMessage();
 
     // Remove before adding to prevent duplicate handlers on repeated open() calls
-    this.element.removeEventListener('click', this.handleBackgroundClickBound);
-    this.element.addEventListener('click', this.handleBackgroundClickBound);
+    this.removeEventListener('click', this.handleBackgroundClickBound);
+    this.addEventListener('click', this.handleBackgroundClickBound);
 
-    this.element.style.display = 'flex';
+    this.style.display = 'flex';
     this.isOpen = true;
   }
 
@@ -160,11 +167,11 @@ export class EditModal {
     this.objectUrls.clear();
     this.uploadedMedia = [];
 
-    this.element.style.display = 'none';
-    if (this.element.isConnected) {
-      document.body.removeChild(this.element);
+    this.style.display = 'none';
+    if (this.isConnected) {
+      document.body.removeChild(this);
     }
-    this.element.removeEventListener('click', this.handleBackgroundClickBound);
+    this.removeEventListener('click', this.handleBackgroundClickBound);
     this.isOpen = false;
 
     if (this.previouslyFocused instanceof HTMLElement) {
@@ -302,7 +309,7 @@ export class EditModal {
     // With Shadow DOM, event.target is retargeted to the host for all shadow-internal
     // events. Use composedPath() to get the actual target before retargeting.
     const path = event.composedPath();
-    if (path.length > 0 && path[0] === this.element) {
+    if (path.length > 0 && path[0] === this) {
       this.close();
     }
   }
@@ -322,15 +329,12 @@ export class EditModal {
   }
 
   private trapFocus(event: KeyboardEvent): void {
-    const shadow = this.element.shadowRoot;
-    if (!shadow) return;
-
-    const focusableEls = shadow.querySelectorAll<HTMLElement>('textarea, button:not([disabled])');
+    const focusableEls = this.shadow.querySelectorAll<HTMLElement>('textarea, button:not([disabled])');
     if (focusableEls.length === 0) return;
 
     const first = focusableEls[0]!;
     const last = focusableEls[focusableEls.length - 1]!;
-    const active = shadow.activeElement;
+    const active = this.shadow.activeElement;
 
     if (event.shiftKey) {
       if (active === first || !active) {
@@ -473,4 +477,12 @@ export class EditModal {
       this.mediaPreview.innerHTML = '';
     }
   }
+}
+
+const editModalRegistry =
+  globalThis.customElements ??
+  (Object.getPrototypeOf(globalThis) as { customElements?: CustomElementRegistry | null })?.customElements ??
+  null;
+if (editModalRegistry && !editModalRegistry.get('edit-modal')) {
+  editModalRegistry.define('edit-modal', EditModal);
 }

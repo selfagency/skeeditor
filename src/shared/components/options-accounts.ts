@@ -1,0 +1,194 @@
+import './account-card';
+import type { AuthListAccountsAccount } from '../messages';
+import { sendMessage } from '../messages';
+
+export class OptionsAccounts extends HTMLElement {
+  private readonly root: ShadowRoot;
+  private accountsList: HTMLElement | null = null;
+
+  public constructor() {
+    super();
+    this.root = this.attachShadow({ mode: 'open' });
+  }
+
+  public connectedCallback(): void {
+    this.render();
+    this.attachHandlers();
+    void this.loadAccounts();
+  }
+
+  private render(): void {
+    this.root.innerHTML = `
+      <style>
+        :host { display: block; }
+        .card {
+          overflow: hidden;
+          border-radius: 0.5rem;
+          border: 1px solid rgba(255,255,255,0.1);
+          background: rgba(31,41,55,0.5);
+        }
+        .card-header {
+          padding: 1.25rem 1rem;
+          border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .card-header h2 {
+          margin: 0;
+          font-size: 1rem;
+          font-weight: 600;
+          color: white;
+        }
+        .card-section {
+          padding: 1.25rem 1rem;
+          border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .card-section:last-child { border-bottom: none; }
+        .accounts-list { display: flex; flex-direction: column; gap: 0.5rem; }
+        .empty-text { margin: 0; font-size: 0.875rem; color: #9ca3af; }
+        .err-text { margin: 0; font-size: 0.875rem; color: #f87171; }
+        label { display: block; font-size: 0.875rem; font-weight: 500; color: #f3f4f6; }
+        input[type="url"] {
+          display: block; width: 100%; margin-top: 0.5rem; box-sizing: border-box;
+          border-radius: 0.375rem; padding: 0.375rem 0.75rem;
+          font-size: 0.875rem; color: white;
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.1);
+          outline: none;
+        }
+        input[type="url"]:focus {
+          border-color: #6366f1;
+          box-shadow: 0 0 0 1px #6366f1;
+        }
+        input[type="url"]::placeholder { color: #6b7280; }
+        .add-section { display: flex; flex-direction: column; gap: 1rem; }
+        .add-section h3 { margin: 0; font-size: 0.875rem; font-weight: 600; color: white; }
+        button.add-btn {
+          align-self: flex-start;
+          border-radius: 0.375rem; padding: 0.5rem 0.75rem;
+          font-size: 0.875rem; font-weight: 600; color: white; cursor: pointer;
+          background: rgba(255,255,255,0.1);
+          border: 1px solid rgba(255,255,255,0.05);
+        }
+        button.add-btn:hover { background: rgba(255,255,255,0.2); }
+      </style>
+      <div class="card">
+        <div class="card-header"><h2>Accounts</h2></div>
+        <div class="card-section">
+          <div class="accounts-list" id="accounts-list">
+            <p class="empty-text">Loading accounts…</p>
+          </div>
+        </div>
+        <div class="card-section add-section">
+          <h3>Add account</h3>
+          <div>
+            <label for="add-pds-url">PDS URL</label>
+            <input type="url" id="add-pds-url" value="https://bsky.social" placeholder="https://bsky.social" />
+          </div>
+          <button class="add-btn" id="add-account" type="button">Add account</button>
+        </div>
+      </div>
+    `;
+
+    this.accountsList = this.root.getElementById('accounts-list');
+  }
+
+  private attachHandlers(): void {
+    this.root.getElementById('add-account')?.addEventListener('click', () => {
+      const input = this.root.getElementById('add-pds-url') as HTMLInputElement | null;
+      const pdsUrl = input?.value?.trim() || '';
+      if (!pdsUrl.startsWith('https://')) {
+        this.emitStatus('Please enter a valid HTTPS URL (e.g. https://bsky.social).', 'error');
+        return;
+      }
+      void sendMessage({ type: 'AUTH_SIGN_IN', pdsUrl });
+    });
+
+    this.root.addEventListener('account-switch', (event: Event) => {
+      const did = (event as CustomEvent<{ did?: string }>).detail?.did ?? '';
+      void this.handleSwitchAccount(did);
+    });
+
+    this.root.addEventListener('account-remove', (event: Event) => {
+      const did = (event as CustomEvent<{ did?: string }>).detail?.did ?? '';
+      void this.handleRemoveAccount(did);
+    });
+  }
+
+  private async loadAccounts(): Promise<void> {
+    try {
+      const response = await sendMessage({ type: 'AUTH_LIST_ACCOUNTS' });
+      this.renderAccounts(response.accounts);
+    } catch (error) {
+      console.error('Error loading accounts:', error);
+      if (this.accountsList) {
+        this.accountsList.innerHTML = '';
+        const p = document.createElement('p');
+        p.className = 'err-text';
+        p.textContent = 'Failed to load accounts.';
+        this.accountsList.appendChild(p);
+      }
+    }
+  }
+
+  private renderAccounts(accounts: AuthListAccountsAccount[]): void {
+    if (!this.accountsList) return;
+
+    if (accounts.length === 0) {
+      this.accountsList.innerHTML = '';
+      const p = document.createElement('p');
+      p.className = 'empty-text';
+      p.textContent = 'No accounts signed in.';
+      this.accountsList.appendChild(p);
+      return;
+    }
+
+    this.accountsList.innerHTML = '';
+    for (const account of accounts) {
+      const card = document.createElement('account-card');
+      card.className = 'account-card';
+      card.setAttribute('did', account.did);
+      card.setAttribute('switch-label', 'Set active');
+      card.setAttribute('remove-label', 'Remove');
+      if (account.handle) card.setAttribute('handle', account.handle);
+      if (account.isActive) card.setAttribute('is-active', 'true');
+      this.accountsList.appendChild(card);
+    }
+  }
+
+  private async handleSwitchAccount(did: string): Promise<void> {
+    if (!did) return;
+    try {
+      await sendMessage({ type: 'AUTH_SWITCH_ACCOUNT', did });
+      this.emitStatus('Active account updated.', 'success');
+      await this.loadAccounts();
+    } catch (error) {
+      console.error('Error switching account:', error);
+      this.emitStatus('Failed to switch account.', 'error');
+    }
+  }
+
+  private async handleRemoveAccount(did: string): Promise<void> {
+    if (!did) return;
+    try {
+      await sendMessage({ type: 'AUTH_SIGN_OUT_ACCOUNT', did });
+      this.emitStatus('Account removed.', 'success');
+      await this.loadAccounts();
+    } catch (error) {
+      console.error('Error removing account:', error);
+      this.emitStatus('Failed to remove account.', 'error');
+    }
+  }
+
+  private emitStatus(message: string, type: 'info' | 'success' | 'error'): void {
+    this.dispatchEvent(
+      new CustomEvent('status-update', {
+        detail: { message, type },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+}
+
+if (!customElements.get('options-accounts')) {
+  customElements.define('options-accounts', OptionsAccounts);
+}

@@ -104,8 +104,8 @@ const HISTORY_MODAL_TEMPLATE = `
   </div>
 `;
 
-export class EditHistoryModal {
-  public readonly element: HTMLElement;
+export class EditHistoryModal extends HTMLElement {
+  private readonly shadow: ShadowRoot;
   private versionsContainer: HTMLElement | null = null;
   private originalDateStrong: HTMLElement | null = null;
   private previouslyFocused: Element | null = null;
@@ -113,29 +113,38 @@ export class EditHistoryModal {
   private handleBackgroundClickBound = this.handleBackgroundClick.bind(this);
   private closeBound = this.close.bind(this);
 
+  /** @deprecated Use the element directly – this alias exists for backward compatibility. */
+  public get element(): this {
+    return this;
+  }
+
   public constructor() {
-    this.element = document.createElement('edit-history-modal');
-    const shadow = this.element.attachShadow({ mode: 'open' });
-    shadow.innerHTML = HISTORY_MODAL_TEMPLATE;
-    this.element.style.display = 'none';
+    super();
+    this.shadow = this.attachShadow({ mode: 'open' });
+  }
 
-    this.versionsContainer = shadow.querySelector<HTMLElement>('.history-versions-container');
-    this.originalDateStrong = shadow.querySelector<HTMLElement>('.history-original-date strong');
+  public connectedCallback(): void {
+    if (this.versionsContainer) return;
+    this.shadow.innerHTML = HISTORY_MODAL_TEMPLATE;
+    this.style.display = 'none';
 
-    const closeButton = shadow.querySelector<HTMLButtonElement>('.close-button');
+    this.versionsContainer = this.shadow.querySelector<HTMLElement>('.history-versions-container');
+    this.originalDateStrong = this.shadow.querySelector<HTMLElement>('.history-original-date strong');
+
+    const closeButton = this.shadow.querySelector<HTMLButtonElement>('.close-button');
     closeButton?.addEventListener('click', this.closeBound);
 
-    const closeFooterButton = shadow.querySelector<HTMLButtonElement>('.close-footer-button');
+    const closeFooterButton = this.shadow.querySelector<HTMLButtonElement>('.close-footer-button');
     closeFooterButton?.addEventListener('click', this.closeBound);
 
-    this.element.addEventListener('keydown', this.handleKeydownBound);
+    this.addEventListener('keydown', this.handleKeydownBound);
   }
 
   public open(originalDate: string): void {
     this.previouslyFocused = document.activeElement;
 
-    if (!this.element.isConnected) {
-      document.body.appendChild(this.element);
+    if (!this.isConnected) {
+      document.body.appendChild(this);
     }
 
     if (this.originalDateStrong) {
@@ -146,12 +155,12 @@ export class EditHistoryModal {
       this.versionsContainer.innerHTML = '<div class="loading-text">Loading edit history…</div>';
     }
 
-    this.element.removeEventListener('click', this.handleBackgroundClickBound);
-    this.element.addEventListener('click', this.handleBackgroundClickBound);
-    this.element.style.display = 'flex';
+    this.removeEventListener('click', this.handleBackgroundClickBound);
+    this.addEventListener('click', this.handleBackgroundClickBound);
+    this.style.display = 'flex';
 
     // Focus the close button for keyboard accessibility
-    const closeBtn = this.element.shadowRoot?.querySelector<HTMLButtonElement>('.close-button');
+    const closeBtn = this.shadow.querySelector<HTMLButtonElement>('.close-button');
     closeBtn?.focus();
   }
 
@@ -201,11 +210,11 @@ export class EditHistoryModal {
   }
 
   public close(): void {
-    this.element.style.display = 'none';
-    if (this.element.isConnected) {
-      document.body.removeChild(this.element);
+    this.style.display = 'none';
+    if (this.isConnected) {
+      document.body.removeChild(this);
     }
-    this.element.removeEventListener('click', this.handleBackgroundClickBound);
+    this.removeEventListener('click', this.handleBackgroundClickBound);
 
     if (this.previouslyFocused instanceof HTMLElement) {
       this.previouslyFocused.focus();
@@ -221,11 +230,17 @@ export class EditHistoryModal {
   }
 
   private handleBackgroundClick(event: MouseEvent): void {
-    const shadow = this.element.shadowRoot;
-    if (!shadow) return;
-    const container = shadow.querySelector('.edit-modal-container');
+    const container = this.shadow.querySelector('.edit-modal-container');
     if (container && !container.contains(event.composedPath()[0] as Node)) {
       this.close();
     }
   }
+}
+
+const historyModalRegistry =
+  globalThis.customElements ??
+  (Object.getPrototypeOf(globalThis) as { customElements?: CustomElementRegistry | null })?.customElements ??
+  null;
+if (historyModalRegistry && !historyModalRegistry.get('edit-history-modal')) {
+  historyModalRegistry.define('edit-history-modal', EditHistoryModal);
 }
