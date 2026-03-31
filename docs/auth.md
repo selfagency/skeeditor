@@ -41,14 +41,6 @@ See the [Developer Auth Guide](./dev/auth.md) for full client metadata, redirect
 
 ## Security notes
 
-For PDS instances that do not support OAuth, `src/shared/auth/app-password.ts` provides:
-
-- `authenticateWithAppPassword(identifier, password)` — calls `com.atproto.server.createSession`
-- `validateAppPassword(password)` — validates length and character requirements
-- `maskAppPassword(password)` — masks the middle of the password for display
-
----
-
 ## Threat Model
 
 ### DPoP key storage
