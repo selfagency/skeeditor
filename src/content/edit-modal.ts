@@ -44,7 +44,7 @@ const EDIT_MODAL_TEMPLATE = `
 // Bluesky's post limit is 300 graphemes (user-perceived characters)
 const MAX_POST_LENGTH = 300;
 
-export class EditModal extends HTMLElement {
+class EditModalImpl extends HTMLElement {
   private readonly shadow: ShadowRoot;
   private textarea: HTMLTextAreaElement | null = null;
   private charCount: HTMLElement | null = null;
@@ -78,10 +78,14 @@ export class EditModal extends HTMLElement {
   public constructor() {
     super();
     this.shadow = this.attachShadow({ mode: 'open' });
+    this.initialize();
   }
 
   public connectedCallback(): void {
-    this.initialize();
+    // initialize() is called in the constructor so the shadow DOM is ready
+    // immediately, even when the custom element registry is stale (e.g. after
+    // vi.resetModules() in tests). The guard inside initialize() prevents
+    // double-rendering.
   }
 
   private initialize(): void {
@@ -484,5 +488,12 @@ const editModalRegistry =
   (Object.getPrototypeOf(globalThis) as { customElements?: CustomElementRegistry | null })?.customElements ??
   null;
 if (editModalRegistry && !editModalRegistry.get('edit-modal')) {
-  editModalRegistry.define('edit-modal', EditModal);
+  editModalRegistry.define('edit-modal', EditModalImpl);
 }
+
+// Re-export the *registered* constructor so that `new EditModal()` always uses
+// the class known to the custom-element registry.  After vi.resetModules() the
+// module is re-evaluated but the registry still holds the original class – using
+// that class avoids jsdom's "Invalid constructor" error.
+export const EditModal = (editModalRegistry?.get('edit-modal') as typeof EditModalImpl | undefined) ?? EditModalImpl;
+export type EditModal = InstanceType<typeof EditModal>;

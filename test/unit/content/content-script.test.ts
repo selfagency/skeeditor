@@ -262,14 +262,14 @@ describe('content-script', () => {
     editButton?.click();
     await flushMicrotasks(3);
 
-    expect(document.querySelector('edit-modal')).toBeTruthy();
+    expect(document.querySelector('[data-skeeditor-modal]')).toBeTruthy();
 
     const onChanged = globalThis.browser.storage.onChanged as unknown as {
       _emit: (changes: Record<string, { newValue?: unknown; oldValue?: unknown }>) => void;
     };
     onChanged._emit({ activeDid: { newValue: null } });
 
-    expect(document.querySelector('edit-modal')).toBeNull();
+    expect(document.querySelector('[data-skeeditor-modal]')).toBeNull();
   });
 
   // ── Phase F: auto-switch on profile navigation ────────────────────────────
@@ -579,7 +579,7 @@ describe('content-script', () => {
     editButton?.click();
     await flushMicrotasks(4);
 
-    const modal = document.querySelector<HTMLElement>('edit-modal');
+    const modal = document.querySelector<HTMLElement>('[data-skeeditor-modal]');
     expect(modal).toBeTruthy();
 
     const shadowRoot = modal?.shadowRoot;
@@ -634,7 +634,7 @@ describe('content-script', () => {
     editButton?.click();
     await flushMicrotasks(4);
 
-    const modal = document.querySelector<HTMLElement>('edit-modal');
+    const modal = document.querySelector<HTMLElement>('[data-skeeditor-modal]');
     const shadowRoot = modal?.shadowRoot;
     const textarea = shadowRoot?.querySelector<HTMLTextAreaElement>('textarea');
     const saveButton = shadowRoot?.querySelector<HTMLButtonElement>('.save-button');
@@ -685,7 +685,7 @@ describe('content-script', () => {
     editButton?.click();
     await flushMicrotasks(4);
 
-    const modal = document.querySelector<HTMLElement>('edit-modal');
+    const modal = document.querySelector<HTMLElement>('[data-skeeditor-modal]');
     const shadowRoot = modal?.shadowRoot;
     const textarea = shadowRoot?.querySelector<HTMLTextAreaElement>('textarea');
     const saveButton = shadowRoot?.querySelector<HTMLButtonElement>('.save-button');

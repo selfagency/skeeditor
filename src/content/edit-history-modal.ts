@@ -84,7 +84,7 @@ const HISTORY_MODAL_TEMPLATE = `
   </div>
 `;
 
-export class EditHistoryModal extends HTMLElement {
+class EditHistoryModalImpl extends HTMLElement {
   private readonly shadow: ShadowRoot;
   private versionsContainer: HTMLElement | null = null;
   private originalDateStrong: HTMLElement | null = null;
@@ -101,9 +101,15 @@ export class EditHistoryModal extends HTMLElement {
   public constructor() {
     super();
     this.shadow = this.attachShadow({ mode: 'open' });
+    this.initialize();
   }
 
   public connectedCallback(): void {
+    // initialize() is called in the constructor so the shadow DOM is ready
+    // immediately, even when the custom element registry is stale.
+  }
+
+  private initialize(): void {
     if (this.versionsContainer) return;
     this.shadow.innerHTML = HISTORY_MODAL_TEMPLATE;
     this.style.display = 'none';
@@ -222,5 +228,9 @@ const historyModalRegistry =
   (Object.getPrototypeOf(globalThis) as { customElements?: CustomElementRegistry | null })?.customElements ??
   null;
 if (historyModalRegistry && !historyModalRegistry.get('edit-history-modal')) {
-  historyModalRegistry.define('edit-history-modal', EditHistoryModal);
+  historyModalRegistry.define('edit-history-modal', EditHistoryModalImpl);
 }
+
+export const EditHistoryModal =
+  (historyModalRegistry?.get('edit-history-modal') as typeof EditHistoryModalImpl | undefined) ?? EditHistoryModalImpl;
+export type EditHistoryModal = InstanceType<typeof EditHistoryModal>;
