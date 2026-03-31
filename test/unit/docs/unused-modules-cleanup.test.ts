@@ -21,10 +21,22 @@ describe('unused module cleanup', () => {
   it('removes stale developer docs references to removed modules', () => {
     const devAuth = readRepoFile('docs/dev/auth.md');
     const projectStructure = readRepoFile('docs/dev/project-structure.md');
+    const userAuth = readRepoFile('docs/auth.md');
+    const devArchitecture = readRepoFile('docs/dev/architecture.md');
+    const devFacets = readRepoFile('docs/dev/facets.md');
 
+    // Ensure no doc points to removed auth modules
     expect(devAuth).not.toContain('src/shared/auth/app-password.ts');
     expect(devAuth).not.toContain('src/shared/auth/token-refresh.ts');
+    expect(userAuth).not.toContain('src/shared/auth/app-password.ts');
+    expect(userAuth).not.toContain('src/shared/auth/token-refresh.ts');
+
+    // Ensure no doc points to removed content/utils modules
     expect(projectStructure).not.toContain('post-badges.ts');
     expect(projectStructure).not.toContain('facet-offsets.ts');
+    expect(devArchitecture).not.toContain('post-badges.ts');
+    expect(devArchitecture).not.toContain('facet-offsets.ts');
+    expect(devFacets).not.toContain('post-badges.ts');
+    expect(devFacets).not.toContain('facet-offsets.ts');
   });
 });
