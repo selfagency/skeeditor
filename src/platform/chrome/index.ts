@@ -11,8 +11,9 @@
  * Polyfill
  * --------
  * Chrome exposes only the `chrome.*` callback API; no native `browser` global.
- * `webextension-polyfill` wraps `chrome.*` into a Promise-based `browser` global.
- * Import the polyfill as the first statement in every entry point.
+ * In this repository, WXT injects the Promise-based `browser` API via
+ * `wxt/browser`, so entry points do not manually import `webextension-polyfill`.
+ * Prefer the shared WXT pattern already documented in `docs/platform.md`.
  *
  * Known limitations
  * -----------------

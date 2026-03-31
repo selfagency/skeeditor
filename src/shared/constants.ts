@@ -143,5 +143,18 @@ export const LABELER_DID = 'did:plc:m6h36r2hzbnozuhxj4obhkyb';
 /** Endpoint to trigger a label broadcast after a successful edit */
 export const LABELER_EMIT_URL = 'https://labeler.skeeditor.link/xrpc/tools.skeeditor.emitLabel';
 
-/** WebSocket endpoint to receive real-time `edited` label pushes from the labeler */
-export const LABELER_SUBSCRIBE_WS_URL = 'wss://labeler.skeeditor.link/xrpc/com.atproto.label.subscribeLabels?cursor=0';
+/** Base WebSocket endpoint to receive real-time `edited` label pushes from the labeler */
+export const LABELER_SUBSCRIBE_WS_BASE_URL = 'wss://labeler.skeeditor.link/xrpc/com.atproto.label.subscribeLabels';
+
+/** storage.local key for the last label sequence processed by the background WebSocket */
+export const LABELER_CURSOR_STORAGE_KEY = 'labelerCursor';
+
+export function buildLabelerSubscribeWsUrl(cursor: number | null): string {
+  if (cursor === null || !Number.isFinite(cursor) || cursor < 0) {
+    return LABELER_SUBSCRIBE_WS_BASE_URL;
+  }
+
+  const url = new URL(LABELER_SUBSCRIBE_WS_BASE_URL);
+  url.searchParams.set('cursor', String(cursor));
+  return url.toString();
+}

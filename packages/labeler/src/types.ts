@@ -1,10 +1,25 @@
+interface DurableObjectStubLike {
+  fetch(request: Request): Promise<Response>;
+}
+
+interface DurableObjectNamespaceLike {
+  idFromName(name: string): unknown;
+  get(id: unknown): DurableObjectStubLike;
+}
+
+interface KVNamespaceLike {}
+
 export interface Env {
-  BROADCAST_HUB: DurableObjectNamespace;
-  LABELS_KV: KVNamespace;
+  BROADCAST_HUB: DurableObjectNamespaceLike;
+  LABELS_KV: KVNamespaceLike;
   /** DID of this labeler, e.g. "did:web:labeler.skeeditor.app" */
   LABELER_DID: string;
   /** Human-readable handle for the labeler */
   LABELER_HANDLE: string;
+  /** Public service origin for this labeler, e.g. "https://labeler.skeeditor.link" */
+  LABELER_SERVICE_URL: string;
+  /** Fallback public key multibase when a signing key is not available at runtime */
+  LABELER_PUBLIC_KEY_MULTIBASE?: string;
   /**
    * secp256k1 private key for signing labels (hex-encoded 32 bytes).
    * Set via: wrangler secret put LABELER_SIGNING_KEY

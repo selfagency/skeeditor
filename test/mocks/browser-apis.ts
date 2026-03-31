@@ -35,6 +35,8 @@ interface BrowserAlarmsMock {
 
 interface BrowserTabsMock {
   create: (options: { url: string }) => Promise<{ id: number }>;
+  query: (queryInfo: { url?: string }) => Promise<Array<{ id?: number }>>;
+  sendMessage: (tabId: number, message: unknown) => Promise<void>;
 }
 
 interface BrowserStorageAreaMock {
@@ -151,6 +153,8 @@ const createBrowserApiMock = (): BrowserApiMock => {
     },
     tabs: {
       create: vi.fn().mockResolvedValue({ id: 1 }),
+      query: vi.fn().mockResolvedValue([]),
+      sendMessage: vi.fn().mockResolvedValue(undefined),
     },
   };
 };
