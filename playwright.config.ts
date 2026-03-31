@@ -17,6 +17,7 @@ export default defineConfig({
     {
       name: 'chromium-extension',
       testMatch: /chrome\.spec\.ts/,
+      workers: 1,
     },
     {
       name: 'firefox-extension',
@@ -27,6 +28,7 @@ export default defineConfig({
       // Run: pnpm test:e2e:chromium:devnet
       name: 'chromium-devnet',
       testMatch: /chrome-devnet\.spec\.ts/,
+      workers: 1,
     },
     {
       // Real-network devnet tests for Firefox. Requires FIREFOX_EXTENSION_E2E=1
@@ -34,6 +36,7 @@ export default defineConfig({
       // Run: FIREFOX_EXTENSION_E2E=1 pnpm test:e2e:firefox:devnet
       name: 'firefox-devnet',
       testMatch: /firefox-devnet\.spec\.ts/,
+      workers: 1,
     },
   ],
 });

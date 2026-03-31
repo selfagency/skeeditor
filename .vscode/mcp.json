@@ -2,7 +2,7 @@
   "servers": {
     "git": {
       "command": "npx",
-      "args": ["-y", "@selfagency/git-mcp", "--repo-path", "${workspaceFolder}"]
+      "args": ["-y", "@selfagency/git-mcp@latest", "--repo-path", "${workspaceFolder}"]
     },
     "tasks": {
       "command": "mcp-taskfile-server",

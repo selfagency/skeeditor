@@ -215,11 +215,21 @@ tasks:
 
   test:e2e:
     desc: Run Playwright end-to-end tests
-    cmd: ./node_modules/.bin/playwright test {{.CLI_ARGS}}
+    cmds:
+      - task: 'devnet:ensure'
+      - cmd: ./node_modules/.bin/playwright test {{.CLI_ARGS}}
 
   test:e2e:list:
     desc: List Playwright end-to-end tests
     cmd: ./node_modules/.bin/playwright test --list {{.CLI_ARGS}}
+
+  test:e2e:local:
+    desc: Run local Playwright extension tests without devnet projects
+    cmd: >-
+      ./node_modules/.bin/playwright test
+      --project=chromium-extension
+      --project=firefox-extension
+      {{.CLI_ARGS}}
 
   test:e2e:project:
     internal: true
@@ -246,6 +256,7 @@ tasks:
   test:e2e:chromium:devnet:
     desc: Run Playwright Chromium devnet tests
     cmds:
+      - task: 'devnet:ensure'
       - task: 'test:e2e:project'
         vars:
           PROJECT: chromium-devnet
@@ -253,6 +264,7 @@ tasks:
   test:e2e:firefox:devnet:
     desc: Run Playwright Firefox devnet tests
     cmds:
+      - task: 'devnet:ensure'
       - task: 'test:e2e:project'
         vars:
           PROJECT: firefox-devnet
@@ -290,6 +302,15 @@ tasks:
   devnet:logs:
     desc: Tail local devnet logs
     cmd: docker compose -f devnet/docker-compose.yml -f devnet/docker-compose.test.yml --project-directory devnet logs -f
+
+  devnet:ensure:
+    internal: true
+    desc: Ensure the local devnet stack is running and ready for E2E tests
+    status:
+      - test -f devnet/data/accounts.env
+      - curl --fail --silent --show-error "http://127.0.0.1:${DEVNET_PDS_PORT:-3000}/xrpc/com.atproto.server.describeServer" >/dev/null
+    cmds:
+      - task: 'devnet:up'
 
   webext:lint:firefox:
     desc: Lint the Firefox extension package with web-ext
