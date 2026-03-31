@@ -1,6 +1,7 @@
 packages:
   - 'packages/*'
 allowBuilds:
+  '@go-task/cli': true
   core-js: true
   esbuild: true
   msw: true
