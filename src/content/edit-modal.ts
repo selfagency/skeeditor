@@ -5,7 +5,7 @@ import { graphemeLength } from '../shared/utils/text';
 const EDIT_MODAL_TEMPLATE = `
   <style>
     :host {
-      display: none;
+      display: flex;
       flex-direction: column;
       position: fixed;
       inset: 0;
@@ -44,8 +44,8 @@ const EDIT_MODAL_TEMPLATE = `
 // Bluesky's post limit is 300 graphemes (user-perceived characters)
 const MAX_POST_LENGTH = 300;
 
-class EditModalImpl extends HTMLElement {
-  private readonly shadow: ShadowRoot;
+export class EditModal {
+  public readonly element: HTMLElement;
   private textarea: HTMLTextAreaElement | null = null;
   private charCount: HTMLElement | null = null;
   private saveButton: HTMLButtonElement | null = null;
@@ -70,45 +70,35 @@ class EditModalImpl extends HTMLElement {
   private handleKeydownBound = this.handleKeydown.bind(this);
   private handleUploadBound = this.handleUpload.bind(this);
 
-  /** @deprecated Use the element directly – this alias exists for backward compatibility. */
-  public get element(): this {
-    return this;
-  }
-
   public constructor() {
-    super();
-    this.shadow = this.attachShadow({ mode: 'open' });
+    this.element = document.createElement('edit-modal');
+    this.element.attachShadow({ mode: 'open' });
     this.initialize();
-  }
-
-  public connectedCallback(): void {
-    // initialize() is called in the constructor so the shadow DOM is ready
-    // immediately, even when the custom element registry is stale (e.g. after
-    // vi.resetModules() in tests). The guard inside initialize() prevents
-    // double-rendering.
   }
 
   private initialize(): void {
     if (this.textarea) return;
-    this.shadow.innerHTML = EDIT_MODAL_TEMPLATE;
-    this.textarea = this.shadow.querySelector<HTMLTextAreaElement>('textarea');
-    this.charCount = this.shadow.querySelector<HTMLElement>('.char-count');
-    this.saveButton = this.shadow.querySelector<HTMLButtonElement>('.save-button');
-    this.uploadButton = this.shadow.querySelector<HTMLButtonElement>('.upload-button');
-    this.fileInput = this.shadow.querySelector<HTMLInputElement>('input[type="file"]');
-    this.mediaPreview = this.shadow.querySelector<HTMLElement>('.media-preview');
-    this.statusMessage = this.shadow.querySelector<HTMLElement>('.status-message');
+    const shadow = this.element.shadowRoot!;
+    shadow.innerHTML = EDIT_MODAL_TEMPLATE;
+    this.element.style.display = 'none';
+    this.textarea = shadow.querySelector<HTMLTextAreaElement>('textarea');
+    this.charCount = shadow.querySelector<HTMLElement>('.char-count');
+    this.saveButton = shadow.querySelector<HTMLButtonElement>('.save-button');
+    this.uploadButton = shadow.querySelector<HTMLButtonElement>('.upload-button');
+    this.fileInput = shadow.querySelector<HTMLInputElement>('input[type="file"]');
+    this.mediaPreview = shadow.querySelector<HTMLElement>('.media-preview');
+    this.statusMessage = shadow.querySelector<HTMLElement>('.status-message');
 
     if (this.textarea) {
       this.textarea.addEventListener('input', this.handleInputBound);
     }
 
-    const closeButton = this.shadow.querySelector<HTMLButtonElement>('.close-button');
+    const closeButton = shadow.querySelector<HTMLButtonElement>('.close-button');
     if (closeButton) {
       closeButton.addEventListener('click', this.closeBound);
     }
 
-    const cancelButton = this.shadow.querySelector<HTMLButtonElement>('.cancel-button');
+    const cancelButton = shadow.querySelector<HTMLButtonElement>('.cancel-button');
     if (cancelButton) {
       cancelButton.addEventListener('click', this.closeBound);
     }
@@ -130,7 +120,7 @@ class EditModalImpl extends HTMLElement {
     // without this, typing in the textarea triggers those shortcuts (e.g. 'n'
     // opens a new-post dialog). Events are still handled by our own handler
     // before propagation is stopped.
-    this.addEventListener('keydown', this.handleKeydownBound);
+    this.element.addEventListener('keydown', this.handleKeydownBound);
   }
 
   public open(text: string, onCancel?: () => void, onSave?: (text: string) => void | Promise<void>): void {
@@ -141,8 +131,8 @@ class EditModalImpl extends HTMLElement {
     this.onSave = onSave ?? undefined;
     this.previouslyFocused = document.activeElement;
 
-    if (!this.isConnected) {
-      document.body.appendChild(this);
+    if (!this.element.isConnected) {
+      document.body.appendChild(this.element);
     }
 
     if (this.textarea) {
@@ -156,10 +146,10 @@ class EditModalImpl extends HTMLElement {
     this.hideStatusMessage();
 
     // Remove before adding to prevent duplicate handlers on repeated open() calls
-    this.removeEventListener('click', this.handleBackgroundClickBound);
-    this.addEventListener('click', this.handleBackgroundClickBound);
+    this.element.removeEventListener('click', this.handleBackgroundClickBound);
+    this.element.addEventListener('click', this.handleBackgroundClickBound);
 
-    this.style.display = 'flex';
+    this.element.style.display = 'flex';
     this.isOpen = true;
   }
 
@@ -170,11 +160,11 @@ class EditModalImpl extends HTMLElement {
     this.objectUrls.clear();
     this.uploadedMedia = [];
 
-    this.style.display = 'none';
-    if (this.isConnected) {
-      document.body.removeChild(this);
+    this.element.style.display = 'none';
+    if (this.element.isConnected) {
+      document.body.removeChild(this.element);
     }
-    this.removeEventListener('click', this.handleBackgroundClickBound);
+    this.element.removeEventListener('click', this.handleBackgroundClickBound);
     this.isOpen = false;
 
     if (this.previouslyFocused instanceof HTMLElement) {
@@ -312,7 +302,7 @@ class EditModalImpl extends HTMLElement {
     // With Shadow DOM, event.target is retargeted to the host for all shadow-internal
     // events. Use composedPath() to get the actual target before retargeting.
     const path = event.composedPath();
-    if (path.length > 0 && path[0] === this) {
+    if (path.length > 0 && path[0] === this.element) {
       this.close();
     }
   }
@@ -332,12 +322,15 @@ class EditModalImpl extends HTMLElement {
   }
 
   private trapFocus(event: KeyboardEvent): void {
-    const focusableEls = this.shadow.querySelectorAll<HTMLElement>('textarea, button:not([disabled])');
+    const shadow = this.element.shadowRoot;
+    if (!shadow) return;
+
+    const focusableEls = shadow.querySelectorAll<HTMLElement>('textarea, button:not([disabled])');
     if (focusableEls.length === 0) return;
 
     const first = focusableEls[0]!;
     const last = focusableEls[focusableEls.length - 1]!;
-    const active = this.shadow.activeElement;
+    const active = shadow.activeElement;
 
     if (event.shiftKey) {
       if (active === first || !active) {
@@ -481,14 +474,3 @@ class EditModalImpl extends HTMLElement {
     }
   }
 }
-
-// Register the custom element.  Use bare `customElements` (always available in
-// browsers).  The guard prevents double-registration when re-injected by WXT HMR.
-if (typeof customElements !== 'undefined' && !customElements.get('edit-modal')) {
-  customElements.define('edit-modal', EditModalImpl);
-}
-
-// Export the class for typing.  Content scripts should create instances via
-// `document.createElement('edit-modal')` to guarantee the registry is used.
-export { EditModalImpl as EditModal };
-export type EditModal = EditModalImpl;

@@ -1,17 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { EditModal } from '@src/content/edit-modal';
-
-// Ensure registration runs (side-effect import)
-import '@src/content/edit-modal';
+import { EditModal } from '@src/content/edit-modal';
 
 let activeModal: EditModal | null = null;
 
 const createModal = (): EditModal => {
-  // Use document.createElement to get the registered class from the custom element registry.
-  // This avoids class identity mismatches after vi.resetModules().
-  const modal = document.createElement('edit-modal') as EditModal;
-  document.body.appendChild(modal);
+  const modal = new EditModal();
+  document.body.appendChild(modal.element);
   activeModal = modal;
   return modal;
 };
@@ -37,8 +32,8 @@ describe('edit-modal', () => {
 
     modal.open('Hello Bluesky');
 
-    const textarea = modal.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
-    const saveButton = modal.shadowRoot!.querySelector('.save-button') as HTMLButtonElement;
+    const textarea = modal.element.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+    const saveButton = modal.element.shadowRoot!.querySelector('.save-button') as HTMLButtonElement;
 
     expect(textarea.value).toBe('Hello Bluesky');
     expect(saveButton.disabled).toBe(true);
@@ -54,8 +49,8 @@ describe('edit-modal', () => {
 
     modal.open('Hello Bluesky');
 
-    const textarea = modal.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
-    const charCount = modal.shadowRoot!.querySelector('.char-count') as HTMLElement;
+    const textarea = modal.element.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+    const charCount = modal.element.shadowRoot!.querySelector('.char-count') as HTMLElement;
 
     textarea.value = 'Hello Bluesky, edited';
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
@@ -70,7 +65,7 @@ describe('edit-modal', () => {
     const emojiText = '👨‍👩‍👧‍👦 Family emoji';
     modal.open(emojiText);
 
-    const charCount = modal.shadowRoot!.querySelector('.char-count') as HTMLElement;
+    const charCount = modal.element.shadowRoot!.querySelector('.char-count') as HTMLElement;
 
     // "👨‍👩‍👧‍👦 Family emoji" = 1 + 1 + 6 + 1 + 5 = 14 graphemes (not 24 UTF-16 code units)
     expect(charCount.textContent).toBe('14 / 300');
@@ -85,8 +80,8 @@ describe('edit-modal', () => {
     const emojiText = '👨‍👩‍👧‍👦'.repeat(28);
     modal.open('something else', undefined, onSave);
 
-    const textarea = modal.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
-    const saveButton = modal.shadowRoot!.querySelector('.save-button') as HTMLButtonElement;
+    const textarea = modal.element.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+    const saveButton = modal.element.shadowRoot!.querySelector('.save-button') as HTMLButtonElement;
 
     textarea.value = emojiText;
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
@@ -102,8 +97,8 @@ describe('edit-modal', () => {
 
     modal.open('Hello Bluesky', undefined, onSave);
 
-    const textarea = modal.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
-    const saveButton = modal.shadowRoot!.querySelector('.save-button') as HTMLButtonElement;
+    const textarea = modal.element.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+    const saveButton = modal.element.shadowRoot!.querySelector('.save-button') as HTMLButtonElement;
 
     textarea.value = 'Hello Bluesky, edited';
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
@@ -118,8 +113,8 @@ describe('edit-modal', () => {
 
     modal.open('Hello Bluesky', undefined, onSave);
 
-    const textarea = modal.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
-    const saveButton = modal.shadowRoot!.querySelector('.save-button') as HTMLButtonElement;
+    const textarea = modal.element.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+    const saveButton = modal.element.shadowRoot!.querySelector('.save-button') as HTMLButtonElement;
 
     textarea.value = 'Hello Bluesky, edited';
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
@@ -127,7 +122,7 @@ describe('edit-modal', () => {
 
     await Promise.resolve();
 
-    const statusMessage = modal.shadowRoot!.querySelector('.status-message') as HTMLElement;
+    const statusMessage = modal.element.shadowRoot!.querySelector('.status-message') as HTMLElement;
     expect(statusMessage.textContent).toContain('save failed');
   });
 
@@ -136,7 +131,7 @@ describe('edit-modal', () => {
       const modal = createModal();
       modal.open('Hello');
 
-      const dialogEl = modal.shadowRoot!.querySelector('[role="dialog"]') as HTMLElement;
+      const dialogEl = modal.element.shadowRoot!.querySelector('[role="dialog"]') as HTMLElement;
 
       expect(dialogEl.getAttribute('role')).toBe('dialog');
       expect(dialogEl.getAttribute('aria-modal')).toBe('true');
@@ -146,8 +141,8 @@ describe('edit-modal', () => {
       const modal = createModal();
       modal.open('Hello');
 
-      const dialogEl = modal.shadowRoot!.querySelector('[role="dialog"]') as HTMLElement;
-      const titleEl = modal.shadowRoot!.querySelector('#edit-modal-title') as HTMLElement;
+      const dialogEl = modal.element.shadowRoot!.querySelector('[role="dialog"]') as HTMLElement;
+      const titleEl = modal.element.shadowRoot!.querySelector('#edit-modal-title') as HTMLElement;
 
       expect(titleEl.id).toBeTruthy();
       expect(dialogEl.getAttribute('aria-labelledby')).toBe(titleEl.id);
@@ -157,7 +152,7 @@ describe('edit-modal', () => {
       const modal = createModal();
       modal.open('Hello');
 
-      const statusEl = modal.shadowRoot!.querySelector('.status-message') as HTMLElement;
+      const statusEl = modal.element.shadowRoot!.querySelector('.status-message') as HTMLElement;
 
       expect(statusEl.getAttribute('aria-live')).toBe('polite');
     });
@@ -182,14 +177,14 @@ describe('edit-modal', () => {
       const modal = createModal();
       modal.open('Hello');
 
-      const shadow = modal.shadowRoot!;
+      const shadow = modal.element.shadowRoot!;
       // Cancel button is the last non-disabled focusable element
       const cancelButton = shadow.querySelector('.cancel-button') as HTMLButtonElement;
 
       // Focus on cancel (last non-disabled), Tab should wrap to first focusable (close button)
       cancelButton.focus();
       const tabEvent = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
-      modal.dispatchEvent(tabEvent);
+      modal.element.dispatchEvent(tabEvent);
 
       const activeEl = shadow.activeElement;
       const closeButton = shadow.querySelector('.close-button') as HTMLElement;
@@ -200,7 +195,7 @@ describe('edit-modal', () => {
       const modal = createModal();
       modal.open('Hello');
 
-      const shadow = modal.shadowRoot!;
+      const shadow = modal.element.shadowRoot!;
       // Close button is the first focusable element in document order
       const closeButton = shadow.querySelector('.close-button') as HTMLButtonElement;
 
@@ -212,7 +207,7 @@ describe('edit-modal', () => {
         bubbles: true,
         cancelable: true,
       });
-      modal.dispatchEvent(shiftTabEvent);
+      modal.element.dispatchEvent(shiftTabEvent);
 
       const activeEl = shadow.activeElement;
       const cancelButton = shadow.querySelector('.cancel-button') as HTMLElement;
@@ -223,7 +218,7 @@ describe('edit-modal', () => {
       const modal = createModal();
       modal.open('Hello');
 
-      const textarea = modal.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+      const textarea = modal.element.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
 
       expect(textarea.getAttribute('aria-label')).toBe('Edit post content');
     });
@@ -234,12 +229,12 @@ describe('edit-modal', () => {
       const modal = createModal();
       modal.open('Hello');
 
-      const input = modal.shadowRoot!.querySelector('input[type="file"]') as HTMLInputElement;
+      const input = modal.element.shadowRoot!.querySelector('input[type="file"]') as HTMLInputElement;
       setFileInputFiles(input, [createFile('photo.jpg', 'image/jpeg'), createFile('clip.mp4', 'video/mp4')]);
       input.dispatchEvent(new Event('change', { bubbles: true }));
 
       expect(modal.getUploadedMedia()).toHaveLength(0);
-      const statusMessage = modal.shadowRoot!.querySelector('.status-message') as HTMLElement;
+      const statusMessage = modal.element.shadowRoot!.querySelector('.status-message') as HTMLElement;
       expect(statusMessage.textContent).toContain('Cannot mix images and video in one post');
     });
 
@@ -247,7 +242,7 @@ describe('edit-modal', () => {
       const modal = createModal();
       modal.open('Hello');
 
-      const input = modal.shadowRoot!.querySelector('input[type="file"]') as HTMLInputElement;
+      const input = modal.element.shadowRoot!.querySelector('input[type="file"]') as HTMLInputElement;
       setFileInputFiles(input, [
         createFile('1.jpg', 'image/jpeg'),
         createFile('2.jpg', 'image/jpeg'),
@@ -258,7 +253,7 @@ describe('edit-modal', () => {
       input.dispatchEvent(new Event('change', { bubbles: true }));
 
       expect(modal.getUploadedMedia()).toHaveLength(0);
-      const statusMessage = modal.shadowRoot!.querySelector('.status-message') as HTMLElement;
+      const statusMessage = modal.element.shadowRoot!.querySelector('.status-message') as HTMLElement;
       expect(statusMessage.textContent).toContain('You can attach up to 4 images');
     });
 
@@ -266,12 +261,12 @@ describe('edit-modal', () => {
       const modal = createModal();
       modal.open('Hello');
 
-      const input = modal.shadowRoot!.querySelector('input[type="file"]') as HTMLInputElement;
+      const input = modal.element.shadowRoot!.querySelector('input[type="file"]') as HTMLInputElement;
       setFileInputFiles(input, [createFile('a.mp4', 'video/mp4'), createFile('b.mp4', 'video/mp4')]);
       input.dispatchEvent(new Event('change', { bubbles: true }));
 
       expect(modal.getUploadedMedia()).toHaveLength(0);
-      const statusMessage = modal.shadowRoot!.querySelector('.status-message') as HTMLElement;
+      const statusMessage = modal.element.shadowRoot!.querySelector('.status-message') as HTMLElement;
       expect(statusMessage.textContent).toContain('You can attach only 1 video');
     });
   });

@@ -3,7 +3,7 @@ import globalStyles from '../shadow-styles.css?inline';
 const HISTORY_MODAL_TEMPLATE = `
   <style>
     :host {
-      display: none;
+      display: flex;
       flex-direction: column;
       position: fixed;
       inset: 0;
@@ -15,10 +15,10 @@ const HISTORY_MODAL_TEMPLATE = `
     ${globalStyles}
     .history-meta {
       font-size: 0.875rem;
-      color: var(--color-text-secondary);
+      color: oklch(55.1% 0.0234 264.4);
       padding: 0.5rem 0.75rem;
       border-radius: 0.375rem;
-      background: var(--color-primary-soft-bg);
+      background: oklch(96.7% 0.0029 264.5);
       display: flex;
       align-items: center;
       gap: 0.5rem;
@@ -28,21 +28,21 @@ const HISTORY_MODAL_TEMPLATE = `
       color: oklch(72.77% 0.1535 60.62);
     }
     .history-version {
-      border: 1px solid var(--color-border-strong);
+      border: 1px solid oklch(87.17% 0.0093 258.3);
       border-radius: 0.375rem;
       overflow: hidden;
     }
     .history-version-header {
       font-size: 0.75rem;
       font-weight: 600;
-      color: var(--color-text-secondary);
+      color: oklch(55.1% 0.0234 264.4);
       padding: 0.375rem 0.75rem;
-      background: var(--color-primary-soft-bg);
-      border-bottom: 1px solid var(--color-border-strong);
+      background: oklch(96.7% 0.0029 264.5);
+      border-bottom: 1px solid oklch(87.17% 0.0093 258.3);
     }
     .history-version-text {
       font-size: 0.9375rem;
-      color: var(--color-text-primary);
+      color: oklch(21.01% 0.0318 264.7);
       padding: 0.75rem;
       white-space: pre-wrap;
       word-break: break-word;
@@ -50,9 +50,29 @@ const HISTORY_MODAL_TEMPLATE = `
     }
     .loading-text {
       font-size: 0.875rem;
-      color: var(--color-text-secondary);
+      color: oklch(55.1% 0.0234 264.4);
       text-align: center;
       padding: 1rem 0;
+    }
+    @media (prefers-color-scheme: dark) {
+      .history-meta {
+        background: oklch(100% 0 none / 0.08);
+        color: oklch(80% 0.02 264.4);
+      }
+      .history-version {
+        border-color: oklch(100% 0 none / 0.1);
+      }
+      .history-version-header {
+        background: oklch(100% 0 none / 0.06);
+        border-bottom-color: oklch(100% 0 none / 0.1);
+        color: oklch(70% 0.02 264.4);
+      }
+      .history-version-text {
+        color: oklch(92% 0.01 264.7);
+      }
+      .loading-text {
+        color: oklch(70% 0.02 264.4);
+      }
     }
   </style>
   <div class="edit-modal-container" role="dialog" aria-modal="true" aria-labelledby="history-modal-title">
@@ -84,8 +104,8 @@ const HISTORY_MODAL_TEMPLATE = `
   </div>
 `;
 
-class EditHistoryModalImpl extends HTMLElement {
-  private readonly shadow: ShadowRoot;
+export class EditHistoryModal {
+  public readonly element: HTMLElement;
   private versionsContainer: HTMLElement | null = null;
   private originalDateStrong: HTMLElement | null = null;
   private previouslyFocused: Element | null = null;
@@ -93,43 +113,29 @@ class EditHistoryModalImpl extends HTMLElement {
   private handleBackgroundClickBound = this.handleBackgroundClick.bind(this);
   private closeBound = this.close.bind(this);
 
-  /** @deprecated Use the element directly – this alias exists for backward compatibility. */
-  public get element(): this {
-    return this;
-  }
-
   public constructor() {
-    super();
-    this.shadow = this.attachShadow({ mode: 'open' });
-    this.initialize();
-  }
+    this.element = document.createElement('edit-history-modal');
+    const shadow = this.element.attachShadow({ mode: 'open' });
+    shadow.innerHTML = HISTORY_MODAL_TEMPLATE;
+    this.element.style.display = 'none';
 
-  public connectedCallback(): void {
-    // initialize() is called in the constructor so the shadow DOM is ready
-    // immediately, even when the custom element registry is stale.
-  }
+    this.versionsContainer = shadow.querySelector<HTMLElement>('.history-versions-container');
+    this.originalDateStrong = shadow.querySelector<HTMLElement>('.history-original-date strong');
 
-  private initialize(): void {
-    if (this.versionsContainer) return;
-    this.shadow.innerHTML = HISTORY_MODAL_TEMPLATE;
-
-    this.versionsContainer = this.shadow.querySelector<HTMLElement>('.history-versions-container');
-    this.originalDateStrong = this.shadow.querySelector<HTMLElement>('.history-original-date strong');
-
-    const closeButton = this.shadow.querySelector<HTMLButtonElement>('.close-button');
+    const closeButton = shadow.querySelector<HTMLButtonElement>('.close-button');
     closeButton?.addEventListener('click', this.closeBound);
 
-    const closeFooterButton = this.shadow.querySelector<HTMLButtonElement>('.close-footer-button');
+    const closeFooterButton = shadow.querySelector<HTMLButtonElement>('.close-footer-button');
     closeFooterButton?.addEventListener('click', this.closeBound);
 
-    this.addEventListener('keydown', this.handleKeydownBound);
+    this.element.addEventListener('keydown', this.handleKeydownBound);
   }
 
   public open(originalDate: string): void {
     this.previouslyFocused = document.activeElement;
 
-    if (!this.isConnected) {
-      document.body.appendChild(this);
+    if (!this.element.isConnected) {
+      document.body.appendChild(this.element);
     }
 
     if (this.originalDateStrong) {
@@ -140,12 +146,12 @@ class EditHistoryModalImpl extends HTMLElement {
       this.versionsContainer.innerHTML = '<div class="loading-text">Loading edit history…</div>';
     }
 
-    this.removeEventListener('click', this.handleBackgroundClickBound);
-    this.addEventListener('click', this.handleBackgroundClickBound);
-    this.style.display = 'flex';
+    this.element.removeEventListener('click', this.handleBackgroundClickBound);
+    this.element.addEventListener('click', this.handleBackgroundClickBound);
+    this.element.style.display = 'flex';
 
     // Focus the close button for keyboard accessibility
-    const closeBtn = this.shadow.querySelector<HTMLButtonElement>('.close-button');
+    const closeBtn = this.element.shadowRoot?.querySelector<HTMLButtonElement>('.close-button');
     closeBtn?.focus();
   }
 
@@ -195,11 +201,11 @@ class EditHistoryModalImpl extends HTMLElement {
   }
 
   public close(): void {
-    this.style.display = 'none';
-    if (this.isConnected) {
-      document.body.removeChild(this);
+    this.element.style.display = 'none';
+    if (this.element.isConnected) {
+      document.body.removeChild(this.element);
     }
-    this.removeEventListener('click', this.handleBackgroundClickBound);
+    this.element.removeEventListener('click', this.handleBackgroundClickBound);
 
     if (this.previouslyFocused instanceof HTMLElement) {
       this.previouslyFocused.focus();
@@ -215,16 +221,11 @@ class EditHistoryModalImpl extends HTMLElement {
   }
 
   private handleBackgroundClick(event: MouseEvent): void {
-    const container = this.shadow.querySelector('.edit-modal-container');
+    const shadow = this.element.shadowRoot;
+    if (!shadow) return;
+    const container = shadow.querySelector('.edit-modal-container');
     if (container && !container.contains(event.composedPath()[0] as Node)) {
       this.close();
     }
   }
 }
-
-if (typeof customElements !== 'undefined' && !customElements.get('edit-history-modal')) {
-  customElements.define('edit-history-modal', EditHistoryModalImpl);
-}
-
-export { EditHistoryModalImpl as EditHistoryModal };
-export type EditHistoryModal = EditHistoryModalImpl;

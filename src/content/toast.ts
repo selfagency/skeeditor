@@ -87,6 +87,8 @@ export class SkeeditorToast extends HTMLElement {
   }
 }
 
-if (typeof customElements !== 'undefined' && !customElements.get('skeeditor-toast')) {
-  customElements.define('skeeditor-toast', SkeeditorToast);
+export function ensureToastRegistered(): void {
+  if (typeof customElements !== 'undefined' && customElements !== null && !customElements.get('skeeditor-toast')) {
+    customElements.define('skeeditor-toast', SkeeditorToast);
+  }
 }

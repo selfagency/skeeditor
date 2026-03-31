@@ -118,6 +118,7 @@ bskyTest(
     // Modal should appear with the record text.
     const modal = page.locator('edit-modal');
     await expect(modal).toBeAttached({ timeout: 5_000 });
+
     const textarea = modal.locator('textarea');
     await expect(textarea).toHaveValue(OWN_POST_TEXT, { timeout: 5_000 });
 

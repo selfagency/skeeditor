@@ -9,11 +9,8 @@ import type {
   PutRecordResponse,
 } from '../shared/messages';
 import { sendMessage } from '../shared/messages';
-// Side-effect imports: ensure custom element registration runs (prevents tree-shaking).
-import './edit-modal';
-import './edit-history-modal';
-import type { EditModal } from './edit-modal';
-import type { EditHistoryModal } from './edit-history-modal';
+import { EditModal } from './edit-modal';
+import { EditHistoryModal } from './edit-history-modal';
 import {
   getCached,
   getCacheSize,
@@ -29,7 +26,7 @@ import {
 import { extractPostInfo, extractPostText, findPosts, updatePostText, type PostInfo } from './post-detector';
 import { buildUpdatedPostRecord, type EditablePostRecord, validateUpdatedPostRecord } from './post-editor';
 import './styles.css';
-import './toast';
+import { ensureToastRegistered } from './toast';
 
 const POST_MARKER_ATTRIBUTE = 'data-skeeditor-processed';
 const EDIT_BUTTON_ATTRIBUTE = 'data-skeeditor-edit-button';
@@ -42,6 +39,7 @@ const log = createLogger('content');
 // ── Toast notification ────────────────────────────────────────────────────────
 
 function showToast(message: string): void {
+  ensureToastRegistered();
   const host = document.createElement('skeeditor-toast');
   host.setAttribute('message', message);
   document.body.appendChild(host);
@@ -525,13 +523,13 @@ let navigationToken = 0;
 const FEED_CONTAINER_SELECTORS = ['[data-testid="feed"]', '[data-testid="feedPage-feed"]', 'main', '[role="main"]'];
 
 const getOrCreateEditModal = (): EditModal => {
-  if (activeModal !== null && activeModal.isConnected) {
+  if (activeModal !== null && activeModal.element.isConnected) {
     return activeModal;
   }
 
-  const modal = document.createElement('edit-modal') as EditModal;
-  modal.setAttribute('data-skeeditor-modal', 'true');
-  document.body.appendChild(modal);
+  const modal = new EditModal();
+  modal.element.setAttribute('data-skeeditor-modal', 'true');
+  document.body.appendChild(modal.element);
   activeModal = modal;
 
   return modal;
@@ -929,11 +927,11 @@ const injectEditButton = (postElement: HTMLElement): void => {
 };
 
 const getOrCreateHistoryModal = (): EditHistoryModal => {
-  if (activeHistoryModal !== null && activeHistoryModal.isConnected) {
+  if (activeHistoryModal !== null && activeHistoryModal.element.isConnected) {
     return activeHistoryModal;
   }
-  const modal = document.createElement('edit-history-modal') as EditHistoryModal;
-  modal.setAttribute('data-skeeditor-history-modal', 'true');
+  const modal = new EditHistoryModal();
+  modal.element.setAttribute('data-skeeditor-history-modal', 'true');
   activeHistoryModal = modal;
   return modal;
 };
