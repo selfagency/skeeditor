@@ -18,7 +18,7 @@ No. Editing a record in the AT Protocol does not generate a new feed event. Your
 
 If you have subscribed to the **Skeeditor labeler** (`@skeeditor.link`), an "edited" label will be applied to your post after you save an edit. Other Bluesky users who also subscribe to the Skeeditor labeler will see this label on your post.
 
-The labeler is a core part of how Skeeditor communicates that a post has been edited — without it, there is no visible indicator on the Bluesky platform. You can subscribe during the initial sign-in flow or at any time from your [Bluesky moderation settings](https://bsky.app/moderation). See [Using Skeeditor → Labeler consent](./usage#labeler-consent) for more details.
+The labeler is a core part of how Skeeditor communicates that a post has been edited — without it, there is no visible indicator on the Bluesky platform. The popup consent prompt links to Bluesky, where you complete subscription manually, and you can manage it any time from your [Bluesky moderation settings](https://bsky.app/moderation). See [Using Skeeditor → Labeler consent](./usage#labeler-consent) for more details.
 
 ---
 
