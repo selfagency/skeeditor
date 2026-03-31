@@ -14,6 +14,7 @@ pr: 77
 CI currently runs tests but does not publish repository coverage or JUnit test results. Add a canonical coverage workflow using `task`, emit `test-report.junit.xml`, upload coverage to Codecov, and upload test results via Codecov's test-results action.
 
 ## Todo
+
 - [x] Add or refine a Taskfile target for CI coverage output
 - [x] Configure Vitest to emit coverage artifacts and JUnit XML in CI
 - [x] Add a coverage job or steps in `.github/workflows/ci.yml`
@@ -23,6 +24,7 @@ CI currently runs tests but does not publish repository coverage or JUnit test r
 - [x] Document local and CI coverage workflow
 
 ## Summary of Changes
+
 - Added `task test:coverage:ci` in Taskfile.yml with Vitest coverage and JUnit reporter configuration
 - Added `coverage` job in `.github/workflows/ci.yml` that runs coverage collection and uploads to Codecov
 - Updated `docs/dev/testing.md` with CI coverage workflow and local coverage documentation

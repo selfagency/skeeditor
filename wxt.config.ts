@@ -9,6 +9,13 @@ export default defineConfig({
   outDir: 'dist',
   outDirTemplate: '{{browser}}',
   imports: false,
+  dev: {
+    server: {
+      // Keep WXT watch/dev off port 3000 because the local ATProto devnet PDS uses it.
+      port: 3001,
+      origin: 'http://localhost:3001',
+    },
+  },
   modules: ['@wxt-dev/auto-icons'],
   autoIcons: {
     baseIconPath: 'assets/icon.svg',
