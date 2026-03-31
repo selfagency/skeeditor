@@ -37,7 +37,7 @@ When you use Skeeditor, your browser makes requests to:
 - Your PDS (typically `bsky.social` or `*.bsky.network`) `/xrpc/com.atproto.repo.getRecord` and `/xrpc/com.atproto.repo.putRecord` for record reads/writes
 - `https://slingshot.microcosm.blue/xrpc/com.atproto.repo.getRecord` for edited-post read acceleration
 - `https://labeler.skeeditor.link/xrpc/tools.skeeditor.emitLabel` for label emits after successful edits
-- `wss://labeler.skeeditor.link/xrpc/com.atproto.label.subscribeLabels` for real-time edited-label subscription updates
+- `wss://labeler.skeeditor.link/xrpc/com.atproto.label.subscribeLabels` for real-time edited-label updates (the extension currently opens this connection on background startup, even if the user has not subscribed to the labeler in Bluesky)
 - `https://plc.directory/<did>` for `did:plc` document resolution in DID helper flows
 - `https://public.api.bsky.app/...` and `https://api.bsky.app/...` for fallback DID→handle lookups
 - `https://docs.skeeditor.link/oauth/client-metadata.json` for OAuth client metadata

@@ -313,6 +313,20 @@ describe('options page', () => {
       expect((document.getElementById('edit-time-limit') as HTMLInputElement).value).toBe('2.5');
     });
 
+    it('populates post date strategy from GET_SETTINGS on load', async () => {
+      vi.mocked(browser.runtime.sendMessage).mockImplementation(async (msg: unknown) => {
+        const type = (msg as { type?: string })?.type;
+        if (type === 'AUTH_LIST_ACCOUNTS') return { accounts: [] };
+        if (type === 'GET_SETTINGS') return { editTimeLimit: null, postDateStrategy: 'preserve' };
+        return { ok: true };
+      });
+
+      await import('@src/options/options');
+      await flushPromises();
+
+      expect((document.getElementById('post-date-strategy') as HTMLSelectElement).value).toBe('preserve');
+    });
+
     it('sends SET_SETTINGS with the entered value when save is clicked', async () => {
       await loadOptionsModule();
 
@@ -359,6 +373,20 @@ describe('options page', () => {
       await flushPromises();
 
       expect(document.getElementById('status')?.textContent).toContain('Storage full');
+    });
+
+    it('sends SET_SETTINGS with preserve mode when selected', async () => {
+      await loadOptionsModule();
+
+      (document.getElementById('post-date-strategy') as HTMLSelectElement).value = 'preserve';
+
+      document.getElementById('save-settings')?.click();
+      await flushPromises();
+
+      expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({
+        type: 'SET_SETTINGS',
+        settings: { editTimeLimit: null, postDateStrategy: 'preserve' },
+      });
     });
   });
 });

@@ -3,6 +3,60 @@ import { serveDidDocument } from './did-document.js';
 import { encodeErrorFrame } from './label.js';
 import type { Env } from './types.ts';
 
+const LABELER_SERVICE_CID = 'bafyreihxzei3be2njobnpxrompe5w3dp5jrrpxhklvs7fxhkpqynxm7b5q';
+
+function getRequestedDids(url: URL): string[] {
+  const repeated = url.searchParams.getAll('dids').flatMap(value => value.split(',').map(item => item.trim()));
+  return repeated.filter(Boolean);
+}
+
+function buildLabelerView(env: Env, detailed: boolean): Record<string, unknown> {
+  const indexedAt = new Date().toISOString();
+  const baseView = {
+    uri: `at://${env.LABELER_DID}/app.bsky.labeler.service/self`,
+    cid: LABELER_SERVICE_CID,
+    indexedAt,
+    creator: {
+      did: env.LABELER_DID,
+      handle: env.LABELER_HANDLE,
+      displayName: 'Skeeditor',
+      description: 'Skeeditor labeler for edited Bluesky posts.',
+      createdAt: indexedAt,
+      indexedAt,
+    },
+  } satisfies Record<string, unknown>;
+
+  if (!detailed) {
+    return baseView;
+  }
+
+  return {
+    ...baseView,
+    policies: {
+      labelValues: ['edited'],
+      labelValueDefinitions: [
+        {
+          identifier: 'edited',
+          blurs: 'none',
+          severity: 'inform',
+          defaultSetting: 'warn',
+          locales: [
+            {
+              lang: 'en',
+              name: 'Edited with Skeeditor',
+              description:
+                'This post was edited with Skeeditor. The author may choose whether Bluesky sees the edited timestamp.',
+            },
+          ],
+        },
+      ],
+    },
+    reasonTypes: ['com.atproto.moderation.defs#reasonOther'],
+    subjectTypes: ['record'],
+    subjectCollections: ['app.bsky.feed.post'],
+  };
+}
+
 export { BroadcastHub };
 
 // ── CORS headers ──────────────────────────────────────────────────────────────
@@ -45,6 +99,17 @@ export default {
     // ── GET /.well-known/did.json ──────────────────────────────────────────
     if (url.pathname === '/.well-known/did.json') {
       return addCors(serveDidDocument(env));
+    }
+
+    if (url.pathname === '/xrpc/app.bsky.labeler.getServices' && request.method === 'GET') {
+      const dids = getRequestedDids(url);
+      if (dids.length === 0) {
+        return addCors(Response.json({ error: 'Missing required query parameter: dids' }, { status: 400 }));
+      }
+
+      const detailed = url.searchParams.get('detailed') === 'true';
+      const views = dids.includes(env.LABELER_DID) ? [buildLabelerView(env, detailed)] : [];
+      return addCors(Response.json({ views }));
     }
 
     // ── GET /xrpc/com.atproto.label.subscribeLabels ────────────────────────

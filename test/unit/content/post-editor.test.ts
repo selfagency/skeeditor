@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildUpdatedPostRecord, type EditablePostRecord } from '@src/content/post-editor';
+import { buildUpdatedPostRecord, type EditablePostRecord, validateUpdatedPostRecord } from '@src/content/post-editor';
 
 describe('post-editor', () => {
   const baseRecord: EditablePostRecord = {
@@ -38,6 +38,18 @@ describe('post-editor', () => {
     expect(nextRecord.tags).toBeDefined();
     expect(nextRecord.tags).toHaveLength(1);
     expect(nextRecord.tags?.[0]).toMatch(/^skeeditor-edit-/);
+  });
+
+  it('should preserve the original createdAt when updateCreatedAt is disabled', () => {
+    const currentRecord: EditablePostRecord = {
+      $type: 'app.bsky.feed.post' as const,
+      text: 'Original text',
+      createdAt: '2026-03-18T12:00:00.000Z',
+    };
+
+    const nextRecord = buildUpdatedPostRecord(currentRecord, 'Updated text', undefined, { updateCreatedAt: false });
+
+    expect(nextRecord.createdAt).toBe(currentRecord.createdAt);
   });
 
   it('should omit facets when the updated text has no detected facets', () => {
@@ -251,5 +263,28 @@ describe('post-editor', () => {
     const mediaFiles = [createFile('a.mp4', 'video/mp4'), createFile('b.mp4', 'video/mp4')];
 
     expect(() => buildUpdatedPostRecord(baseRecord, 'Updated text', mediaFiles)).toThrow('You can attach only 1 video');
+  });
+
+  it('should return a validation error when the updated record is not a valid Bluesky post', () => {
+    const invalidRecord = {
+      $type: 'app.bsky.feed.post',
+      text: 'Updated text',
+      createdAt: 'not-a-datetime',
+    } as EditablePostRecord;
+
+    const result = validateUpdatedPostRecord(invalidRecord);
+
+    expect(result).toEqual({
+      success: false,
+      error: expect.stringContaining('Edited post is invalid:'),
+    });
+  });
+
+  it('should accept a valid updated record', () => {
+    const validRecord = buildUpdatedPostRecord(baseRecord, 'Updated text');
+
+    const result = validateUpdatedPostRecord(validRecord);
+
+    expect(result).toEqual({ success: true, value: validRecord });
   });
 });

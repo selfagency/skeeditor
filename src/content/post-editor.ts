@@ -1,4 +1,5 @@
 import { l } from '@atproto/lex';
+import * as AppBskyFeedPost from '../lexicons/app/bsky/feed/post.defs';
 import type { Main as RichtextFacet } from '../lexicons/app/bsky/richtext/facet.defs';
 import type { SelfLabels } from '../lexicons/com/atproto/label/defs.defs';
 
@@ -30,8 +31,46 @@ export interface EditablePostRecord extends Record<string, unknown> {
   embed?: ExternalEmbed | ImagesEmbed | VideoEmbed;
 }
 
+interface SafeValidateSuccess<T> {
+  success: true;
+  value: T;
+}
+
+interface SafeValidateFailure {
+  error?: string;
+  message?: string;
+  issues?: Array<{ message?: string }>;
+}
+
 const MAX_IMAGE_COUNT = 4;
 const MAX_VIDEO_COUNT = 1;
+
+const isSafeValidateSuccess = <T>(value: unknown): value is SafeValidateSuccess<T> => {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    'success' in value &&
+    (value as Record<string, unknown>)['success'] === true &&
+    'value' in value
+  );
+};
+
+const formatValidationFailure = (result: SafeValidateFailure): string => {
+  if (typeof result.message === 'string' && result.message.length > 0) {
+    return result.message;
+  }
+
+  const firstIssue = result.issues?.find(issue => typeof issue.message === 'string' && issue.message.length > 0);
+  if (typeof firstIssue?.message === 'string') {
+    return firstIssue.message;
+  }
+
+  if (typeof result.error === 'string' && result.error.length > 0) {
+    return result.error;
+  }
+
+  return 'Edited post does not match the Bluesky post schema.';
+};
 
 const buildMentionDidResolver = (currentRecord: EditablePostRecord): ((handle: string) => string | undefined) => {
   const mentionDidByHandle = new Map<string, string>();
@@ -85,6 +124,21 @@ export function buildUpdatedPostRecord(
   }
 
   return nextRecord;
+}
+
+export function validateUpdatedPostRecord(
+  record: EditablePostRecord,
+): { success: true; value: EditablePostRecord } | { success: false; error: string } {
+  const result = AppBskyFeedPost.$safeValidate(record) as SafeValidateSuccess<EditablePostRecord> | SafeValidateFailure;
+
+  if (isSafeValidateSuccess<EditablePostRecord>(result)) {
+    return { success: true, value: result.value };
+  }
+
+  return {
+    success: false,
+    error: `Edited post is invalid: ${formatValidationFailure(result)}`,
+  };
 }
 
 export function normalizeMediaFiles(mediaFiles: File[]): File[] {

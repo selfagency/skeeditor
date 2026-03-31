@@ -20,6 +20,10 @@ After a user edits a post, Skeeditor writes the updated record to their PDS and 
 
 The DID is exported from `src/shared/constants.ts` as `LABELER_DID`.
 
+::: info Production defaults vs. local overrides
+The DID, handle, service URL, and fallback public key shown in this document are the current production values. The Worker reads them from `packages/labeler/wrangler.jsonc` (`LABELER_DID`, `LABELER_HANDLE`, `LABELER_SERVICE_URL`, and `LABELER_PUBLIC_KEY_MULTIBASE`) and can be pointed at other environments for dev/test deployments.
+:::
+
 ---
 
 ## Cloudflare Worker (`packages/labeler/`)
@@ -46,10 +50,14 @@ The labeler service runs as a [Cloudflare Worker](https://workers.cloudflare.com
 
 ### Environment variables
 
-| Variable         | Value                              |
-| ---------------- | ---------------------------------- |
-| `LABELER_DID`    | `did:plc:m6h36r2hzbnozuhxj4obhkyb` |
-| `LABELER_HANDLE` | `skeeditor.link`                   |
+| Variable                       | Production value                    |
+| ------------------------------ | ----------------------------------- |
+| `LABELER_DID`                  | `did:plc:m6h36r2hzbnozuhxj4obhkyb`  |
+| `LABELER_HANDLE`               | `skeeditor.link`                    |
+| `LABELER_SERVICE_URL`          | `https://labeler.skeeditor.link`    |
+| `LABELER_PUBLIC_KEY_MULTIBASE` | published fallback verification key |
+
+`LABELER_SIGNING_KEY` is stored as a Worker secret. When it is present, the DID document derives the public key directly from the signing key at runtime; otherwise the Worker falls back to `LABELER_PUBLIC_KEY_MULTIBASE`. If neither is configured, `/.well-known/did.json` fails fast with a 500 so a mismatched or incomplete deployment is obvious.
 
 ---
 
@@ -66,12 +74,14 @@ flowchart TD
     B -->|"Not subscribed"| D["Sets flag in extension storage"]
     D --> E["Popup next opens → sees flag →
     shows consent dialog"]
-    E -->|"Accept"| F["Extension adds LABELER_DID
-    to user's labeler preferences"]
-    E -->|"Decline"| G["Flag cleared, no subscription"]
+  E -->|"Open labeler profile"| F["Opens Bluesky labeler profile
+  so the user can subscribe manually"]
+  E -->|"Not now"| G["Flag cleared, no subscription"]
 ```
 
-The `CHECK_LABELER_SUBSCRIPTION` message is fire-and-forget from the perspective of the popup. A network error during the check is silently swallowed — it must never block or delay the sign-in flow.
+The `CHECK_LABELER_SUBSCRIPTION` message is fire-and-forget from the perspective of the popup. A network error during the check is silently swallowed — it must never block or delay the sign-in flow. The popup prompt is **manual**: it opens the Bluesky labeler profile and leaves subscription management to Bluesky.
+
+Separately, the extension background service currently opens the labeler WebSocket on startup as a best-effort real-time enhancement. This does **not** subscribe the user in Bluesky by itself; it only lets installed Skeeditor clients hear `edited` label broadcasts quickly.
 
 ---
 
@@ -106,6 +116,8 @@ wrangler deploy
 ```
 
 The custom domain `labeler.skeeditor.link` is configured as a route in `wrangler.jsonc` and must be set up in the Cloudflare dashboard.
+
+If you rotate `LABELER_SIGNING_KEY`, update `LABELER_PUBLIC_KEY_MULTIBASE` only if you intentionally rely on the fallback path. In normal production deployments, the runtime-derived key from `LABELER_SIGNING_KEY` should be the source of truth.
 
 ---
 

@@ -1,5 +1,8 @@
 # Implementation Plan — Skeeditor Labeler + Real-Time Propagation
 
+> [!WARNING]
+> Historical planning document: this file captures the original labeler rollout plan and is preserved for context. It is **not** maintained as the authoritative implementation reference. For current behavior, configuration, and operational notes, use `docs/dev/labeler-services.md`.
+
 ## Problem
 
 After a user saves an edit, the updated post text propagates to followers via the
@@ -24,7 +27,7 @@ installed. Users without the extension see the update when AppView catches up.
 
 ## Architecture Overview
 
-```
+```text
 [Editor's extension]
     PUT_RECORD → PDS ✓
     POST /emit → Labeler → Durable Object wakes
@@ -59,13 +62,14 @@ accrues when a label event is actually broadcast. This is the only practical
 way to serve millions of persistent WebSocket connections cost-effectively.
 
 Estimated cost at scale:
-| Event | Cost |
+
+| Event                             | Cost            |
 | --------------------------------- | --------------- |
-| Idle connections (hibernating) | $0.00 |
-| DO wakeup per broadcast | $0.15 / million |
+| Idle connections (hibernating)    | $0.00           |
+| DO wakeup per broadcast           | $0.15 / million |
 | Worker invocations (emit trigger) | $0.30 / million |
-| KV reads (queryLabels) | $0.50 / million |
-| **1M edits/day total** | **< $1/day** |
+| KV reads (queryLabels)            | $0.50 / million |
+| **1M edits/day total**            | **< $1/day**    |
 
 ### Endpoints
 
@@ -137,7 +141,7 @@ Frame format:
 The extension must prove it is acting on behalf of the DID that owns the post
 being labeled.
 
-**Implemented: Bearer JWT with cryptographic verification**
+#### Implemented: Bearer JWT with cryptographic verification
 
 The extension sends the user's ATProto access JWT in `Authorization: Bearer <token>`.
 The labeler worker:
@@ -162,7 +166,7 @@ signed by the subject's own PDS — forged or tampered tokens are rejected at st
 
 Single global instance (`id = "global"`). All WebSocket clients connect to it.
 
-```
+```text
 WebSocket lifecycle (Cloudflare Hibernation API):
   - ws.accept() → connection stored; DO can sleep
   - webSocketMessage(ws, msg) → parse cursor/ping; DO wakes briefly
@@ -309,7 +313,7 @@ a best-effort enhancement — the firehose still propagates the edit regardless.
 
 ## File Map
 
-```
+```text
 packages/labeler/
   package.json              # name: @skeeditor/labeler
   tsconfig.json

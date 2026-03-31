@@ -24,7 +24,7 @@ import {
   setStorage,
 } from './edited-post-cache';
 import { extractPostInfo, extractPostText, findPosts, updatePostText, type PostInfo } from './post-detector';
-import { buildUpdatedPostRecord, type EditablePostRecord } from './post-editor';
+import { buildUpdatedPostRecord, type EditablePostRecord, validateUpdatedPostRecord } from './post-editor';
 import './styles.css';
 import './toast';
 
@@ -750,6 +750,14 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
       }
     }
 
+    const validationResult = validateUpdatedPostRecord(updatedRecord);
+    if (!validationResult.success) {
+      modal.setError(validationResult.error);
+      return;
+    }
+
+    const validatedRecord = validationResult.value;
+
     // Create a history record for the old version before modifying the post!
     try {
       // Resolve to DID-form so the postUri stored in the archive record is canonical
@@ -777,7 +785,7 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
       repo: info.repo,
       collection: info.collection,
       rkey: info.rkey,
-      record: updatedRecord,
+      record: validatedRecord,
       swapRecord: currentCid,
     });
 
@@ -810,7 +818,7 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
     // Write to cache immediately — the MO path will keep applying the cached
     // text on React re-renders. No setTimeout hack needed.
     setCached(normalizedAtUri, text, initialRecordText);
-    recentRecordsCache.set(normalizedAtUri, { record: updatedRecord, cid: writeResponse.cid, savedAt: Date.now() });
+    recentRecordsCache.set(normalizedAtUri, { record: validatedRecord, cid: writeResponse.cid, savedAt: Date.now() });
     showToast('Edit saved.');
     console.info(`${APP_NAME}: edit saved`, { atUri: normalizedAtUri, uri: writeResponse.uri, cid: writeResponse.cid });
   });

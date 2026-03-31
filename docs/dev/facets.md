@@ -107,7 +107,7 @@ const record = {
   $type: 'app.bsky.feed.post',
   text: newText,
   facets: buildFacets(newText),
-  createdAt: originalRecord.createdAt, // always preserve
+  createdAt: originalRecord.createdAt, // or update, depending on the user's timestamp setting
 };
 ```
 
@@ -116,5 +116,7 @@ const record = {
 ## Important rules
 
 - **Always recalculate facets when text changes.** Never copy facets from the original record into an edited record — the byte offsets will be wrong if any text was inserted or removed before a decorated span.
-- **Preserve `createdAt`.** Copy it from the original record; setting it to the current time changes the post's timestamp in feeds.
+- **Honor the timestamp setting.** Skeeditor supports two modes:
+  - **Update timestamp** → the edit becomes visible in standard Bluesky clients, but Bluesky may mark the post as having a tampered date.
+  - **Preserve timestamp** → avoids changing the original post date, but the edited text is then only reliably visible to Skeeditor users until other clients catch up.
 - **Preserve embeds.** The edit flow preserves `embed` from the original record unless the user explicitly removes it, since skeeditor does not currently support editing image/video embeds.

@@ -592,6 +592,116 @@ describe('content-script', () => {
     expect(statusMessage?.textContent).toContain('older than your edit time limit of 5 minutes');
   });
 
+  it('should preserve the original createdAt when post date strategy is preserve', async () => {
+    const createdAt = '2026-03-26T00:00:00.000Z';
+    const sendMessage = vi.fn(async request => {
+      if (request.type === 'AUTH_GET_STATUS') {
+        return {
+          authenticated: true,
+          did: 'did:plc:alice123',
+          expiresAt: Date.now() + 60_000,
+        };
+      }
+
+      if (request.type === 'GET_RECORD') {
+        return {
+          value: { $type: 'app.bsky.feed.post', text: 'Hello Bluesky', createdAt },
+          cid: 'bafyreitest',
+        };
+      }
+
+      if (request.type === 'GET_SETTINGS') {
+        return { editTimeLimit: null, postDateStrategy: 'preserve' };
+      }
+
+      if (request.type === 'CREATE_RECORD') {
+        return { type: 'CREATE_RECORD_SUCCESS', uri: 'at://archive', cid: 'bafyreihistory' };
+      }
+
+      if (request.type === 'PUT_RECORD') {
+        return { type: 'PUT_RECORD_SUCCESS', uri: 'at://updated', cid: 'bafyreinew' };
+      }
+
+      return { ok: true };
+    });
+
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    await import('@src/content/content-script');
+    await flushMicrotasks();
+
+    const editButton = document.querySelector<HTMLButtonElement>('[data-skeeditor-edit-button]');
+    editButton?.click();
+    await flushMicrotasks(4);
+
+    const modal = document.querySelector<HTMLElement>('edit-modal');
+    const shadowRoot = modal?.shadowRoot;
+    const textarea = shadowRoot?.querySelector<HTMLTextAreaElement>('textarea');
+    const saveButton = shadowRoot?.querySelector<HTMLButtonElement>('.save-button');
+
+    textarea!.value = 'Hello Bluesky, preserved';
+    textarea!.dispatchEvent(new Event('input', { bubbles: true }));
+    saveButton?.click();
+    await flushMicrotasks(6);
+
+    expect(sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'PUT_RECORD',
+        record: expect.objectContaining({ createdAt, text: 'Hello Bluesky, preserved' }),
+      }),
+    );
+  });
+
+  it('should surface a local validation error and skip PUT_RECORD when the edited post is invalid', async () => {
+    const sendMessage = vi.fn(async request => {
+      if (request.type === 'AUTH_GET_STATUS') {
+        return {
+          authenticated: true,
+          did: 'did:plc:alice123',
+          expiresAt: Date.now() + 60_000,
+        };
+      }
+
+      if (request.type === 'GET_RECORD') {
+        return {
+          value: { $type: 'app.bsky.feed.post', text: 'Hello Bluesky', createdAt: 'not-a-datetime' },
+          cid: 'bafyreitest',
+        };
+      }
+
+      if (request.type === 'GET_SETTINGS') {
+        return { editTimeLimit: null, postDateStrategy: 'preserve' };
+      }
+
+      return { ok: true };
+    });
+
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    await import('@src/content/content-script');
+    await flushMicrotasks();
+
+    const editButton = document.querySelector<HTMLButtonElement>('[data-skeeditor-edit-button]');
+    editButton?.click();
+    await flushMicrotasks(4);
+
+    const modal = document.querySelector<HTMLElement>('edit-modal');
+    const shadowRoot = modal?.shadowRoot;
+    const textarea = shadowRoot?.querySelector<HTMLTextAreaElement>('textarea');
+    const saveButton = shadowRoot?.querySelector<HTMLButtonElement>('.save-button');
+
+    textarea!.value = 'Hello Bluesky, invalid preserve';
+    textarea!.dispatchEvent(new Event('input', { bubbles: true }));
+    saveButton?.click();
+    await flushMicrotasks(6);
+
+    const statusMessage = shadowRoot?.querySelector<HTMLElement>('.status-message');
+
+    expect(statusMessage?.textContent).toContain('Edited post is invalid');
+    expect(sendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'PUT_RECORD' }));
+    expect(sendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'CREATE_RECORD' }));
+  });
+
   // ── Phase 3: listener lifecycle ──────────────────────────────────────────
 
   it('should remove the Edited label click listener from document on cleanupContentScript', async () => {

@@ -1,5 +1,5 @@
 import { browser } from 'wxt/browser';
-import { APP_NAME, BSKY_APP_ORIGIN, LABELER_SUBSCRIBE_WS_URL } from '../shared/constants';
+import { APP_NAME, BSKY_APP_ORIGIN, buildLabelerSubscribeWsUrl, LABELER_CURSOR_STORAGE_KEY } from '../shared/constants';
 import type { LabelReceivedNotification } from '../shared/messages';
 
 // ── Labeler WebSocket subscription ────────────────────────────────────────────
@@ -90,6 +90,32 @@ function cborDecode(buf: Uint8Array, pos: number): { value: unknown; pos: number
 let labelerWs: WebSocket | null = null;
 let labelerWsBackoff = LABELER_WS_MIN_BACKOFF_MS;
 let labelerWsRetryTimer: ReturnType<typeof setTimeout> | null = null;
+let labelerWsConnecting = false;
+let labelerCursor: number | null = null;
+
+async function getStoredLabelerCursor(): Promise<number | null> {
+  if (labelerCursor !== null) {
+    return labelerCursor;
+  }
+
+  const result = await browser.storage.local.get(LABELER_CURSOR_STORAGE_KEY);
+  const value = result[LABELER_CURSOR_STORAGE_KEY];
+  labelerCursor = typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
+  return labelerCursor;
+}
+
+async function setStoredLabelerCursor(nextCursor: number): Promise<void> {
+  if (!Number.isFinite(nextCursor) || nextCursor < 0) {
+    return;
+  }
+
+  if (labelerCursor !== null && nextCursor <= labelerCursor) {
+    return;
+  }
+
+  labelerCursor = nextCursor;
+  await browser.storage.local.set({ [LABELER_CURSOR_STORAGE_KEY]: nextCursor });
+}
 
 function broadcastLabelReceived(uri: string): void {
   const msg: LabelReceivedNotification = { type: 'LABEL_RECEIVED', uri };
@@ -107,11 +133,15 @@ function broadcastLabelReceived(uri: string): void {
     .catch(() => undefined);
 }
 
-function connectLabelerWs(): void {
+async function openLabelerWs(): Promise<void> {
   if (labelerWs !== null && labelerWs.readyState <= WebSocket.OPEN) return;
+  if (labelerWsConnecting) return;
+
+  labelerWsConnecting = true;
 
   try {
-    const ws = new WebSocket(LABELER_SUBSCRIBE_WS_URL);
+    const cursor = await getStoredLabelerCursor();
+    const ws = new WebSocket(buildLabelerSubscribeWsUrl(cursor));
     // ATProto subscribeLabels frames are binary CBOR, not text JSON.
     ws.binaryType = 'arraybuffer';
     labelerWs = ws;
@@ -134,6 +164,10 @@ function connectLabelerWs(): void {
 
         const body = cborDecode(buf, header.pos);
         const bodyObj = body.value as Map<string, unknown>;
+        const seq = bodyObj.get('seq');
+        if (typeof seq === 'number') {
+          void setStoredLabelerCursor(seq);
+        }
         const labels = bodyObj.get('labels');
         if (!Array.isArray(labels)) return;
 
@@ -156,7 +190,7 @@ function connectLabelerWs(): void {
       labelerWs = null;
       labelerWsRetryTimer = setTimeout(() => {
         labelerWsBackoff = Math.min(labelerWsBackoff * 2, LABELER_WS_MAX_BACKOFF_MS);
-        connectLabelerWs();
+        void openLabelerWs();
       }, labelerWsBackoff);
     };
 
@@ -166,7 +200,13 @@ function connectLabelerWs(): void {
     };
   } catch (err) {
     console.warn(APP_NAME + ': labeler WS init failed:', err);
+  } finally {
+    labelerWsConnecting = false;
   }
+}
+
+function connectLabelerWs(): void {
+  void openLabelerWs();
 }
 
 export { connectLabelerWs };

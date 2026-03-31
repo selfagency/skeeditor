@@ -52,5 +52,7 @@
   "vars": {
     "LABELER_DID": "did:plc:m6h36r2hzbnozuhxj4obhkyb",
     "LABELER_HANDLE": "skeeditor.link",
+    "LABELER_SERVICE_URL": "https://labeler.skeeditor.link",
+    "LABELER_PUBLIC_KEY_MULTIBASE": "zQ3shtSrUuoZLm2nz6mwUrh3H3qDyZpbqxDVwim4SjktNrKe2",
   },
 }
