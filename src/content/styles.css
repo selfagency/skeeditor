@@ -93,16 +93,3 @@ html.theme--dim {
   height: 16px;
   flex-shrink: 0;
 }
-
-.skeeditor-edited-badge {
-  display: inline-flex;
-  align-items: center;
-  /* margin-inline-start: 0.25rem; */
-  /* padding: 0.125rem 0.5rem; */
-  border-radius: 9999px;
-  background: var(--skeeditor-backgroundLight);
-  color: var(--skeeditor-text-secondary);
-  font-size: 0.75rem;
-  font-weight: 600;
-  line-height: 1;
-}

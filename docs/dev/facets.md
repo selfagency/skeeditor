@@ -100,24 +100,6 @@ If `resolveMentionDid` is not provided (or returns `undefined` for a given handl
 
 ---
 
-## `recalculateFacets` (`src/shared/utils/facet-offsets.ts`)
-
-When text is edited, existing facet byte offsets may need to shift. `recalculateFacets` uses a common-prefix/common-suffix diff algorithm to determine which facets need to move and by how much:
-
-```ts
-import { recalculateFacets } from '@src/shared/utils/facet-offsets';
-
-const updatedFacets = recalculateFacets(originalText, editedText, originalFacets);
-```
-
-- Facets **before** the edit zone are unchanged.
-- Facets **after** the edit zone are shifted by the byte-length delta.
-- Facets that **overlap** the edit zone are discarded (they no longer correspond to the original text span).
-
-This utility handles multi-byte characters correctly, including surrogate pairs and CJK characters.
-
-> **Note:** `buildUpdatedPostRecord` in `src/content/post-editor.ts` currently rebuilds all facets from scratch via `buildFacets` rather than using `recalculateFacets`. The incremental approach is available for cases where full rebuild is not desired.
-
 The returned facets are plain `app.bsky.richtext.facet` objects that can be embedded directly in the record:
 
 ```ts
