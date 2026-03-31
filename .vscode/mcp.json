@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "git": {
+      "command": "npx",
+      "args": ["-y", "@selfagency/git-mcp", "--repo-path", "${workspaceFolder}"]
+    },
+    "tasks": {
+      "command": "mcp-taskfile-server",
+      "type": "stdio"
+    }
+  }
+}
