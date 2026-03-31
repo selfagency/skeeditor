@@ -94,15 +94,16 @@ export class OptionsSettings extends HTMLElement {
           <div>
             <label for="post-date-strategy">Post date behavior on edit</label>
             <select id="post-date-strategy">
-              <option value="preserve">Preserve original post date (recommended)</option>
               <option value="update">Update post date to time of edit</option>
+              <option value="preserve">Preserve original post date</option>
             </select>
           </div>
           <p class="hint">
-            Bluesky sorts posts using the earlier of <code>createdAt</code> and <code>indexedAt</code>.
-            Preserving the original date keeps the post in its original feed position.
-            Updating the date changes it in the stored record and may re-sort the post if Bluesky
-            re-indexes it, but Bluesky may flag an updated timestamp as tampered.
+            When set to <strong>Update</strong>, the <code>createdAt</code> field in the stored
+            AT Protocol record is changed to the time of the edit, which changes the timestamp
+            displayed on the post. The post's position in chronological feeds may not move because
+            Bluesky sorts using the earlier of <code>createdAt</code> and <code>indexedAt</code>.
+            When set to <strong>Preserve</strong>, the original creation date is kept unchanged.
           </p>
 
           <div>

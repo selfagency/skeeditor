@@ -13,7 +13,7 @@ export interface ExtensionSettings {
 
 const DEFAULT_SETTINGS: ExtensionSettings = {
   editTimeLimit: null,
-  postDateStrategy: 'preserve',
+  postDateStrategy: 'update',
 };
 
 const getStorage = (): typeof browser.storage.local => {
