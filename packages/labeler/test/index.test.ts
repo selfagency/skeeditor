@@ -79,13 +79,31 @@ describe('serveDidDocument', () => {
   });
 
   it('fails fast when no public key configuration is available', async () => {
-    const response = serveDidDocument(
-      makeEnv({ LABELER_PUBLIC_KEY_MULTIBASE: undefined, LABELER_SIGNING_KEY: undefined }),
-    );
+    const env = makeEnv();
+    delete env.LABELER_PUBLIC_KEY_MULTIBASE;
+    delete env.LABELER_SIGNING_KEY;
+
+    const response = serveDidDocument(env);
 
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toEqual({
       error: 'Labeler public key is not configured. Provide LABELER_SIGNING_KEY or LABELER_PUBLIC_KEY_MULTIBASE.',
     });
+  });
+
+  it('falls back to LABELER_PUBLIC_KEY_MULTIBASE when signing-key derivation fails', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    const response = serveDidDocument(
+      makeEnv({
+        LABELER_SIGNING_KEY: 'not-a-valid-private-key',
+        LABELER_PUBLIC_KEY_MULTIBASE: 'zFallbackPublicKeyWins',
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { verificationMethod: Array<{ publicKeyMultibase: string }> };
+    expect(body.verificationMethod[0]?.publicKeyMultibase).toBe('zFallbackPublicKeyWins');
+    expect(warnSpy).toHaveBeenCalledOnce();
   });
 });

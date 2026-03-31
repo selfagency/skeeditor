@@ -1,10 +1,9 @@
+import { createPrivateKey, createPublicKey } from 'node:crypto';
 import type { Env } from './types.ts';
 
 const BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 
 function buildSecp256k1PublicKeyMultibase(privateKeyHex: string): string {
-  const { createPrivateKey, createPublicKey } = require('node:crypto') as typeof import('node:crypto');
-
   const privBytes = Buffer.from(privateKeyHex, 'hex');
   const oidSecp256k1 = Buffer.from([0x2b, 0x81, 0x04, 0x00, 0x0a]);
   const inner = Buffer.concat([
@@ -49,6 +48,13 @@ function resolvePublicKeyMultibase(env: Env): string | null {
     try {
       return buildSecp256k1PublicKeyMultibase(env.LABELER_SIGNING_KEY);
     } catch {
+      if (typeof env.LABELER_PUBLIC_KEY_MULTIBASE === 'string' && env.LABELER_PUBLIC_KEY_MULTIBASE.length > 0) {
+        console.warn(
+          'Failed to derive labeler public key from LABELER_SIGNING_KEY; falling back to LABELER_PUBLIC_KEY_MULTIBASE.',
+        );
+        return env.LABELER_PUBLIC_KEY_MULTIBASE;
+      }
+
       return null;
     }
   }
@@ -72,8 +78,8 @@ function resolvePublicKeyMultibase(env: Env): string | null {
  *   wrangler secret put LABELER_SIGNING_KEY
  *   (paste the hex-encoded private key)
  *
- * The public key multibase value below must be replaced with the actual
- * public key derived from your LABELER_SIGNING_KEY before deploying.
+ * The Worker derives the public key from LABELER_SIGNING_KEY when available,
+ * and can fall back to LABELER_PUBLIC_KEY_MULTIBASE for recovery/migration.
  */
 export function serveDidDocument(env: Env): Response {
   const did = env.LABELER_DID;
