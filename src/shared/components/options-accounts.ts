@@ -24,51 +24,64 @@ export class OptionsAccounts extends HTMLElement {
         .card {
           overflow: hidden;
           border-radius: 0.5rem;
-          border: 1px solid rgba(255,255,255,0.1);
-          background: rgba(31,41,55,0.5);
+          border: 1px solid var(--color-border);
+          background: var(--color-surface-raised);
         }
         .card-header {
           padding: 1.25rem 1rem;
-          border-bottom: 1px solid rgba(255,255,255,0.1);
+          border-bottom: 1px solid var(--color-border);
         }
         .card-header h2 {
           margin: 0;
           font-size: 1rem;
           font-weight: 600;
-          color: white;
+          color: var(--color-text-primary);
         }
         .card-section {
           padding: 1.25rem 1rem;
-          border-bottom: 1px solid rgba(255,255,255,0.1);
+          border-bottom: 1px solid var(--color-border);
         }
         .card-section:last-child { border-bottom: none; }
         .accounts-list { display: flex; flex-direction: column; gap: 0.5rem; }
-        .empty-text { margin: 0; font-size: 0.875rem; color: #9ca3af; }
-        .err-text { margin: 0; font-size: 0.875rem; color: #f87171; }
-        label { display: block; font-size: 0.875rem; font-weight: 500; color: #f3f4f6; }
+        .empty-text { margin: 0; font-size: 0.875rem; color: var(--color-text-secondary); }
+        .err-text { margin: 0; font-size: 0.875rem; color: var(--color-error); }
+        label {
+          display: block;
+          font-size: 0.875rem;
+          font-weight: 500;
+          color: var(--color-text-primary);
+        }
         input[type="url"] {
           display: block; width: 100%; margin-top: 0.5rem; box-sizing: border-box;
           border-radius: 0.375rem; padding: 0.375rem 0.75rem;
-          font-size: 0.875rem; color: white;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.1);
+          font-size: 0.875rem;
+          color: var(--color-input-text);
+          background: var(--color-input-bg);
+          border: 1px solid var(--color-input-border);
           outline: none;
         }
         input[type="url"]:focus {
-          border-color: #6366f1;
-          box-shadow: 0 0 0 1px #6366f1;
+          border-color: var(--color-input-focus);
+          box-shadow: 0 0 0 1px var(--color-input-focus);
         }
-        input[type="url"]::placeholder { color: #6b7280; }
+        input[type="url"]::placeholder { color: var(--color-input-placeholder); }
         .add-section { display: flex; flex-direction: column; gap: 1rem; }
-        .add-section h3 { margin: 0; font-size: 0.875rem; font-weight: 600; color: white; }
+        .add-section h3 {
+          margin: 0;
+          font-size: 0.875rem;
+          font-weight: 600;
+          color: var(--color-text-primary);
+        }
         button.add-btn {
           align-self: flex-start;
           border-radius: 0.375rem; padding: 0.5rem 0.75rem;
-          font-size: 0.875rem; font-weight: 600; color: white; cursor: pointer;
-          background: rgba(255,255,255,0.1);
-          border: 1px solid rgba(255,255,255,0.05);
+          font-size: 0.875rem; font-weight: 600; cursor: pointer;
+          color: var(--color-secondary-text);
+          background: var(--color-secondary-bg);
+          border: 1px solid var(--color-secondary-border);
+          box-shadow: 0 1px 2px 0 oklch(0% 0 none / 0.05);
         }
-        button.add-btn:hover { background: rgba(255,255,255,0.2); }
+        button.add-btn:hover { background: var(--color-secondary-bg-hover); }
       </style>
       <div class="card">
         <div class="card-header"><h2>Accounts</h2></div>

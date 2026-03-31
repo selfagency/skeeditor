@@ -35,13 +35,17 @@ export class OptionsStatus extends HTMLElement {
   }
 
   private render(): void {
-    const colorClass =
-      this.type === 'success' ? 'color: #34d399;' : this.type === 'error' ? 'color: #f87171;' : 'color: #60a5fa;';
+    const colorVar =
+      this.type === 'success'
+        ? 'var(--color-success)'
+        : this.type === 'error'
+          ? 'var(--color-error)'
+          : 'var(--color-info)';
 
     this.root.innerHTML = `
       <style>
         :host { display: block; min-height: 1.25rem; }
-        p { margin: 0; font-size: 0.875rem; ${colorClass} }
+        p { margin: 0; font-size: 0.875rem; color: ${colorVar}; }
       </style>
       <p>${this.escapeHTML(this.message)}</p>
     `;

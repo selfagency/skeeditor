@@ -15,10 +15,10 @@ const HISTORY_MODAL_TEMPLATE = `
     ${globalStyles}
     .history-meta {
       font-size: 0.875rem;
-      color: oklch(55.1% 0.0234 264.4);
+      color: var(--color-text-secondary);
       padding: 0.5rem 0.75rem;
       border-radius: 0.375rem;
-      background: oklch(96.7% 0.0029 264.5);
+      background: var(--color-primary-soft-bg);
       display: flex;
       align-items: center;
       gap: 0.5rem;
@@ -28,21 +28,21 @@ const HISTORY_MODAL_TEMPLATE = `
       color: oklch(72.77% 0.1535 60.62);
     }
     .history-version {
-      border: 1px solid oklch(87.17% 0.0093 258.3);
+      border: 1px solid var(--color-border-strong);
       border-radius: 0.375rem;
       overflow: hidden;
     }
     .history-version-header {
       font-size: 0.75rem;
       font-weight: 600;
-      color: oklch(55.1% 0.0234 264.4);
+      color: var(--color-text-secondary);
       padding: 0.375rem 0.75rem;
-      background: oklch(96.7% 0.0029 264.5);
-      border-bottom: 1px solid oklch(87.17% 0.0093 258.3);
+      background: var(--color-primary-soft-bg);
+      border-bottom: 1px solid var(--color-border-strong);
     }
     .history-version-text {
       font-size: 0.9375rem;
-      color: oklch(21.01% 0.0318 264.7);
+      color: var(--color-text-primary);
       padding: 0.75rem;
       white-space: pre-wrap;
       word-break: break-word;
@@ -50,29 +50,9 @@ const HISTORY_MODAL_TEMPLATE = `
     }
     .loading-text {
       font-size: 0.875rem;
-      color: oklch(55.1% 0.0234 264.4);
+      color: var(--color-text-secondary);
       text-align: center;
       padding: 1rem 0;
-    }
-    @media (prefers-color-scheme: dark) {
-      .history-meta {
-        background: oklch(100% 0 none / 0.08);
-        color: oklch(80% 0.02 264.4);
-      }
-      .history-version {
-        border-color: oklch(100% 0 none / 0.1);
-      }
-      .history-version-header {
-        background: oklch(100% 0 none / 0.06);
-        border-bottom-color: oklch(100% 0 none / 0.1);
-        color: oklch(70% 0.02 264.4);
-      }
-      .history-version-text {
-        color: oklch(92% 0.01 264.7);
-      }
-      .loading-text {
-        color: oklch(70% 0.02 264.4);
-      }
     }
   </style>
   <div class="edit-modal-container" role="dialog" aria-modal="true" aria-labelledby="history-modal-title">

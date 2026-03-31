@@ -25,18 +25,18 @@ export class OptionsSettings extends HTMLElement {
         .card {
           overflow: hidden;
           border-radius: 0.5rem;
-          border: 1px solid rgba(255,255,255,0.1);
-          background: rgba(31,41,55,0.5);
+          border: 1px solid var(--color-border);
+          background: var(--color-surface-raised);
         }
         .card-header {
           padding: 1.25rem 1rem;
-          border-bottom: 1px solid rgba(255,255,255,0.1);
+          border-bottom: 1px solid var(--color-border);
         }
         .card-header h2 {
           margin: 0;
           font-size: 1rem;
           font-weight: 600;
-          color: white;
+          color: var(--color-text-primary);
         }
         .card-body {
           padding: 1.25rem 1rem;
@@ -44,28 +44,38 @@ export class OptionsSettings extends HTMLElement {
           flex-direction: column;
           gap: 1rem;
         }
-        label { display: block; font-size: 0.875rem; font-weight: 500; color: #f3f4f6; }
+        label {
+          display: block;
+          font-size: 0.875rem;
+          font-weight: 500;
+          color: var(--color-text-primary);
+        }
         input[type="number"], select {
           display: block; width: 100%; margin-top: 0.5rem; box-sizing: border-box;
           border-radius: 0.375rem; padding: 0.375rem 0.75rem;
-          font-size: 0.875rem; color: white;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.1);
+          font-size: 0.875rem;
+          color: var(--color-input-text);
+          background: var(--color-input-bg);
+          border: 1px solid var(--color-input-border);
           outline: none;
         }
         input[type="number"]:focus, select:focus {
-          border-color: #6366f1;
-          box-shadow: 0 0 0 1px #6366f1;
+          border-color: var(--color-input-focus);
+          box-shadow: 0 0 0 1px var(--color-input-focus);
         }
-        input[type="number"]::placeholder { color: #6b7280; }
-        .hint { margin: 0; font-size: 0.875rem; color: #9ca3af; }
+        input[type="number"]::placeholder { color: var(--color-input-placeholder); }
+        select option { background: var(--color-surface); color: var(--color-input-text); }
+        .hint { margin: 0; font-size: 0.875rem; color: var(--color-text-secondary); }
         button.save-btn {
           align-self: flex-start;
           border-radius: 0.375rem; padding: 0.5rem 0.75rem;
-          font-size: 0.875rem; font-weight: 600; color: white; cursor: pointer;
-          background: #6366f1; border: none;
+          font-size: 0.875rem; font-weight: 600; cursor: pointer;
+          color: var(--color-primary-text);
+          background: var(--color-primary);
+          border: none;
+          box-shadow: 0 1px 2px 0 oklch(0% 0 none / 0.05);
         }
-        button.save-btn:hover { background: #818cf8; }
+        button.save-btn:hover { background: var(--color-primary-hover); }
         button.save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
       </style>
       <div class="card">
