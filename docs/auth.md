@@ -93,6 +93,7 @@ On browsers where `browser.storage.session` is unavailable, the fallback is `bro
 ### Token Refresh Security
 
 The token refresh mechanism includes in-flight request deduplication to prevent race conditions and ensure consistent token state across concurrent refresh attempts.
+
 - DPoP private keys are stored as JWK in extension storage due to MV3 service-worker lifecycle constraints.
 - PKCE `state` is validated on callback to prevent CSRF.
 - Pending auth state prefers `browser.storage.session`; fallback local entries are TTL-cleaned on startup.
