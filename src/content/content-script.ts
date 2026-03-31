@@ -23,7 +23,14 @@ import {
   setIdentity,
   setStorage,
 } from './edited-post-cache';
-import { extractPostInfo, extractPostText, findPosts, updatePostText, type PostInfo } from './post-detector';
+import {
+  extractPostInfo,
+  extractPostText,
+  findPosts,
+  updatePostText,
+  updatePostTimestamp,
+  type PostInfo,
+} from './post-detector';
 import { buildUpdatedPostRecord, type EditablePostRecord, validateUpdatedPostRecord } from './post-editor';
 import './styles.css';
 import { ensureToastRegistered } from './toast';
@@ -813,6 +820,9 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
 
     modal.close();
     updatePostText(postElement, text);
+    if (postDateStrategy === 'update') {
+      updatePostTimestamp(postElement, validatedRecord.createdAt);
+    }
     // Normalize to DID form so cache lookups succeed regardless of whether the
     // post was found via handle-form or DID-form URL.
     const normalizedAtUri = normalizeCacheKey(info.atUri, info.repo);
@@ -820,7 +830,8 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
     // text on React re-renders. No setTimeout hack needed.
     setCached(normalizedAtUri, text, initialRecordText);
     recentRecordsCache.set(normalizedAtUri, { record: validatedRecord, cid: writeResponse.cid, savedAt: Date.now() });
-    showToast('Edit saved.');
+    const toastMsg = postDateStrategy === 'update' ? 'Edit saved. Post date updated.' : 'Edit saved.';
+    showToast(toastMsg);
     console.info(`${APP_NAME}: edit saved`, { atUri: normalizedAtUri, uri: writeResponse.uri, cid: writeResponse.cid });
   });
 };
