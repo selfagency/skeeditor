@@ -143,6 +143,58 @@ describe('auth-popup Web Component', () => {
 
       expect(el.shadowRoot?.querySelector('#add-pds-url')).toBeNull();
     });
+
+    it('shows manual labeler consent copy when pendingLabelerPrompt is true', async () => {
+      mockSendMessage([makeAccount({ isActive: true })]);
+      vi.mocked(browser.storage.local.get).mockResolvedValueOnce({ pendingLabelerPrompt: true });
+
+      const el = createElement();
+      await attach(el);
+
+      const bannerText = el.shadowRoot?.textContent ?? '';
+      const subscribeLink = el.shadowRoot?.querySelector<HTMLAnchorElement>('#subscribe-labeler');
+      const dismissButton = el.shadowRoot?.querySelector<HTMLButtonElement>('#dismiss-labeler-prompt');
+
+      expect(bannerText).toContain('opens Bluesky so you can subscribe there');
+      expect(subscribeLink?.textContent).toContain('Open labeler profile');
+      expect(dismissButton?.textContent).toContain('Not now');
+    });
+
+    it('clears pendingLabelerPrompt and hides banner when subscribe link is clicked', async () => {
+      mockSendMessage([makeAccount({ isActive: true })]);
+      vi.mocked(browser.storage.local.get).mockResolvedValueOnce({ pendingLabelerPrompt: true });
+
+      const el = createElement();
+      await attach(el);
+
+      const subscribeLink = el.shadowRoot?.querySelector<HTMLAnchorElement>('#subscribe-labeler');
+      expect(subscribeLink).not.toBeNull();
+
+      subscribeLink?.click();
+      await flushPromises();
+
+      expect(vi.mocked(browser.storage.local.remove)).toHaveBeenCalledWith('pendingLabelerPrompt');
+      expect(el.shadowRoot?.querySelector('#subscribe-labeler')).toBeNull();
+      expect(el.shadowRoot?.querySelector('#dismiss-labeler-prompt')).toBeNull();
+    });
+
+    it('clears pendingLabelerPrompt and hides banner when Not now is clicked', async () => {
+      mockSendMessage([makeAccount({ isActive: true })]);
+      vi.mocked(browser.storage.local.get).mockResolvedValueOnce({ pendingLabelerPrompt: true });
+
+      const el = createElement();
+      await attach(el);
+
+      const dismissButton = el.shadowRoot?.querySelector<HTMLButtonElement>('#dismiss-labeler-prompt');
+      expect(dismissButton).not.toBeNull();
+
+      dismissButton?.click();
+      await flushPromises();
+
+      expect(vi.mocked(browser.storage.local.remove)).toHaveBeenCalledWith('pendingLabelerPrompt');
+      expect(el.shadowRoot?.querySelector('#subscribe-labeler')).toBeNull();
+      expect(el.shadowRoot?.querySelector('#dismiss-labeler-prompt')).toBeNull();
+    });
   });
 
   describe('authenticated state (multiple accounts)', () => {
