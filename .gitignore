@@ -196,6 +196,7 @@ dist
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
+!.vscode/mcp.json
 !.vscode/extensions.json
 !.vscode/mcp.json
 !.vscode/*.code-snippets
