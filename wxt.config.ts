@@ -1,7 +1,28 @@
+import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import tailwindcss from '@tailwindcss/vite';
 import '@wxt-dev/auto-icons';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'wxt';
+
+const rootDir = dirname(fileURLToPath(import.meta.url));
+const packageJson = JSON.parse(readFileSync(resolve(rootDir, 'package.json'), 'utf8')) as { version: string };
+const extensionVersion = packageJson.version;
+
+const getExtensionCommitSha = (): string => {
+  try {
+    return execSync('git rev-parse --short=12 HEAD', {
+      cwd: rootDir,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+  } catch {
+    return 'unknown';
+  }
+};
+
+const extensionCommitSha = getExtensionCommitSha();
 
 export default defineConfig({
   srcDir: 'src',
@@ -22,7 +43,7 @@ export default defineConfig({
   },
   manifest: ctx => ({
     name: 'Skeeditor',
-    version: '0.1.0',
+    version: extensionVersion,
     description: 'Edit your own Bluesky posts directly on bsky.app.',
     incognito: 'not_allowed' as const,
     permissions: ['storage', 'tabs', 'alarms'] as const,
@@ -59,9 +80,13 @@ export default defineConfig({
   }),
   vite: () => ({
     plugins: [tailwindcss()],
+    define: {
+      __SKEEDITOR_VERSION__: JSON.stringify(extensionVersion),
+      __SKEEDITOR_COMMIT_SHA__: JSON.stringify(extensionCommitSha),
+    },
     resolve: {
       alias: {
-        '@src': resolve('./src'),
+        '@src': resolve(rootDir, 'src'),
       },
     },
   }),
