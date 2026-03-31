@@ -3,7 +3,7 @@ import globalStyles from '../shadow-styles.css?inline';
 const HISTORY_MODAL_TEMPLATE = `
   <style>
     :host {
-      display: flex;
+      display: none;
       flex-direction: column;
       position: fixed;
       inset: 0;
@@ -112,7 +112,6 @@ class EditHistoryModalImpl extends HTMLElement {
   private initialize(): void {
     if (this.versionsContainer) return;
     this.shadow.innerHTML = HISTORY_MODAL_TEMPLATE;
-    this.style.display = 'none';
 
     this.versionsContainer = this.shadow.querySelector<HTMLElement>('.history-versions-container');
     this.originalDateStrong = this.shadow.querySelector<HTMLElement>('.history-original-date strong');
@@ -223,14 +222,9 @@ class EditHistoryModalImpl extends HTMLElement {
   }
 }
 
-const historyModalRegistry =
-  globalThis.customElements ??
-  (Object.getPrototypeOf(globalThis) as { customElements?: CustomElementRegistry | null })?.customElements ??
-  null;
-if (historyModalRegistry && !historyModalRegistry.get('edit-history-modal')) {
-  historyModalRegistry.define('edit-history-modal', EditHistoryModalImpl);
+if (typeof customElements !== 'undefined' && !customElements.get('edit-history-modal')) {
+  customElements.define('edit-history-modal', EditHistoryModalImpl);
 }
 
-export const EditHistoryModal =
-  (historyModalRegistry?.get('edit-history-modal') as typeof EditHistoryModalImpl | undefined) ?? EditHistoryModalImpl;
-export type EditHistoryModal = InstanceType<typeof EditHistoryModal>;
+export { EditHistoryModalImpl as EditHistoryModal };
+export type EditHistoryModal = EditHistoryModalImpl;

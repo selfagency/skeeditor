@@ -5,7 +5,7 @@ import { graphemeLength } from '../shared/utils/text';
 const EDIT_MODAL_TEMPLATE = `
   <style>
     :host {
-      display: flex;
+      display: none;
       flex-direction: column;
       position: fixed;
       inset: 0;
@@ -91,7 +91,6 @@ class EditModalImpl extends HTMLElement {
   private initialize(): void {
     if (this.textarea) return;
     this.shadow.innerHTML = EDIT_MODAL_TEMPLATE;
-    this.style.display = 'none';
     this.textarea = this.shadow.querySelector<HTMLTextAreaElement>('textarea');
     this.charCount = this.shadow.querySelector<HTMLElement>('.char-count');
     this.saveButton = this.shadow.querySelector<HTMLButtonElement>('.save-button');
@@ -483,17 +482,13 @@ class EditModalImpl extends HTMLElement {
   }
 }
 
-const editModalRegistry =
-  globalThis.customElements ??
-  (Object.getPrototypeOf(globalThis) as { customElements?: CustomElementRegistry | null })?.customElements ??
-  null;
-if (editModalRegistry && !editModalRegistry.get('edit-modal')) {
-  editModalRegistry.define('edit-modal', EditModalImpl);
+// Register the custom element.  Use bare `customElements` (always available in
+// browsers).  The guard prevents double-registration when re-injected by WXT HMR.
+if (typeof customElements !== 'undefined' && !customElements.get('edit-modal')) {
+  customElements.define('edit-modal', EditModalImpl);
 }
 
-// Re-export the *registered* constructor so that `new EditModal()` always uses
-// the class known to the custom-element registry.  After vi.resetModules() the
-// module is re-evaluated but the registry still holds the original class – using
-// that class avoids jsdom's "Invalid constructor" error.
-export const EditModal = (editModalRegistry?.get('edit-modal') as typeof EditModalImpl | undefined) ?? EditModalImpl;
-export type EditModal = InstanceType<typeof EditModal>;
+// Export the class for typing.  Content scripts should create instances via
+// `document.createElement('edit-modal')` to guarantee the registry is used.
+export { EditModalImpl as EditModal };
+export type EditModal = EditModalImpl;

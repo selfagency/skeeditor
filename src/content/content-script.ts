@@ -9,8 +9,11 @@ import type {
   PutRecordResponse,
 } from '../shared/messages';
 import { sendMessage } from '../shared/messages';
-import { EditModal } from './edit-modal';
-import { EditHistoryModal } from './edit-history-modal';
+// Side-effect imports: ensure custom element registration runs (prevents tree-shaking).
+import './edit-modal';
+import './edit-history-modal';
+import type { EditModal } from './edit-modal';
+import type { EditHistoryModal } from './edit-history-modal';
 import {
   getCached,
   getCacheSize,
@@ -526,7 +529,7 @@ const getOrCreateEditModal = (): EditModal => {
     return activeModal;
   }
 
-  const modal = new EditModal();
+  const modal = document.createElement('edit-modal') as EditModal;
   modal.setAttribute('data-skeeditor-modal', 'true');
   document.body.appendChild(modal);
   activeModal = modal;
@@ -929,7 +932,7 @@ const getOrCreateHistoryModal = (): EditHistoryModal => {
   if (activeHistoryModal !== null && activeHistoryModal.isConnected) {
     return activeHistoryModal;
   }
-  const modal = new EditHistoryModal();
+  const modal = document.createElement('edit-history-modal') as EditHistoryModal;
   modal.setAttribute('data-skeeditor-history-modal', 'true');
   activeHistoryModal = modal;
   return modal;

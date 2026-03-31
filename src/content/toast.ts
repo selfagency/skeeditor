@@ -87,10 +87,6 @@ export class SkeeditorToast extends HTMLElement {
   }
 }
 
-const toastRegistry =
-  globalThis.customElements ??
-  (Object.getPrototypeOf(globalThis) as { customElements?: CustomElementRegistry | null })?.customElements ??
-  null;
-if (toastRegistry && !toastRegistry.get('skeeditor-toast')) {
-  toastRegistry.define('skeeditor-toast', SkeeditorToast);
+if (typeof customElements !== 'undefined' && !customElements.get('skeeditor-toast')) {
+  customElements.define('skeeditor-toast', SkeeditorToast);
 }
