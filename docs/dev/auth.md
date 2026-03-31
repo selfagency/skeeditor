@@ -148,17 +148,6 @@ The popup queries and switches accounts via the message layer — it never reads
 
 ---
 
-## Token refresh (`src/shared/auth/token-refresh.ts`)
-
-`TokenRefreshManager` proactively refreshes the access token before it expires:
-
-- Deduplicates concurrent refresh requests (only one in-flight at a time).
-- Retries on transient network errors.
-- Calls `sessionStore.set()` with the new tokens after a successful refresh.
-- Emits an `auth-session-invalidated` event on unrecoverable failures (e.g. refresh token revoked), which triggers a re-auth prompt in the popup.
-
----
-
 ## Required scopes
 
 | Scope                | Purpose                                           |

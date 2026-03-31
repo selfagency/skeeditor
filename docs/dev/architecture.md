@@ -35,7 +35,7 @@ Because the content script cannot make authenticated XRPC calls directly, it sen
 Runs as a Manifest V3 service worker (Chrome) or persistent background script (Firefox). It is the trusted core of the extension. Responsibilities:
 
 - **Session storage** — reads/writes OAuth sessions in `browser.storage.local` via `sessionStore`, keyed by DID (multi-account).
-- **Token refresh** — automatically refreshes expiring tokens via `TokenRefreshManager`.
+- **Token refresh** — automatically refreshes expiring tokens through `refreshAccessToken` in `src/shared/auth/auth-client.ts`.
 - **XRPC calls** — receives `GET_RECORD`, `CREATE_RECORD`, and `PUT_RECORD` messages from content/popup, makes the authenticated HTTP request, and returns the result.
 - **OAuth flow** — handles `AUTH_SIGN_IN`, `AUTH_SIGN_OUT`, `AUTH_CALLBACK`, `AUTH_REAUTHORIZE`, `AUTH_LIST_ACCOUNTS`, `AUTH_SWITCH_ACCOUNT`, `AUTH_SIGN_OUT_ACCOUNT`.
 - **Settings** — serves `GET_SETTINGS` / `SET_SETTINGS` to the options page.

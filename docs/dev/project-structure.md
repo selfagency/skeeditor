@@ -50,7 +50,6 @@ skeeditor/
 │   ├── content/
 │   │   ├── content-script.ts    # Main content script: auth, scanning, label push, DOM patching
 │   │   ├── post-detector.ts     # DOM scanning: finds posts across all bsky.app views; extracts PostInfo
-│   │   ├── post-badges.ts       # Injects Edit badge elements next to your posts
 │   │   ├── post-editor.ts       # Orchestrates GET_RECORD → edit modal → PUT_RECORD
 │   │   ├── edit-modal.ts        # In-page editor modal Web Component
 │   │   ├── edited-post-cache.ts # In-memory cache of edited post text; handle↔DID registry
@@ -81,10 +80,8 @@ skeeditor/
 │       │   ├── auth-client.ts   # OAuth PKCE client (initiate flow, exchange code, revoke)
 │       │   ├── pkce.ts          # generateCodeVerifier / generateCodeChallenge utilities
 │       │   ├── session-store.ts # Multi-account session store; keyed by DID in browser.storage.local
-│       │   ├── token-refresh.ts # TokenRefreshManager: deduplication, proactive refresh
 │       │   └── types.ts         # OAuthTokens, Session, AuthStatus types
 │       └── utils/
-│           ├── facet-offsets.ts # Recalculate facet byte offsets after text edits
 │           ├── facets.ts        # detectLinks / detectMentions / detectHashtags / buildFacets
 │           └── text.ts          # Text-manipulation helpers (grapheme count, etc.)
 │
