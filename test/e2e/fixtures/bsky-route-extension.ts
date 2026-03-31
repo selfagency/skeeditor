@@ -80,6 +80,14 @@ interface BskyRouteFixtures {
   routeXrpcPutRecord: (result: ReturnType<typeof makeMockPutRecordResult>) => Promise<void>;
 
   /**
+   * Intercept the XRPC putRecord endpoint, capture the request body, and
+   * respond with a success result. Returns the captured body for assertion.
+   */
+  capturePutRecord: (
+    result: ReturnType<typeof makeMockPutRecordResult>,
+  ) => Promise<{ getBody: () => Record<string, unknown> | null }>;
+
+  /**
    * Intercept the XRPC putRecord endpoint and respond with a 409 InvalidSwap
    * conflict error so the edit-modal shows the "please reload and try again" prompt.
    */
@@ -145,6 +153,22 @@ export const test = chromiumBase.extend<BskyRouteFixtures>({
           body: JSON.stringify(result),
         }),
       );
+    });
+  },
+
+  capturePutRecord: async ({ context }, use) => {
+    await use(async result => {
+      let captured: Record<string, unknown> | null = null;
+      await context.route(/\/xrpc\/com\.atproto\.repo\.putRecord/, async route => {
+        const body = route.request().postDataJSON() as Record<string, unknown>;
+        captured = body;
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(result),
+        });
+      });
+      return { getBody: () => captured };
     });
   },
 

@@ -6,8 +6,8 @@ type: feature
 priority: normal
 created_at: 2026-03-31T14:45:43Z
 updated_at: 2026-03-31T14:45:58Z
+id: skeeditor-l11x
 ---
-
 Refactor all UI elements (EditModal, EditHistoryModal, options page sections) to proper web components following the existing auth-popup/account-card/toast patterns.
 
 branch: feat/skeeditor-l11x-refactor-ui-web-components

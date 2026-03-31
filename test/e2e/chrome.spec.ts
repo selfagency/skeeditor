@@ -190,3 +190,99 @@ bskyTest(
     await expect(statusMsg).toContainText('This post changed while you were editing.');
   },
 );
+
+/**
+ * Verifies that when postDateStrategy is 'update', the PUT_RECORD request body
+ * contains a createdAt that has been updated to approximately the current time —
+ * not the original '2026-03-25T12:00:00.000Z' from the mock GET_RECORD response.
+ *
+ * Per the Bluesky Timestamps spec (https://docs.bsky.app/docs/advanced-guides/timestamps),
+ * sortAt = min(createdAt, indexedAt). Updating createdAt past the original indexedAt
+ * may not change the visible display date unless the AppView also updates indexedAt.
+ * This test confirms the record body IS correctly mutated by the extension.
+ */
+bskyTest(
+  'PUT_RECORD body contains updated createdAt when postDateStrategy is update',
+  async ({ page, setAuthState, routeBskyApp, routeXrpcGetRecord, capturePutRecord, context, extensionId }) => {
+    // Set postDateStrategy to 'update' in storage before navigating.
+    const popupPage = await context.newPage();
+    await popupPage.goto(`chrome-extension://${extensionId}/popup.html`);
+    await popupPage.evaluate(async () => {
+      await chrome.storage.local.set({ settings: { editTimeLimit: null, postDateStrategy: 'update' } });
+    });
+    await popupPage.close();
+
+    await setAuthState(TEST_DID);
+    await routeBskyApp();
+    await routeXrpcGetRecord(makeMockGetRecordResult());
+    const { getBody } = await capturePutRecord(makeMockPutRecordResult());
+
+    const before = Date.now();
+    await page.goto(`https://bsky.app/profile/${TEST_DID}/post/${TEST_RKEY}`);
+
+    const editButton = page.locator(`[data-at-uri="${TEST_AT_URI}"] .skeeditor-edit-button`);
+    await expect(editButton).toBeVisible({ timeout: 10_000 });
+    await editButton.click();
+
+    const modal = page.locator('edit-modal');
+    await expect(modal.locator('textarea')).toBeVisible({ timeout: 5_000 });
+    await modal.locator('textarea').fill('Updated text with new date');
+    await modal.locator('.save-button').click();
+    await expect(modal).not.toBeAttached({ timeout: 5_000 });
+
+    const body = getBody();
+    expect(body).not.toBeNull();
+    const record = (body as Record<string, unknown>)['record'] as Record<string, unknown>;
+    const savedCreatedAt = record['createdAt'] as string;
+
+    // Must NOT be the original from the mock GET_RECORD response.
+    expect(savedCreatedAt).not.toBe('2026-03-25T12:00:00.000Z');
+
+    // Must be a valid ISO datetime approximately equal to now.
+    const savedMs = new Date(savedCreatedAt).getTime();
+    const after = Date.now();
+    expect(savedMs).toBeGreaterThanOrEqual(before - 5000);
+    expect(savedMs).toBeLessThanOrEqual(after + 5000);
+  },
+);
+
+/**
+ * Verifies that when postDateStrategy is 'preserve', the PUT_RECORD body
+ * keeps the original createdAt from the record unchanged.
+ */
+bskyTest(
+  'PUT_RECORD body preserves createdAt when postDateStrategy is preserve',
+  async ({ page, setAuthState, routeBskyApp, routeXrpcGetRecord, capturePutRecord, context, extensionId }) => {
+    // Default is now 'preserve', but set it explicitly to be unambiguous.
+    const popupPage = await context.newPage();
+    await popupPage.goto(`chrome-extension://${extensionId}/popup.html`);
+    await popupPage.evaluate(async () => {
+      await chrome.storage.local.set({ settings: { editTimeLimit: null, postDateStrategy: 'preserve' } });
+    });
+    await popupPage.close();
+
+    await setAuthState(TEST_DID);
+    await routeBskyApp();
+    await routeXrpcGetRecord(makeMockGetRecordResult());
+    const { getBody } = await capturePutRecord(makeMockPutRecordResult());
+
+    await page.goto(`https://bsky.app/profile/${TEST_DID}/post/${TEST_RKEY}`);
+
+    const editButton = page.locator(`[data-at-uri="${TEST_AT_URI}"] .skeeditor-edit-button`);
+    await expect(editButton).toBeVisible({ timeout: 10_000 });
+    await editButton.click();
+
+    const modal = page.locator('edit-modal');
+    await expect(modal.locator('textarea')).toBeVisible({ timeout: 5_000 });
+    await modal.locator('textarea').fill('Updated text preserving original date');
+    await modal.locator('.save-button').click();
+    await expect(modal).not.toBeAttached({ timeout: 5_000 });
+
+    const body = getBody();
+    expect(body).not.toBeNull();
+    const record = (body as Record<string, unknown>)['record'] as Record<string, unknown>;
+
+    // Must be exactly the original createdAt from the mock GET_RECORD response.
+    expect(record['createdAt']).toBe('2026-03-25T12:00:00.000Z');
+  },
+);

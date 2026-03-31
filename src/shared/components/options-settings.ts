@@ -94,14 +94,15 @@ export class OptionsSettings extends HTMLElement {
           <div>
             <label for="post-date-strategy">Post date behavior on edit</label>
             <select id="post-date-strategy">
-              <option value="update">Update post date on edit (recommended)</option>
-              <option value="preserve">Preserve original post date</option>
+              <option value="preserve">Preserve original post date (recommended)</option>
+              <option value="update">Update post date to time of edit</option>
             </select>
           </div>
           <p class="hint">
-            Tradeoff: updating the post timestamp makes the edit visible in standard Bluesky clients, but Bluesky may
-            flag the post as having a tampered date. Preserving the original timestamp avoids that change, but then only
-            Skeeditor users reliably see the edited text.
+            Bluesky sorts posts using the earlier of <code>createdAt</code> and <code>indexedAt</code>.
+            Preserving the original date keeps the post in its original feed position.
+            Updating the date changes it in the stored record and may re-sort the post if Bluesky
+            re-indexes it, but Bluesky may flag an updated timestamp as tampered.
           </p>
 
           <div>
