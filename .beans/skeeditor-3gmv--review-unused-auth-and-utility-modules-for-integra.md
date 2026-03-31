@@ -7,6 +7,8 @@ priority: normal
 created_at: 2026-03-30T14:04:21Z
 updated_at: 2026-03-31T01:34:39Z
 parent: skeeditor-d3m1
+branch: fix/3gmv-review-unused-auth-utility-modules
+pr: 92
 ---
 
 Several modules appear under-integrated or unused in production paths. Decide whether to integrate them properly, document them as future-facing, or remove them to reduce maintenance overhead.
