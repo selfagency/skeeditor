@@ -124,6 +124,26 @@ describe('validateEmitAuth', () => {
     );
   });
 
+  it('normalizes a trailing slash in the PDS serviceEndpoint before calling getSession', async () => {
+    const jwt = makeJwt({ sub: DID_PLC, iat: 1_000_000, exp: 9_999_999 });
+    const didDocWithSlash = {
+      id: DID_PLC,
+      service: [
+        {
+          id: '#atproto_pds',
+          type: 'AtprotoPersonalDataServer',
+          serviceEndpoint: `${PDS_URL}/`,
+        },
+      ],
+    };
+    const fetchFn = vi.fn(makeFetch({ sessionStatus: 200, didDoc: didDocWithSlash }));
+
+    const result = await validateEmitAuth(`Bearer ${jwt}`, VALID_PAYLOAD, fetchFn);
+
+    expect(result).toEqual({ valid: true });
+    expect(fetchFn).toHaveBeenCalledWith(`${PDS_URL}/xrpc/com.atproto.server.getSession`, expect.any(Object));
+  });
+
   // ── Invalid signature (rejected by issuer) ──────────────────────────────
 
   it('rejects a token whose signature is rejected by the PDS', async () => {

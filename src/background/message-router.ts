@@ -79,25 +79,42 @@ function emitLabelTrigger(
 ): void {
   log.debug('emit-label-trigger', { uri, cid, did, dpopEnabled: dpopEnabled !== false });
   void (async () => {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
+    const body = JSON.stringify({ uri, cid, did });
 
     if (dpopEnabled === false) {
-      headers['Authorization'] = `Bearer ${accessToken}`;
-    } else {
-      const pdsUrl = await getCurrentPdsUrl(did);
-      const sessionUrl = `${pdsUrl.replace(/\/+$/u, '')}/xrpc/com.atproto.server.getSession`;
-      const proof = await createDpopProof(await getDpopKeyPair(did), 'GET', sessionUrl, accessToken);
-      headers['Authorization'] = `DPoP ${accessToken}`;
-      headers['DPoP'] = proof;
+      return fetch(LABELER_EMIT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body,
+      });
     }
 
-    return fetch(LABELER_EMIT_URL, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ uri, cid, did }),
-    });
+    const pdsUrl = await getCurrentPdsUrl(did);
+    const sessionUrl = `${pdsUrl.replace(/\/+$/u, '')}/xrpc/com.atproto.server.getSession`;
+    const keyPair = await getDpopKeyPair(did);
+
+    const makeRequest = async (nonce?: string): Promise<Response> => {
+      const proof = await createDpopProof(keyPair, 'GET', sessionUrl, accessToken, nonce);
+      return fetch(LABELER_EMIT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `DPoP ${accessToken}`,
+          DPoP: proof,
+        },
+        body,
+      });
+    };
+
+    let res = await makeRequest();
+    if (res.status === 400 || res.status === 401) {
+      const nonce = res.headers.get('DPoP-Nonce');
+      if (nonce !== null) res = await makeRequest(nonce);
+    }
+    return res;
   })()
     .then(async res => {
       const body = await res.text().catch(() => '');

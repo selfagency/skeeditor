@@ -137,7 +137,7 @@ export async function validateEmitAuth(
       headers['DPoP'] = dpopHeader;
     }
 
-    const sessionResp = await fetchFn(`${pdsEndpoint}/xrpc/com.atproto.server.getSession`, {
+    const sessionResp = await fetchFn(`${pdsEndpoint.replace(/\/+$/u, '')}/xrpc/com.atproto.server.getSession`, {
       headers,
     });
 

@@ -120,6 +120,12 @@ const makeDeps = (overrides: Partial<RouterDeps> = {}): RouterDeps => ({
   ...overrides,
 });
 
+/** Flush the microtask queue, allowing fire-and-forget async operations to settle. */
+const flushPromises = async (): Promise<void> => {
+  await Promise.resolve();
+  await Promise.resolve();
+};
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -956,8 +962,7 @@ describe('handleMessage', () => {
         deps,
       );
 
-      await Promise.resolve();
-      await Promise.resolve();
+      await flushPromises();
 
       expect(fetchSpy).toHaveBeenCalledWith(constants.LABELER_EMIT_URL, expect.any(Object));
       getCurrentPdsUrlSpy.mockRestore();
@@ -987,8 +992,7 @@ describe('handleMessage', () => {
         deps,
       );
 
-      await Promise.resolve();
-      await Promise.resolve();
+      await flushPromises();
 
       expect(fetchSpy).toHaveBeenCalledWith(constants.LABELER_EMIT_URL, expect.any(Object));
       getCurrentPdsUrlSpy.mockRestore();
@@ -1019,8 +1023,7 @@ describe('handleMessage', () => {
         deps,
       );
 
-      await Promise.resolve();
-      await Promise.resolve();
+      await flushPromises();
 
       const [, init] = fetchSpy.mock.calls[0]!;
       const headers = (init as RequestInit).headers as Record<string, string>;
@@ -1053,8 +1056,7 @@ describe('handleMessage', () => {
         deps,
       );
 
-      await Promise.resolve();
-      await Promise.resolve();
+      await flushPromises();
 
       const [, init] = fetchSpy.mock.calls[0]!;
       const headers = (init as RequestInit).headers as Record<string, string>;
@@ -1087,8 +1089,7 @@ describe('handleMessage', () => {
         deps,
       );
 
-      await Promise.resolve();
-      await Promise.resolve();
+      await flushPromises();
 
       const [, init] = fetchSpy.mock.calls[0]!;
       const body = JSON.parse((init as RequestInit).body as string) as Record<string, unknown>;

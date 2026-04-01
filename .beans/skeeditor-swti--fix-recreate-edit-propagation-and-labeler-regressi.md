@@ -2,13 +2,12 @@
 # skeeditor-swti
 branch: fix/recreate-edit-labeler-regression
 pr: https://github.com/selfagency/skeeditor/pull/96
-title: fix recreate edit propagation and labeler regressi
+title: fix recreate edit propagation and labeler regression
 status: completed
 type: task
 priority: critical
 created_at: 2026-04-01T17:40:27Z
 updated_at: 2026-04-01T17:40:27Z
-id: skeeditor-swti
 ---
 ## Context
 Users report edited posts still do not visibly change across clients, even after recent save-strategy changes. The labeler flow has also stopped working.
