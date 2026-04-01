@@ -16,20 +16,21 @@ const DEFAULT_SETTINGS: ExtensionSettings = {
   saveStrategy: 'recreate',
 };
 
+export const EDIT_TIME_LIMIT_OPTIONS = [0.5, 1, 3, 5, 15, 30] as const;
+
 const getStorage = (): typeof browser.storage.local => {
   return browser.storage.local ?? browser.storage.sync;
 };
 
 export const EDIT_TIME_LIMIT_MIN = 0.5;
-export const EDIT_TIME_LIMIT_MAX = 5;
+export const EDIT_TIME_LIMIT_MAX = 30;
 
 export const isValidEditTimeLimit = (value: unknown): value is number | null => {
   return (
     value === null ||
     (typeof value === 'number' &&
       Number.isFinite(value) &&
-      value >= EDIT_TIME_LIMIT_MIN &&
-      value <= EDIT_TIME_LIMIT_MAX)
+      EDIT_TIME_LIMIT_OPTIONS.includes(value as (typeof EDIT_TIME_LIMIT_OPTIONS)[number]))
   );
 };
 

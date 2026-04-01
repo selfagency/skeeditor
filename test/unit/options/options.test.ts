@@ -291,7 +291,7 @@ describe('options page', () => {
       vi.mocked(browser.runtime.sendMessage).mockImplementation(async (msg: unknown) => {
         const type = (msg as { type?: string })?.type;
         if (type === 'AUTH_LIST_ACCOUNTS') return { accounts: [] };
-        if (type === 'GET_SETTINGS') return { editTimeLimit: 2.5, saveStrategy: 'edit' };
+        if (type === 'GET_SETTINGS') return { editTimeLimit: 3, saveStrategy: 'edit' };
         return { ok: true };
       });
 
@@ -299,8 +299,8 @@ describe('options page', () => {
       document.body.appendChild(settingsEl);
       await flushPromises();
 
-      const input = settingsEl.shadowRoot?.getElementById('edit-time-limit') as HTMLInputElement;
-      expect(input.value).toBe('2.5');
+      const select = settingsEl.shadowRoot?.getElementById('edit-time-limit') as HTMLSelectElement;
+      expect(select.value).toBe('3');
     });
 
     it('populates save strategy from GET_SETTINGS on load', async () => {
@@ -322,23 +322,23 @@ describe('options page', () => {
     it('sends SET_SETTINGS with the entered value when save is clicked', async () => {
       await setupComponents([]);
 
-      const input = settingsEl.shadowRoot?.getElementById('edit-time-limit') as HTMLInputElement;
-      input.value = '2';
+      const select = settingsEl.shadowRoot?.getElementById('edit-time-limit') as HTMLSelectElement;
+      select.value = '3';
 
       (settingsEl.shadowRoot?.getElementById('save-settings') as HTMLButtonElement)?.click();
       await flushPromises();
 
       expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({
         type: 'SET_SETTINGS',
-        settings: { editTimeLimit: 2, saveStrategy: 'edit' },
+        settings: { editTimeLimit: 3, saveStrategy: 'edit' },
       });
     });
 
     it('sends SET_SETTINGS with null when edit-time-limit is left blank', async () => {
       await setupComponents([]);
 
-      const input = settingsEl.shadowRoot?.getElementById('edit-time-limit') as HTMLInputElement;
-      input.value = '';
+      const select = settingsEl.shadowRoot?.getElementById('edit-time-limit') as HTMLSelectElement;
+      select.value = '';
 
       (settingsEl.shadowRoot?.getElementById('save-settings') as HTMLButtonElement)?.click();
       await flushPromises();

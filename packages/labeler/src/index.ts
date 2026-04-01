@@ -65,7 +65,8 @@ function corsHeaders(): HeadersInit {
   return {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Authorization, Content-Type, DPoP',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type, DPoP, dpop',
+    'Access-Control-Max-Age': '86400',
   };
 }
 

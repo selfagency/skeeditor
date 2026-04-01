@@ -55,6 +55,21 @@ html.theme--dim {
   --skeeditor-primary-hover: #4d8aff;
 }
 
+.skeeditor-edit-button {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  min-height: 2rem;
+  line-height: 1;
+  color: var(--skeeditor-text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+}
+
 .skeeditor-edit-button[data-skeeditor-fallback='true'] {
   appearance: none;
   display: inline-flex;
@@ -92,4 +107,6 @@ html.theme--dim {
   width: 16px;
   height: 16px;
   flex-shrink: 0;
+  stroke: currentColor;
+  pointer-events: none;
 }

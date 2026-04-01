@@ -16,7 +16,14 @@ vi.mock('wxt/browser', () => ({
   },
 }));
 
-import { APP_BSKY_FEED_POST_COLLECTION, APP_NAME, BSKY_APP_ORIGIN, getSettings } from '@src/shared/constants';
+import {
+  APP_BSKY_FEED_POST_COLLECTION,
+  APP_NAME,
+  BSKY_APP_ORIGIN,
+  EDIT_TIME_LIMIT_OPTIONS,
+  getSettings,
+  isValidEditTimeLimit,
+} from '@src/shared/constants';
 import { browser } from 'wxt/browser';
 
 describe('shared constants', () => {
@@ -39,5 +46,11 @@ describe('shared constants', () => {
       editTimeLimit: null,
       saveStrategy: 'recreate',
     });
+  });
+
+  it('only accepts supported edit time limit options', () => {
+    expect(EDIT_TIME_LIMIT_OPTIONS).toEqual([0.5, 1, 3, 5, 15, 30]);
+    expect(isValidEditTimeLimit(3)).toBe(true);
+    expect(isValidEditTimeLimit(2.5)).toBe(false);
   });
 });

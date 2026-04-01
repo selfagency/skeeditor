@@ -37,6 +37,8 @@ describe('labeler worker routes', () => {
     expect(response.headers.get('Access-Control-Allow-Headers')).toContain('Authorization');
     expect(response.headers.get('Access-Control-Allow-Headers')).toContain('Content-Type');
     expect(response.headers.get('Access-Control-Allow-Headers')).toContain('DPoP');
+    expect(response.headers.get('Access-Control-Allow-Headers')).toContain('dpop');
+    expect(response.headers.get('Access-Control-Max-Age')).toBe('86400');
   });
 
   it('serves getServices with a detailed view for the configured labeler DID', async () => {

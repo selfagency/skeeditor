@@ -316,7 +316,7 @@ describe('handleMessage', () => {
 
     it('rejects invalid settings payloads', async () => {
       const result = await handleMessage(
-        { type: 'SET_SETTINGS', settings: { editTimeLimit: 10, saveStrategy: 'edit' } },
+        { type: 'SET_SETTINGS', settings: { editTimeLimit: 2.5, saveStrategy: 'edit' } },
         makeDeps(),
       );
 

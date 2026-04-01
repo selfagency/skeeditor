@@ -100,9 +100,9 @@ export class AccountCard extends HTMLElement {
         ${globalStyles}
         :host { display: block; }
         .account-row {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          align-items: start;
           gap: 0.75rem;
         }
         .account-label {
@@ -113,9 +113,8 @@ export class AccountCard extends HTMLElement {
           gap: 0.375rem;
         }
         .account-name {
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
+          white-space: normal;
+          overflow-wrap: anywhere;
           font-size: 0.875rem;
           color: var(--color-text-primary);
         }
@@ -123,6 +122,7 @@ export class AccountCard extends HTMLElement {
           font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
           font-size: 0.75rem;
           color: var(--color-text-secondary);
+          word-break: break-all;
         }
         .active-indicator {
           margin-left: 0.125rem;
@@ -133,9 +133,19 @@ export class AccountCard extends HTMLElement {
         }
         .actions {
           display: flex;
+          flex-wrap: wrap;
           flex-shrink: 0;
           align-items: center;
+          justify-content: flex-end;
           gap: 0.5rem;
+        }
+        @media (max-width: 32rem) {
+          .account-row {
+            grid-template-columns: minmax(0, 1fr);
+          }
+          .actions {
+            justify-content: flex-start;
+          }
         }
         .btn {
           display: inline-flex;

@@ -1,10 +1,15 @@
-import { EDIT_TIME_LIMIT_MAX, EDIT_TIME_LIMIT_MIN } from '../constants';
+import { EDIT_TIME_LIMIT_MAX, EDIT_TIME_LIMIT_MIN, EDIT_TIME_LIMIT_OPTIONS } from '../constants';
 import { sendMessage } from '../messages';
 import { showOptionsToast } from './options-toast';
 
+const formatEditTimeLimitLabel = (minutes: number): string => {
+  if (minutes === 0.5) return '30 seconds';
+  return minutes === 1 ? '1 minute' : `${minutes} minutes`;
+};
+
 export class OptionsSettings extends HTMLElement {
   private readonly root: ShadowRoot;
-  private editTimeLimitInput: HTMLInputElement | null = null;
+  private editTimeLimitSelect: HTMLSelectElement | null = null;
   private saveStrategySelect: HTMLSelectElement | null = null;
   private saveButton: HTMLButtonElement | null = null;
 
@@ -20,6 +25,10 @@ export class OptionsSettings extends HTMLElement {
   }
 
   private render(): void {
+    const editTimeLimitOptions = EDIT_TIME_LIMIT_OPTIONS.map(
+      value => `<option value="${value}">${formatEditTimeLimitLabel(value)}</option>`,
+    ).join('');
+
     this.root.innerHTML = `
       <style>
         :host { display: block; }
@@ -52,7 +61,7 @@ export class OptionsSettings extends HTMLElement {
           font-weight: 500;
           color: var(--color-text-primary);
         }
-        input[type="number"], select {
+        select {
           display: block; width: 100%; margin-top: 0.5rem; box-sizing: border-box;
           border-radius: var(--radius-control); padding: 0.5rem 0.75rem;
           font-size: 0.875rem;
@@ -61,11 +70,10 @@ export class OptionsSettings extends HTMLElement {
           border: 1px solid var(--color-input-border);
           outline: none;
         }
-        input[type="number"]:focus, select:focus {
+        select:focus {
           border-color: var(--color-input-focus);
           box-shadow: 0 0 0 1px var(--color-input-focus);
         }
-        input[type="number"]::placeholder { color: var(--color-input-placeholder); }
         select option { background: var(--color-surface); color: var(--color-input-text); }
         .hint { margin: 0; font-size: 0.875rem; color: var(--color-text-secondary); }
         button.save-btn {
@@ -84,13 +92,14 @@ export class OptionsSettings extends HTMLElement {
         <div class="card-header"><h2>Extension Settings</h2></div>
         <div class="card-body">
           <div>
-            <label for="edit-time-limit">Edit time limit (minutes)</label>
-            <input type="number" id="edit-time-limit"
-              min="${EDIT_TIME_LIMIT_MIN}" max="${EDIT_TIME_LIMIT_MAX}" step="0.5"
-              placeholder="Leave blank to disable" />
+            <label for="edit-time-limit">Edit time limit</label>
+            <select id="edit-time-limit">
+              <option value="">No limit</option>
+              ${editTimeLimitOptions}
+            </select>
           </div>
           <p class="hint">
-            Leave blank to disable. When set, posts older than the configured window cannot be edited.
+            When set, posts older than the selected window cannot be edited.
           </p>
 
           <div>
@@ -106,7 +115,8 @@ export class OptionsSettings extends HTMLElement {
             reliably makes Bluesky/AppView surface the change across clients. This also means the recreated
             post loses its existing likes and reposts. <strong>Edit record</strong>
             keeps the existing record identity and preserves the original post timestamp, but Bluesky may
-            not visibly surface the change outside your local session.
+            not visibly refresh its cached view. Skeeditor users and other appviews that do not rely on
+            Bluesky's cache can still see the changed text sooner.
           </p>
 
           <div>
@@ -116,7 +126,7 @@ export class OptionsSettings extends HTMLElement {
       </div>
     `;
 
-    this.editTimeLimitInput = this.root.getElementById('edit-time-limit') as HTMLInputElement;
+    this.editTimeLimitSelect = this.root.getElementById('edit-time-limit') as HTMLSelectElement;
     this.saveStrategySelect = this.root.getElementById('save-strategy') as HTMLSelectElement;
     this.saveButton = this.root.getElementById('save-settings') as HTMLButtonElement;
   }
@@ -126,11 +136,11 @@ export class OptionsSettings extends HTMLElement {
   }
 
   private async loadSettings(): Promise<void> {
-    if (!this.editTimeLimitInput || !this.saveStrategySelect) return;
+    if (!this.editTimeLimitSelect || !this.saveStrategySelect) return;
     try {
       const response = await sendMessage({ type: 'GET_SETTINGS' });
       if (!('error' in response)) {
-        this.editTimeLimitInput.value = response.editTimeLimit === null ? '' : String(response.editTimeLimit);
+        this.editTimeLimitSelect.value = response.editTimeLimit === null ? '' : String(response.editTimeLimit);
         this.saveStrategySelect.value = response.saveStrategy;
       }
     } catch (error) {
@@ -139,10 +149,10 @@ export class OptionsSettings extends HTMLElement {
   }
 
   private async saveSettings(): Promise<void> {
-    if (!this.editTimeLimitInput || !this.saveStrategySelect || !this.saveButton) return;
+    if (!this.editTimeLimitSelect || !this.saveStrategySelect || !this.saveButton) return;
 
     const saveStrategy = this.saveStrategySelect.value === 'recreate' ? 'recreate' : 'edit';
-    const rawEditTimeLimit = this.editTimeLimitInput.value.trim();
+    const rawEditTimeLimit = this.editTimeLimitSelect.value.trim();
     const editTimeLimit = rawEditTimeLimit.length === 0 ? null : Number.parseFloat(rawEditTimeLimit);
 
     if (
@@ -169,7 +179,7 @@ export class OptionsSettings extends HTMLElement {
       this.emitStatus(
         editTimeLimit === null
           ? `Settings saved. Edit time limit disabled. Save strategy: ${saveStrategyLabel}.`
-          : `Settings saved. Edit time limit: ${editTimeLimit} minutes. Save strategy: ${saveStrategyLabel}.`,
+          : `Settings saved. Edit time limit: ${formatEditTimeLimitLabel(editTimeLimit)}. Save strategy: ${saveStrategyLabel}.`,
         'success',
       );
     } catch (error) {

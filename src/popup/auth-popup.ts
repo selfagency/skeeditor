@@ -90,7 +90,7 @@ class AuthPopup extends HTMLElement {
 
   private template(): string {
     const style = `<style>${globalStyles}
-      :host { display: block; color: var(--color-text-primary); }
+      :host { display: block; color: var(--color-text-primary); min-width: 22rem; }
       .popup-section { display: flex; flex-direction: column; gap: 1rem; padding: 1rem; }
       .loading-state { display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
       .muted { color: var(--color-text-secondary); font-size: 0.875rem; }
