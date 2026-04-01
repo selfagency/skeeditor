@@ -285,4 +285,30 @@ describe('message router integration: PUT_RECORD', () => {
 
     expect(result).toMatchObject({ error: expect.any(String) });
   });
+
+  it('returns PUT_RECORD_SUCCESS when RECREATE_RECORD completes via applyWrites', async () => {
+    server.use(
+      http.post(`${BSKY_PDS_URL}/xrpc/com.atproto.repo.applyWrites`, () =>
+        HttpResponse.json({
+          results: [
+            { $type: 'com.atproto.repo.applyWrites#deleteResult' },
+            { $type: 'com.atproto.repo.applyWrites#createResult', uri: TEST_AT_URI, cid: TEST_CID_NEW },
+          ],
+        }),
+      ),
+    );
+
+    const result = await handleMessage(
+      {
+        type: 'RECREATE_RECORD',
+        repo: TEST_DID,
+        collection: TEST_COLLECTION,
+        rkey: TEST_RKEY,
+        record: { ...TEST_RECORD, text: 'Recreated text', createdAt: new Date().toISOString() },
+      },
+      makeRealDeps(),
+    );
+
+    expect(result).toEqual({ type: 'PUT_RECORD_SUCCESS', uri: TEST_AT_URI, cid: TEST_CID_NEW });
+  });
 });

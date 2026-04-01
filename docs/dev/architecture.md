@@ -10,7 +10,7 @@ graph TB
         CS["Content Script<br/>(bsky.app page)<br/>• Detects posts<br/>• Injects Edit btn<br/>• Shows modal"]
         BG["Background Worker<br/>(service worker)<br/>• Stores sessions<br/>• Makes XRPC calls<br/>• Refreshes tokens<br/>• Labeler checks"]
         PU["Popup<br/>(toolbar button)<br/>• Sign In / Out<br/>• Account switching<br/>• Auth status<br/>• Labeler consent<br/>• Options link"]
-        OP["Options Page<br/>(full tab)<br/>• Edit time limit"]
+        OP["Options Page<br/>(full tab)<br/>• Edit time limit<br/>• Save strategy"]
     end
 
     CS <-->|"messages"| BG
@@ -36,7 +36,7 @@ Runs as a Manifest V3 service worker (Chrome) or persistent background script (F
 
 - **Session storage** — reads/writes OAuth sessions in `browser.storage.local` via `sessionStore`, keyed by DID (multi-account).
 - **Token refresh** — automatically refreshes expiring tokens through `refreshAccessToken` in `src/shared/auth/auth-client.ts`.
-- **XRPC calls** — receives `GET_RECORD`, `CREATE_RECORD`, and `PUT_RECORD` messages from content/popup, makes the authenticated HTTP request, and returns the result.
+- **XRPC calls** — receives `GET_RECORD`, `CREATE_RECORD`, `PUT_RECORD`, and `RECREATE_RECORD` messages from content/popup, makes the authenticated HTTP request, and returns the result.
 - **OAuth flow** — handles `AUTH_SIGN_IN`, `AUTH_SIGN_OUT`, `AUTH_CALLBACK`, `AUTH_REAUTHORIZE`, `AUTH_LIST_ACCOUNTS`, `AUTH_SWITCH_ACCOUNT`, `AUTH_SIGN_OUT_ACCOUNT`.
 - **Settings** — serves `GET_SETTINGS` / `SET_SETTINGS` to the options page.
 - **Labeler** — after sign-in, runs `CHECK_LABELER_SUBSCRIPTION` to decide whether to show the consent dialog.
@@ -58,6 +58,7 @@ The `<auth-popup>` Web Component UI rendered when the user clicks the toolbar bu
 A full-tab settings page accessible from the popup. Currently manages:
 
 - **Edit time limit** — the window after a post is created during which the Edit button is visible (0.5–5 minutes, or unlimited).
+- **Save strategy** — whether saves use an in-place `PUT_RECORD` edit or an atomic `applyWrites` recreate.
 
 Settings are persisted in `browser.storage.local` under `"settings"` via the `GET_SETTINGS` / `SET_SETTINGS` messages.
 
@@ -73,8 +74,8 @@ flowchart TD
     D --> E["background → content-script:\nrecord { text, facets, cid }"]
     E --> F["edit-modal opens, user types"]
     F --> G["User clicks Save"]
-    G --> H["detectFacets(newText)\nsends PUT_RECORD { record, swapCid } → background"]
-    H --> I["background: XrpcClient.putRecordWithSwap → bsky.social"]
+    G --> H["detectFacets(newText)\nsends PUT_RECORD or RECREATE_RECORD → background"]
+    H --> I["background: XrpcClient.putRecordWithSwap or recreateRecord → PDS"]
     I --> J{"Result"}
     J -->|"Success"| K["content-script updates DOM"]
     J -->|"Conflict"| L["content-script shows conflict UI"]
@@ -129,7 +130,9 @@ Browser API differences are isolated in `src/platform/<browser>/`. Shared code a
 
 ### Optimistic concurrency via CID
 
-`putRecord` passes the CID from the fetched record as a `swapCid`. The PDS rejects writes where the record has changed, preventing silent overwrites. The extension surfaces the conflict to the user rather than silently discarding either version.
+When the user selects **Edit record**, `putRecord` passes the CID from the fetched record as a `swapCid`. The PDS rejects writes where the record has changed, preventing silent overwrites. The extension surfaces the conflict to the user rather than silently discarding either version.
+
+When the user selects **Recreate record**, the background worker uses `com.atproto.repo.applyWrites` to atomically delete and recreate the post at the same `rkey`. This path refreshes `createdAt` and is more behaviorally visible in Bluesky, but it is intentionally presented as the more invasive option.
 
 ### Labeler subscription is opt-in
 

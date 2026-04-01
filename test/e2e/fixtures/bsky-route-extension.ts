@@ -39,6 +39,10 @@ interface MockPutRecordResult {
   cid: string;
 }
 
+interface MockApplyWritesResult {
+  results: Array<Record<string, unknown>>;
+}
+
 export const makeMockGetRecordResult = (text = OWN_POST_TEXT): MockGetRecordResult => ({
   uri: TEST_AT_URI,
   value: {
@@ -52,6 +56,17 @@ export const makeMockGetRecordResult = (text = OWN_POST_TEXT): MockGetRecordResu
 export const makeMockPutRecordResult = (): MockPutRecordResult => ({
   uri: TEST_AT_URI,
   cid: 'bafyreia6umzg3a6d7mjbow4p57tviey45muohklhgsvjoamcctoiusr4pe',
+});
+
+export const makeMockApplyWritesResult = (): MockApplyWritesResult => ({
+  results: [
+    { $type: 'com.atproto.repo.applyWrites#deleteResult' },
+    {
+      $type: 'com.atproto.repo.applyWrites#createResult',
+      uri: TEST_AT_URI,
+      cid: 'bafyreih6c2wqxd5dnhcg2rq3a5s3sjd7z6m7qwzlyax3vdv5s6hkqaa2ru',
+    },
+  ],
 });
 
 // ── Fixture interfaces ────────────────────────────────────────────────────────
@@ -85,6 +100,14 @@ interface BskyRouteFixtures {
    */
   capturePutRecord: (
     result: ReturnType<typeof makeMockPutRecordResult>,
+  ) => Promise<{ getBody: () => Record<string, unknown> | null }>;
+
+  /**
+   * Intercept the XRPC applyWrites endpoint, capture the request body, and
+   * respond with a success result. Returns the captured body for assertion.
+   */
+  captureApplyWrites: (
+    result: ReturnType<typeof makeMockApplyWritesResult>,
   ) => Promise<{ getBody: () => Record<string, unknown> | null }>;
 
   /**
@@ -160,6 +183,22 @@ export const test = chromiumBase.extend<BskyRouteFixtures>({
     await use(async result => {
       let captured: Record<string, unknown> | null = null;
       await context.route(/\/xrpc\/com\.atproto\.repo\.putRecord/, async route => {
+        const body = route.request().postDataJSON() as Record<string, unknown>;
+        captured = body;
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(result),
+        });
+      });
+      return { getBody: () => captured };
+    });
+  },
+
+  captureApplyWrites: async ({ context }, use) => {
+    await use(async result => {
+      let captured: Record<string, unknown> | null = null;
+      await context.route(/\/xrpc\/com\.atproto\.repo\.applyWrites/, async route => {
         const body = route.request().postDataJSON() as Record<string, unknown>;
         captured = body;
         await route.fulfill({

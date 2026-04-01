@@ -6,6 +6,7 @@ import {
   TEST_AT_URI,
   TEST_DID,
   TEST_RKEY,
+  makeMockApplyWritesResult,
   test as bskyTest,
   makeMockGetRecordResult,
   makeMockPutRecordResult,
@@ -192,23 +193,17 @@ bskyTest(
 );
 
 /**
- * Verifies that when postDateStrategy is 'update', the PUT_RECORD request body
- * contains a createdAt that has been updated to approximately the current time —
- * not the original '2026-03-25T12:00:00.000Z' from the mock GET_RECORD response.
- *
- * Per the Bluesky Timestamps spec (https://docs.bsky.app/docs/advanced-guides/timestamps),
- * sortAt = min(createdAt, indexedAt). Updating createdAt past the original indexedAt
- * may not change the visible display date unless the AppView also updates indexedAt.
- * This test confirms the record body IS correctly mutated by the extension.
+ * Verifies that when saveStrategy is 'edit', the extension still uses PUT_RECORD
+ * and preserves the original createdAt in the stored record body.
  */
 bskyTest(
-  'PUT_RECORD body contains updated createdAt when postDateStrategy is update',
+  'PUT_RECORD body preserves createdAt when saveStrategy is edit',
   async ({ page, setAuthState, routeBskyApp, routeXrpcGetRecord, capturePutRecord, context, extensionId }) => {
-    // Set postDateStrategy to 'update' in storage before navigating.
+    // Set saveStrategy to 'edit' in storage before navigating.
     const popupPage = await context.newPage();
     await popupPage.goto(`chrome-extension://${extensionId}/popup.html`);
     await popupPage.evaluate(async () => {
-      await chrome.storage.local.set({ settings: { editTimeLimit: null, postDateStrategy: 'update' } });
+      await chrome.storage.local.set({ settings: { editTimeLimit: null, saveStrategy: 'edit' } });
     });
     await popupPage.close();
 
@@ -216,8 +211,6 @@ bskyTest(
     await routeBskyApp();
     await routeXrpcGetRecord(makeMockGetRecordResult());
     const { getBody } = await capturePutRecord(makeMockPutRecordResult());
-
-    const before = Date.now();
     await page.goto(`https://bsky.app/profile/${TEST_DID}/post/${TEST_RKEY}`);
 
     const editButton = page.locator(`[data-at-uri="${TEST_AT_URI}"] .skeeditor-edit-button`);
@@ -226,45 +219,37 @@ bskyTest(
 
     const modal = page.locator('edit-modal');
     await expect(modal.locator('textarea')).toBeVisible({ timeout: 5_000 });
-    await modal.locator('textarea').fill('Updated text with new date');
+    await modal.locator('textarea').fill('Updated text preserving record identity');
     await modal.locator('.save-button').click();
     await expect(modal).not.toBeAttached({ timeout: 5_000 });
 
     const body = getBody();
     expect(body).not.toBeNull();
     const record = (body as Record<string, unknown>)['record'] as Record<string, unknown>;
-    const savedCreatedAt = record['createdAt'] as string;
-
-    // Must NOT be the original from the mock GET_RECORD response.
-    expect(savedCreatedAt).not.toBe('2026-03-25T12:00:00.000Z');
-
-    // Must be a valid ISO datetime approximately equal to now.
-    const savedMs = new Date(savedCreatedAt).getTime();
-    const after = Date.now();
-    expect(savedMs).toBeGreaterThanOrEqual(before - 5000);
-    expect(savedMs).toBeLessThanOrEqual(after + 5000);
+    expect(record['createdAt']).toBe('2026-03-25T12:00:00.000Z');
   },
 );
 
 /**
- * Verifies that when postDateStrategy is 'preserve', the PUT_RECORD body
- * keeps the original createdAt from the record unchanged.
+ * Verifies that when saveStrategy is 'recreate', the extension uses applyWrites
+ * with delete+create and generates a fresh createdAt in the recreated record.
  */
 bskyTest(
-  'PUT_RECORD body preserves createdAt when postDateStrategy is preserve',
-  async ({ page, setAuthState, routeBskyApp, routeXrpcGetRecord, capturePutRecord, context, extensionId }) => {
-    // Default is now 'preserve', but set it explicitly to be unambiguous.
+  'RECREATE_RECORD uses applyWrites with a fresh createdAt when saveStrategy is recreate',
+  async ({ page, setAuthState, routeBskyApp, routeXrpcGetRecord, captureApplyWrites, context, extensionId }) => {
     const popupPage = await context.newPage();
     await popupPage.goto(`chrome-extension://${extensionId}/popup.html`);
     await popupPage.evaluate(async () => {
-      await chrome.storage.local.set({ settings: { editTimeLimit: null, postDateStrategy: 'preserve' } });
+      await chrome.storage.local.set({ settings: { editTimeLimit: null, saveStrategy: 'recreate' } });
     });
     await popupPage.close();
 
     await setAuthState(TEST_DID);
     await routeBskyApp();
     await routeXrpcGetRecord(makeMockGetRecordResult());
-    const { getBody } = await capturePutRecord(makeMockPutRecordResult());
+    const { getBody } = await captureApplyWrites(makeMockApplyWritesResult());
+
+    const before = Date.now();
 
     await page.goto(`https://bsky.app/profile/${TEST_DID}/post/${TEST_RKEY}`);
 
@@ -274,15 +259,21 @@ bskyTest(
 
     const modal = page.locator('edit-modal');
     await expect(modal.locator('textarea')).toBeVisible({ timeout: 5_000 });
-    await modal.locator('textarea').fill('Updated text preserving original date');
+    await modal.locator('textarea').fill('Updated text recreated as fresh');
     await modal.locator('.save-button').click();
     await expect(modal).not.toBeAttached({ timeout: 5_000 });
 
     const body = getBody();
     expect(body).not.toBeNull();
-    const record = (body as Record<string, unknown>)['record'] as Record<string, unknown>;
-
-    // Must be exactly the original createdAt from the mock GET_RECORD response.
-    expect(record['createdAt']).toBe('2026-03-25T12:00:00.000Z');
+    const writes = (body as Record<string, unknown>)['writes'] as Array<Record<string, unknown>>;
+    expect(writes).toHaveLength(2);
+    expect(writes[0]?.['$type']).toBe('com.atproto.repo.applyWrites#delete');
+    expect(writes[1]?.['$type']).toBe('com.atproto.repo.applyWrites#create');
+    const record = writes[1]?.['value'] as Record<string, unknown>;
+    expect(record['createdAt']).not.toBe('2026-03-25T12:00:00.000Z');
+    const savedMs = new Date(record['createdAt'] as string).getTime();
+    const after = Date.now();
+    expect(savedMs).toBeGreaterThanOrEqual(before - 5000);
+    expect(savedMs).toBeLessThanOrEqual(after + 5000);
   },
 );

@@ -4,7 +4,7 @@ import { sendMessage } from '../messages';
 export class OptionsSettings extends HTMLElement {
   private readonly root: ShadowRoot;
   private editTimeLimitInput: HTMLInputElement | null = null;
-  private postDateStrategySelect: HTMLSelectElement | null = null;
+  private saveStrategySelect: HTMLSelectElement | null = null;
   private saveButton: HTMLButtonElement | null = null;
 
   public constructor() {
@@ -92,18 +92,17 @@ export class OptionsSettings extends HTMLElement {
           </p>
 
           <div>
-            <label for="post-date-strategy">Post date behavior on edit</label>
-            <select id="post-date-strategy">
-              <option value="update">Update post date to time of edit</option>
-              <option value="preserve">Preserve original post date</option>
+            <label for="save-strategy">How Skeeditor saves an edit</label>
+            <select id="save-strategy">
+              <option value="edit">Edit record in place</option>
+              <option value="recreate">Recreate record atomically</option>
             </select>
           </div>
           <p class="hint">
-            When set to <strong>Update</strong>, the <code>createdAt</code> field in the stored
-            AT Protocol record is changed to the time of the edit, which changes the timestamp
-            displayed on the post. The post's position in chronological feeds may not move because
-            Bluesky sorts using the earlier of <code>createdAt</code> and <code>indexedAt</code>.
-            When set to <strong>Preserve</strong>, the original creation date is kept unchanged.
+            <strong>Edit record</strong> keeps the existing record identity and preserves the original
+            post timestamp, which is ideal for quick fixes and typo cleanups. <strong>Recreate record</strong>
+            performs an atomic delete-and-create at the same record key with a fresh <code>createdAt</code>,
+            which is more likely to make Bluesky surface the edit as fresh but is a more invasive rewrite.
           </p>
 
           <div>
@@ -114,7 +113,7 @@ export class OptionsSettings extends HTMLElement {
     `;
 
     this.editTimeLimitInput = this.root.getElementById('edit-time-limit') as HTMLInputElement;
-    this.postDateStrategySelect = this.root.getElementById('post-date-strategy') as HTMLSelectElement;
+    this.saveStrategySelect = this.root.getElementById('save-strategy') as HTMLSelectElement;
     this.saveButton = this.root.getElementById('save-settings') as HTMLButtonElement;
   }
 
@@ -123,12 +122,12 @@ export class OptionsSettings extends HTMLElement {
   }
 
   private async loadSettings(): Promise<void> {
-    if (!this.editTimeLimitInput || !this.postDateStrategySelect) return;
+    if (!this.editTimeLimitInput || !this.saveStrategySelect) return;
     try {
       const response = await sendMessage({ type: 'GET_SETTINGS' });
       if (!('error' in response)) {
         this.editTimeLimitInput.value = response.editTimeLimit === null ? '' : String(response.editTimeLimit);
-        this.postDateStrategySelect.value = response.postDateStrategy;
+        this.saveStrategySelect.value = response.saveStrategy;
       }
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -136,9 +135,9 @@ export class OptionsSettings extends HTMLElement {
   }
 
   private async saveSettings(): Promise<void> {
-    if (!this.editTimeLimitInput || !this.postDateStrategySelect || !this.saveButton) return;
+    if (!this.editTimeLimitInput || !this.saveStrategySelect || !this.saveButton) return;
 
-    const postDateStrategy = this.postDateStrategySelect.value === 'preserve' ? 'preserve' : 'update';
+    const saveStrategy = this.saveStrategySelect.value === 'recreate' ? 'recreate' : 'edit';
     const rawEditTimeLimit = this.editTimeLimitInput.value.trim();
     const editTimeLimit = rawEditTimeLimit.length === 0 ? null : Number.parseFloat(rawEditTimeLimit);
 
@@ -157,15 +156,16 @@ export class OptionsSettings extends HTMLElement {
     this.saveButton.textContent = 'Saving…';
 
     try {
-      const response = await sendMessage({ type: 'SET_SETTINGS', settings: { editTimeLimit, postDateStrategy } });
+      const response = await sendMessage({ type: 'SET_SETTINGS', settings: { editTimeLimit, saveStrategy } });
       if (!('ok' in response && response.ok)) {
         this.emitStatus(('error' in response ? response.error : null) ?? 'Failed to save settings.', 'error');
         return;
       }
+      const saveStrategyLabel = saveStrategy === 'recreate' ? 'Recreate record' : 'Edit record';
       this.emitStatus(
         editTimeLimit === null
-          ? `Settings saved. Edit time limit disabled. Date mode: ${postDateStrategy}.`
-          : `Settings saved. Edit time limit: ${editTimeLimit} minutes. Date mode: ${postDateStrategy}.`,
+          ? `Settings saved. Edit time limit disabled. Save strategy: ${saveStrategyLabel}.`
+          : `Settings saved. Edit time limit: ${editTimeLimit} minutes. Save strategy: ${saveStrategyLabel}.`,
         'success',
       );
     } catch (error) {

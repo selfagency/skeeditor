@@ -707,7 +707,7 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
 
   const settingsResponse = await sendMessage({ type: 'GET_SETTINGS' });
   const editTimeLimit = 'error' in settingsResponse ? null : settingsResponse.editTimeLimit;
-  const postDateStrategy = 'error' in settingsResponse ? 'update' : settingsResponse.postDateStrategy;
+  const saveStrategy = 'error' in settingsResponse ? 'edit' : settingsResponse.saveStrategy;
 
   if (exceedsEditTimeLimit(currentRecord.createdAt, editTimeLimit)) {
     modal.open(initialRecordText);
@@ -719,7 +719,7 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
   modal.open(initialRecordText, undefined, async text => {
     const uploadedMedia = modal.getUploadedMedia();
     const updatedRecord = buildUpdatedPostRecord(currentRecord, text, uploadedMedia, {
-      updateCreatedAt: postDateStrategy === 'update',
+      updateCreatedAt: saveStrategy === 'recreate',
     });
 
     // Upload media files if any
@@ -788,14 +788,25 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
       // We do not abort the actual edit if archiving fails.
     }
 
-    const writeResponse = await sendMessage({
-      type: 'PUT_RECORD',
-      repo: info.repo,
-      collection: info.collection,
-      rkey: info.rkey,
-      record: validatedRecord,
-      swapRecord: currentCid,
-    });
+    const writeResponse = await sendMessage(
+      saveStrategy === 'recreate'
+        ? {
+            type: 'RECREATE_RECORD',
+            repo: info.repo,
+            collection: info.collection,
+            rkey: info.rkey,
+            record: validatedRecord,
+            swapRecord: currentCid,
+          }
+        : {
+            type: 'PUT_RECORD',
+            repo: info.repo,
+            collection: info.collection,
+            rkey: info.rkey,
+            record: validatedRecord,
+            swapRecord: currentCid,
+          },
+    );
 
     if (writeResponse.type === 'PUT_RECORD_ERROR') {
       if (writeResponse.requiresReauth) {
@@ -820,7 +831,7 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
 
     modal.close();
     updatePostText(postElement, text);
-    if (postDateStrategy === 'update') {
+    if (saveStrategy === 'recreate') {
       updatePostTimestamp(postElement, validatedRecord.createdAt);
     }
     // Normalize to DID form so cache lookups succeed regardless of whether the
@@ -830,7 +841,7 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
     // text on React re-renders. No setTimeout hack needed.
     setCached(normalizedAtUri, text, initialRecordText);
     recentRecordsCache.set(normalizedAtUri, { record: validatedRecord, cid: writeResponse.cid, savedAt: Date.now() });
-    const toastMsg = postDateStrategy === 'update' ? 'Edit saved. Post date updated.' : 'Edit saved.';
+    const toastMsg = saveStrategy === 'recreate' ? 'Edit saved. Post recreated.' : 'Edit saved.';
     showToast(toastMsg);
     console.info(`${APP_NAME}: edit saved`, { atUri: normalizedAtUri, uri: writeResponse.uri, cid: writeResponse.cid });
   });

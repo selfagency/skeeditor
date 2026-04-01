@@ -152,6 +152,15 @@ export interface PutRecordRequest {
   swapRecord?: string;
 }
 
+export interface RecreateRecordRequest {
+  type: 'RECREATE_RECORD';
+  repo: string;
+  collection: string;
+  rkey: string;
+  record: Record<string, unknown> & { $type: string };
+  swapRecord?: string;
+}
+
 export type PutRecordResponse = PutRecordSuccessResponse | PutRecordErrorResponse | PutRecordConflictResponse;
 
 // ── Blob upload messages ────────────────────────────────────────────────────────
@@ -218,6 +227,7 @@ export type MessageRequest =
   | ListRecordsRequest
   | GetRecordRequest
   | PutRecordRequest
+  | RecreateRecordRequest
   | UploadBlobRequest
   | SetPdsUrlRequest
   | GetPdsUrlRequest
@@ -264,15 +274,17 @@ export type ResponseFor<T extends MessageRequest> = T extends AuthGetStatusReque
                   ? GetRecordResponse
                   : T extends PutRecordRequest
                     ? PutRecordResponse
-                    : T extends UploadBlobRequest
-                      ? UploadBlobResponse
-                      : T extends SetPdsUrlRequest
-                        ? SetPdsUrlResponse
-                        : T extends GetPdsUrlRequest
-                          ? GetPdsUrlResponse
-                          : T extends CheckLabelerSubscriptionRequest
-                            ? CheckLabelerSubscriptionResponse
-                            : never;
+                    : T extends RecreateRecordRequest
+                      ? PutRecordResponse
+                      : T extends UploadBlobRequest
+                        ? UploadBlobResponse
+                        : T extends SetPdsUrlRequest
+                          ? SetPdsUrlResponse
+                          : T extends GetPdsUrlRequest
+                            ? GetPdsUrlResponse
+                            : T extends CheckLabelerSubscriptionRequest
+                              ? CheckLabelerSubscriptionResponse
+                              : never;
 
 /**
  * Type-safe wrapper around `browser.runtime.sendMessage`.

@@ -429,6 +429,85 @@ describe('XrpcClient', () => {
     });
   });
 
+  describe('recreateRecord', () => {
+    it('should call applyWrites with delete + create at the same rkey', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        headers: { get: vi.fn().mockReturnValue(null) },
+        json: vi.fn().mockResolvedValue({
+          results: [
+            { $type: 'com.atproto.repo.applyWrites#deleteResult' },
+            {
+              $type: 'com.atproto.repo.applyWrites#createResult',
+              uri: 'at://did:plc:abc123/app.bsky.feed.post/rkey1',
+              cid: 'bafynew',
+            },
+          ],
+        }),
+      } as unknown as Response);
+      const client = new XrpcClient({
+        service: 'https://bsky.social',
+        did: 'did:plc:abc123',
+        accessJwt: 'jwt-token',
+      });
+
+      const record = { $type: 'app.bsky.feed.post', text: 'hello', createdAt: '2024-01-01T00:00:00Z' };
+      const result = await client.recreateRecord({
+        repo: 'did:plc:abc123',
+        collection: 'app.bsky.feed.post',
+        rkey: 'rkey1',
+        record,
+      });
+
+      const [, init] = fetchSpy.mock.calls[0] ?? [];
+      expect(fetchSpy).toHaveBeenCalledWith(
+        'https://bsky.social/xrpc/com.atproto.repo.applyWrites',
+        expect.any(Object),
+      );
+      expect(init).toMatchObject({ method: 'POST' });
+      expect(JSON.parse((init as RequestInit).body as string)).toEqual({
+        repo: 'did:plc:abc123',
+        validate: true,
+        writes: [
+          {
+            $type: 'com.atproto.repo.applyWrites#delete',
+            collection: 'app.bsky.feed.post',
+            rkey: 'rkey1',
+          },
+          {
+            $type: 'com.atproto.repo.applyWrites#create',
+            collection: 'app.bsky.feed.post',
+            rkey: 'rkey1',
+            value: record,
+          },
+        ],
+      });
+      expect(result).toEqual({ uri: 'at://did:plc:abc123/app.bsky.feed.post/rkey1', cid: 'bafynew' });
+    });
+
+    it('should throw when applyWrites omits the create result', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        headers: { get: vi.fn().mockReturnValue(null) },
+        json: vi.fn().mockResolvedValue({ results: [{ $type: 'com.atproto.repo.applyWrites#deleteResult' }] }),
+      } as unknown as Response);
+      const client = new XrpcClient({
+        service: 'https://bsky.social',
+        did: 'did:plc:abc123',
+        accessJwt: 'jwt-token',
+      });
+
+      await expect(
+        client.recreateRecord({
+          repo: 'did:plc:abc123',
+          collection: 'app.bsky.feed.post',
+          rkey: 'rkey1',
+          record: { $type: 'app.bsky.feed.post', text: 'hello', createdAt: '2024-01-01T00:00:00Z' },
+        }),
+      ).rejects.toThrow('applyWrites: missing create result');
+    });
+  });
+
   describe('XrpcClientError', () => {
     it('should be an Error instance', () => {
       const error = new XrpcClientError('test message');

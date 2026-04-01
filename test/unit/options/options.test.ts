@@ -35,7 +35,7 @@ function mockSendMessage(accounts: AuthListAccountsAccount[]): void {
   vi.mocked(browser.runtime.sendMessage).mockImplementation(async (msg: unknown) => {
     const type = (msg as { type?: string })?.type;
     if (type === 'AUTH_LIST_ACCOUNTS') return { accounts };
-    if (type === 'GET_SETTINGS') return { editTimeLimit: null, postDateStrategy: 'update' };
+    if (type === 'GET_SETTINGS') return { editTimeLimit: null, saveStrategy: 'edit' };
     return { ok: true };
   });
 }
@@ -124,7 +124,7 @@ describe('options page', () => {
       vi.mocked(browser.runtime.sendMessage).mockImplementation(async (msg: unknown) => {
         const type = (msg as { type?: string })?.type;
         if (type === 'AUTH_LIST_ACCOUNTS') throw new Error('Network error');
-        if (type === 'GET_SETTINGS') return { editTimeLimit: null, postDateStrategy: 'update' };
+        if (type === 'GET_SETTINGS') return { editTimeLimit: null, saveStrategy: 'edit' };
         return { ok: true };
       });
 
@@ -189,7 +189,7 @@ describe('options page', () => {
           callCount++;
           return callCount === 1 ? { accounts: [makeAccount({ did: 'did:plc:testuser123' })] } : { accounts: [] };
         }
-        if (type === 'GET_SETTINGS') return { editTimeLimit: null, postDateStrategy: 'update' };
+        if (type === 'GET_SETTINGS') return { editTimeLimit: null, saveStrategy: 'edit' };
         return { ok: true };
       });
 
@@ -239,7 +239,9 @@ describe('options page', () => {
       await flushPromises();
 
       expect(statusSpy).toHaveBeenCalled();
-      const detail = (statusSpy.mock.calls[0]?.[0] as CustomEvent).detail;
+      const firstEvent = statusSpy.mock.calls[0]?.[0];
+      expect(firstEvent).toBeDefined();
+      const detail = (firstEvent as CustomEvent).detail;
       expect(detail.message).toContain('valid HTTPS URL');
       expect(vi.mocked(browser.runtime.sendMessage)).not.toHaveBeenCalledWith(
         expect.objectContaining({ type: 'AUTH_SIGN_IN' }),
@@ -254,7 +256,7 @@ describe('options page', () => {
       vi.mocked(browser.runtime.sendMessage).mockImplementation(async (msg: unknown) => {
         const type = (msg as { type?: string })?.type;
         if (type === 'AUTH_LIST_ACCOUNTS') return { accounts: [] };
-        if (type === 'GET_SETTINGS') return { editTimeLimit: 2.5, postDateStrategy: 'update' };
+        if (type === 'GET_SETTINGS') return { editTimeLimit: 2.5, saveStrategy: 'edit' };
         return { ok: true };
       });
 
@@ -266,11 +268,11 @@ describe('options page', () => {
       expect(input.value).toBe('2.5');
     });
 
-    it('populates post date strategy from GET_SETTINGS on load', async () => {
+    it('populates save strategy from GET_SETTINGS on load', async () => {
       vi.mocked(browser.runtime.sendMessage).mockImplementation(async (msg: unknown) => {
         const type = (msg as { type?: string })?.type;
         if (type === 'AUTH_LIST_ACCOUNTS') return { accounts: [] };
-        if (type === 'GET_SETTINGS') return { editTimeLimit: null, postDateStrategy: 'preserve' };
+        if (type === 'GET_SETTINGS') return { editTimeLimit: null, saveStrategy: 'recreate' };
         return { ok: true };
       });
 
@@ -278,8 +280,8 @@ describe('options page', () => {
       document.body.appendChild(settingsEl);
       await flushPromises();
 
-      const select = settingsEl.shadowRoot?.getElementById('post-date-strategy') as HTMLSelectElement;
-      expect(select.value).toBe('preserve');
+      const select = settingsEl.shadowRoot?.getElementById('save-strategy') as HTMLSelectElement;
+      expect(select.value).toBe('recreate');
     });
 
     it('sends SET_SETTINGS with the entered value when save is clicked', async () => {
@@ -293,7 +295,7 @@ describe('options page', () => {
 
       expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({
         type: 'SET_SETTINGS',
-        settings: { editTimeLimit: 2, postDateStrategy: 'update' },
+        settings: { editTimeLimit: 2, saveStrategy: 'edit' },
       });
     });
 
@@ -308,7 +310,7 @@ describe('options page', () => {
 
       expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({
         type: 'SET_SETTINGS',
-        settings: { editTimeLimit: null, postDateStrategy: 'update' },
+        settings: { editTimeLimit: null, saveStrategy: 'edit' },
       });
     });
 
@@ -316,7 +318,7 @@ describe('options page', () => {
       vi.mocked(browser.runtime.sendMessage).mockImplementation(async (msg: unknown) => {
         const type = (msg as { type?: string })?.type;
         if (type === 'AUTH_LIST_ACCOUNTS') return { accounts: [] };
-        if (type === 'GET_SETTINGS') return { editTimeLimit: null, postDateStrategy: 'update' };
+        if (type === 'GET_SETTINGS') return { editTimeLimit: null, saveStrategy: 'edit' };
         if (type === 'SET_SETTINGS') return { error: 'Storage full' };
         return { ok: true };
       });
@@ -331,21 +333,25 @@ describe('options page', () => {
       (settingsEl.shadowRoot?.getElementById('save-settings') as HTMLButtonElement)?.click();
       await flushPromises();
 
-      const detail = (statusSpy.mock.calls[0]?.[0] as CustomEvent).detail;
+      const firstEvent = statusSpy.mock.calls[0]?.[0];
+      expect(firstEvent).toBeDefined();
+      const detail = (firstEvent as CustomEvent).detail;
       expect(detail.message).toContain('Storage full');
     });
 
-    it('sends SET_SETTINGS with preserve mode when selected', async () => {
+    it('sends SET_SETTINGS with recreate mode when selected', async () => {
       await setupComponents([]);
 
-      (settingsEl.shadowRoot?.getElementById('post-date-strategy') as HTMLSelectElement).value = 'preserve';
+      const saveStrategySelect = settingsEl.shadowRoot?.getElementById('save-strategy');
+      expect(saveStrategySelect).toBeInstanceOf(HTMLSelectElement);
+      (saveStrategySelect as HTMLSelectElement).value = 'recreate';
 
       (settingsEl.shadowRoot?.getElementById('save-settings') as HTMLButtonElement)?.click();
       await flushPromises();
 
       expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({
         type: 'SET_SETTINGS',
-        settings: { editTimeLimit: null, postDateStrategy: 'preserve' },
+        settings: { editTimeLimit: null, saveStrategy: 'recreate' },
       });
     });
   });
