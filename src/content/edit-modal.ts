@@ -14,6 +14,20 @@ const EDIT_MODAL_TEMPLATE = `
       background: var(--color-surface-overlay, rgba(0, 0, 0, 0.5));
     }
     ${globalStyles}
+    .char-count {
+      color: var(--color-text-secondary);
+    }
+    .char-count.error {
+      color: var(--color-error);
+    }
+    .status-message.error {
+      background: var(--color-error-bg);
+      color: var(--color-error-text);
+    }
+    .status-message.success {
+      background: var(--color-success-bg);
+      color: var(--color-success-text);
+    }
   </style>
   <div class="edit-modal-container" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
     <div class="edit-modal-header">
@@ -272,12 +286,10 @@ export class EditModal {
 
     this.charCount.textContent = `${length} / ${this.maxLength}`;
     if (isError) {
-      this.charCount.classList.remove('text-gray-500', 'dark:text-gray-400');
-      this.charCount.classList.add('text-red-500', 'dark:text-red-400');
+      this.charCount.classList.add('error');
       this.textarea.setCustomValidity('Post exceeds maximum length');
     } else {
-      this.charCount.classList.remove('text-red-500', 'dark:text-red-400');
-      this.charCount.classList.add('text-gray-500', 'dark:text-gray-400');
+      this.charCount.classList.remove('error');
       this.textarea.setCustomValidity('');
     }
   }
@@ -300,35 +312,11 @@ export class EditModal {
       this.statusMessage.textContent = message;
       this.statusMessage.classList.remove('hidden');
       if (type === 'error') {
-        this.statusMessage.classList.add(
-          'error',
-          'bg-red-50',
-          'text-red-700',
-          'dark:bg-red-400/10',
-          'dark:text-red-400',
-        );
-        this.statusMessage.classList.remove(
-          'success',
-          'bg-green-50',
-          'text-green-700',
-          'dark:bg-green-400/10',
-          'dark:text-green-400',
-        );
+        this.statusMessage.classList.add('error');
+        this.statusMessage.classList.remove('success');
       } else {
-        this.statusMessage.classList.add(
-          'success',
-          'bg-green-50',
-          'text-green-700',
-          'dark:bg-green-400/10',
-          'dark:text-green-400',
-        );
-        this.statusMessage.classList.remove(
-          'error',
-          'bg-red-50',
-          'text-red-700',
-          'dark:bg-red-400/10',
-          'dark:text-red-400',
-        );
+        this.statusMessage.classList.add('success');
+        this.statusMessage.classList.remove('error');
       }
     }
   }

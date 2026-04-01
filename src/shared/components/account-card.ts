@@ -8,7 +8,6 @@ function parseBooleanAttribute(value: string | null): boolean {
 
 function createActiveIndicator(): SVGElement {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('class', 'ml-1 size-3.5 shrink-0 text-indigo-500 dark:text-indigo-400');
   svg.setAttribute('viewBox', '0 0 20 20');
   svg.setAttribute('fill', 'currentColor');
   svg.setAttribute('aria-label', 'Active account');
