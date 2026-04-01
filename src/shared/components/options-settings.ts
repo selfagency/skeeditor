@@ -94,15 +94,17 @@ export class OptionsSettings extends HTMLElement {
           <div>
             <label for="save-strategy">How Skeeditor saves an edit</label>
             <select id="save-strategy">
-              <option value="edit">Edit record in place</option>
               <option value="recreate">Recreate record atomically</option>
+              <option value="edit">Edit record in place</option>
             </select>
           </div>
           <p class="hint">
-            <strong>Edit record</strong> keeps the existing record identity and preserves the original
-            post timestamp, which is ideal for quick fixes and typo cleanups. <strong>Recreate record</strong>
-            performs an atomic delete-and-create at the same record key with a fresh <code>createdAt</code>,
-            which is more likely to make Bluesky surface the edit as fresh but is a more invasive rewrite.
+            <strong>Recreate record</strong> is the recommended default because it performs an atomic
+            delete-and-create at the same record key with a fresh <code>createdAt</code>, which is what
+            reliably makes Bluesky/AppView surface the change across clients. This also means the recreated
+            post loses its existing likes and reposts. <strong>Edit record</strong>
+            keeps the existing record identity and preserves the original post timestamp, but Bluesky may
+            not visibly surface the change outside your local session.
           </p>
 
           <div>

@@ -13,7 +13,7 @@ export interface ExtensionSettings {
 
 const DEFAULT_SETTINGS: ExtensionSettings = {
   editTimeLimit: null,
-  saveStrategy: 'edit',
+  saveStrategy: 'recreate',
 };
 
 const getStorage = (): typeof browser.storage.local => {

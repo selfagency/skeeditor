@@ -707,7 +707,7 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
 
   const settingsResponse = await sendMessage({ type: 'GET_SETTINGS' });
   const editTimeLimit = 'error' in settingsResponse ? null : settingsResponse.editTimeLimit;
-  const saveStrategy = 'error' in settingsResponse ? 'edit' : settingsResponse.saveStrategy;
+  const saveStrategy = 'error' in settingsResponse ? 'recreate' : settingsResponse.saveStrategy;
 
   if (exceedsEditTimeLimit(currentRecord.createdAt, editTimeLimit)) {
     modal.open(initialRecordText);

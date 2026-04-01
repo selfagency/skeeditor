@@ -119,6 +119,31 @@ The custom domain `labeler.skeeditor.link` is configured as a route in `wrangler
 
 If you rotate `LABELER_SIGNING_KEY`, update `LABELER_PUBLIC_KEY_MULTIBASE` only if you intentionally rely on the fallback path. In normal production deployments, the runtime-derived key from `LABELER_SIGNING_KEY` should be the source of truth.
 
+### DPoP / CORS rollout checklist
+
+The Worker source allows the `DPoP` header in CORS preflight and forwards it through `tools.skeeditor.emitLabel`, but that only helps once the deployed Worker is updated.
+
+Before re-enabling DPoP-based labeler emits in the extension:
+
+1. Deploy the current `packages/labeler` Worker.
+2. Confirm preflight advertises `DPoP` in `Access-Control-Allow-Headers` for `POST /xrpc/tools.skeeditor.emitLabel`.
+3. Confirm the Worker still accepts Bearer requests so older clients remain compatible during rollout.
+4. Only then switch the extension emit path from Bearer-compat mode back to DPoP.
+
+Quick manual verification after deploy:
+
+```sh
+cd packages/labeler
+wrangler deploy
+
+curl -i -X OPTIONS https://labeler.skeeditor.link/xrpc/tools.skeeditor.emitLabel \
+  -H 'Origin: chrome-extension://test-extension' \
+  -H 'Access-Control-Request-Method: POST' \
+  -H 'Access-Control-Request-Headers: authorization, content-type, dpop'
+```
+
+The response should include `Access-Control-Allow-Headers` containing `DPoP`.
+
 ---
 
 ## Resources

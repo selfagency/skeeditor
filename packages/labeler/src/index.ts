@@ -65,7 +65,7 @@ function corsHeaders(): HeadersInit {
   return {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type, DPoP',
   };
 }
 
@@ -163,8 +163,10 @@ export default {
         headers: {
           Authorization: request.headers.get('Authorization') ?? '',
           'Content-Type': 'application/json',
+          DPoP: request.headers.get('DPoP') ?? '',
         },
         body: request.body,
+        duplex: 'half',
       });
       const resp = await hub.fetch(forwarded);
       return addCors(resp);

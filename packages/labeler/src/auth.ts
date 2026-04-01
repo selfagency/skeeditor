@@ -63,17 +63,23 @@ export async function validateEmitAuth(
   authHeader: string | null,
   payload: EmitPayload,
   fetchFn: typeof fetch = fetch,
+  dpopHeader: string | null = null,
 ): Promise<{ valid: true } | { valid: false; reason: string }> {
   if (authHeader === null) {
     return { valid: false, reason: 'Missing Authorization header' };
   }
 
   const parts = authHeader.split(' ');
-  if (parts.length !== 2 || parts[0]?.toLowerCase() !== 'bearer' || !parts[1]) {
-    return { valid: false, reason: 'Authorization header must be: Bearer <token>' };
+  const scheme = parts[0]?.toLowerCase();
+  if (parts.length !== 2 || (scheme !== 'bearer' && scheme !== 'dpop') || !parts[1]) {
+    return { valid: false, reason: 'Authorization header must be: Bearer <token> or DPoP <token>' };
   }
 
   const token = parts[1];
+
+  if (scheme === 'dpop' && (typeof dpopHeader !== 'string' || dpopHeader.length === 0)) {
+    return { valid: false, reason: 'Missing DPoP header for DPoP Authorization' };
+  }
 
   // JWT structure: base64url(header).base64url(payload).signature
   const segments = token.split('.');
@@ -126,8 +132,13 @@ export async function validateEmitAuth(
   }
 
   try {
+    const headers: Record<string, string> = { Authorization: authHeader };
+    if (scheme === 'dpop' && typeof dpopHeader === 'string' && dpopHeader.length > 0) {
+      headers['DPoP'] = dpopHeader;
+    }
+
     const sessionResp = await fetchFn(`${pdsEndpoint}/xrpc/com.atproto.server.getSession`, {
-      headers: { Authorization: authHeader },
+      headers,
     });
 
     if (!sessionResp.ok) {

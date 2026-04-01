@@ -70,16 +70,35 @@ async function getDpopKeyPair(did?: string): Promise<CryptoKeyPair> {
  * broadcast a signed `edited` label to all subscribed extension clients.
  * Errors are swallowed — the real-time update is best-effort only.
  */
-function emitLabelTrigger(uri: string, cid: string, did: string, accessToken: string): void {
-  log.debug('emit-label-trigger', { uri, cid, did });
-  void fetch(LABELER_EMIT_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
+function emitLabelTrigger(
+  uri: string,
+  cid: string,
+  did: string,
+  accessToken: string,
+  dpopEnabled: boolean | undefined,
+): void {
+  log.debug('emit-label-trigger', { uri, cid, did, dpopEnabled: dpopEnabled !== false });
+  void (async () => {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ uri, cid, did }),
-  })
+    };
+
+    if (dpopEnabled === false) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    } else {
+      const pdsUrl = await getCurrentPdsUrl(did);
+      const sessionUrl = `${pdsUrl.replace(/\/+$/u, '')}/xrpc/com.atproto.server.getSession`;
+      const proof = await createDpopProof(await getDpopKeyPair(did), 'GET', sessionUrl, accessToken);
+      headers['Authorization'] = `DPoP ${accessToken}`;
+      headers['DPoP'] = proof;
+    }
+
+    return fetch(LABELER_EMIT_URL, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ uri, cid, did }),
+    });
+  })()
     .then(async res => {
       const body = await res.text().catch(() => '');
       if (!res.ok) {
@@ -849,7 +868,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
           });
 
           if (result.success) {
-            emitLabelTrigger(result.uri, result.cid, stored.did, stored.accessToken);
+            emitLabelTrigger(result.uri, result.cid, stored.did, stored.accessToken, stored.dpopEnabled);
             return { type: 'PUT_RECORD_SUCCESS', uri: result.uri, cid: result.cid } satisfies PutRecordSuccessResponse;
           }
 
@@ -875,7 +894,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
         }
 
         const result = await client.putRecord(params);
-        emitLabelTrigger(result.uri, result.cid, stored.did, stored.accessToken);
+        emitLabelTrigger(result.uri, result.cid, stored.did, stored.accessToken, stored.dpopEnabled);
         return { type: 'PUT_RECORD_SUCCESS', uri: result.uri, cid: result.cid } satisfies PutRecordSuccessResponse;
       } catch (err) {
         // Check for authentication/scope errors that require re-authentication
@@ -932,7 +951,7 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
           record: message.record,
         });
 
-        emitLabelTrigger(result.uri, result.cid, stored.did, stored.accessToken);
+        emitLabelTrigger(result.uri, result.cid, stored.did, stored.accessToken, stored.dpopEnabled);
         return { type: 'PUT_RECORD_SUCCESS', uri: result.uri, cid: result.cid } satisfies PutRecordSuccessResponse;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to recreate record';

@@ -18,6 +18,27 @@ const makeEnv = (overrides: Partial<Env> = {}): Env => ({
 });
 
 describe('labeler worker routes', () => {
+  it('answers CORS preflight for emitLabel with DPoP allowed', async () => {
+    const response = await worker.fetch(
+      new Request('https://labeler.skeeditor.link/xrpc/tools.skeeditor.emitLabel', {
+        method: 'OPTIONS',
+        headers: {
+          Origin: 'chrome-extension://test-extension',
+          'Access-Control-Request-Method': 'POST',
+          'Access-Control-Request-Headers': 'authorization, content-type, dpop',
+        },
+      }),
+      makeEnv(),
+    );
+
+    expect(response.status).toBe(204);
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
+    expect(response.headers.get('Access-Control-Allow-Methods')).toContain('POST');
+    expect(response.headers.get('Access-Control-Allow-Headers')).toContain('Authorization');
+    expect(response.headers.get('Access-Control-Allow-Headers')).toContain('Content-Type');
+    expect(response.headers.get('Access-Control-Allow-Headers')).toContain('DPoP');
+  });
+
   it('serves getServices with a detailed view for the configured labeler DID', async () => {
     const env = makeEnv();
     const response = await worker.fetch(
@@ -46,6 +67,41 @@ describe('labeler worker routes', () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ views: [] });
+  });
+
+  it('forwards Authorization and DPoP headers to the hub emit route', async () => {
+    const hubFetch = vi.fn().mockResolvedValue(Response.json({ ok: true }));
+    const env = makeEnv({
+      BROADCAST_HUB: {
+        idFromName: vi.fn().mockReturnValue({}),
+        get: vi.fn().mockReturnValue({ fetch: hubFetch }),
+      } as unknown as DurableObjectNamespace,
+    });
+
+    const response = await worker.fetch(
+      new Request('https://labeler.skeeditor.link/xrpc/tools.skeeditor.emitLabel', {
+        method: 'POST',
+        headers: {
+          Authorization: 'DPoP token-123',
+          DPoP: 'proof-abc',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          uri: `at://${env.LABELER_DID}/app.bsky.feed.post/abc`,
+          cid: 'bafy123',
+          did: env.LABELER_DID,
+        }),
+      }),
+      env,
+    );
+
+    expect(response.status).toBe(200);
+    expect(hubFetch).toHaveBeenCalledOnce();
+
+    const [forwarded] = hubFetch.mock.calls[0] ?? [];
+    expect(forwarded).toBeInstanceOf(Request);
+    expect((forwarded as Request).headers.get('Authorization')).toBe('DPoP token-123');
+    expect((forwarded as Request).headers.get('DPoP')).toBe('proof-abc');
   });
 });
 

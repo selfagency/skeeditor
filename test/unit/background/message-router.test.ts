@@ -934,6 +934,7 @@ describe('handleMessage', () => {
     it('triggers a labeler emit after a successful putRecordWithSwap', async () => {
       const session = makeSession();
       const xrpc = makeXrpcMock();
+      const getCurrentPdsUrlSpy = vi.spyOn(constants, 'getCurrentPdsUrl').mockResolvedValue('https://pds.test');
       const deps = makeDeps({
         store: makeStoreMock(session),
         createXrpc: vi.fn().mockReturnValue(xrpc),
@@ -955,12 +956,17 @@ describe('handleMessage', () => {
         deps,
       );
 
+      await Promise.resolve();
+      await Promise.resolve();
+
       expect(fetchSpy).toHaveBeenCalledWith(constants.LABELER_EMIT_URL, expect.any(Object));
+      getCurrentPdsUrlSpy.mockRestore();
     });
 
     it('triggers a labeler emit after a successful putRecord (no swap)', async () => {
       const session = makeSession();
       const xrpc = makeXrpcMock();
+      const getCurrentPdsUrlSpy = vi.spyOn(constants, 'getCurrentPdsUrl').mockResolvedValue('https://pds.test');
       const deps = makeDeps({
         store: makeStoreMock(session),
         createXrpc: vi.fn().mockReturnValue(xrpc),
@@ -981,11 +987,50 @@ describe('handleMessage', () => {
         deps,
       );
 
+      await Promise.resolve();
+      await Promise.resolve();
+
       expect(fetchSpy).toHaveBeenCalledWith(constants.LABELER_EMIT_URL, expect.any(Object));
+      getCurrentPdsUrlSpy.mockRestore();
     });
 
-    it('forwards only the access token in the Authorization header of the labeler emit', async () => {
+    it('uses DPoP auth and proof for the labeler emit when the session is DPoP-enabled', async () => {
       const session = makeSession();
+      const xrpc = makeXrpcMock();
+      const getCurrentPdsUrlSpy = vi.spyOn(constants, 'getCurrentPdsUrl').mockResolvedValue('https://pds.test');
+      const deps = makeDeps({
+        store: makeStoreMock(session),
+        createXrpc: vi.fn().mockReturnValue(xrpc),
+      });
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        text: vi.fn().mockResolvedValue(''),
+      } as unknown as Response);
+
+      await handleMessage(
+        {
+          type: 'PUT_RECORD',
+          repo: 'did:plc:alice',
+          collection: 'app.bsky.feed.post',
+          rkey: 'abc',
+          record: { $type: 'app.bsky.feed.post', text: 'edited' },
+          swapRecord: 'bafyreiabc',
+        },
+        deps,
+      );
+
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const [, init] = fetchSpy.mock.calls[0]!;
+      const headers = (init as RequestInit).headers as Record<string, string>;
+      expect(headers['Authorization']).toBe(`DPoP ${session.accessToken}`);
+      expect(headers['DPoP']).toBe('test-dpop-proof');
+      getCurrentPdsUrlSpy.mockRestore();
+    });
+
+    it('falls back to Bearer auth for the labeler emit when DPoP is disabled', async () => {
+      const session = makeSession({ dpopEnabled: false });
       const xrpc = makeXrpcMock();
       const deps = makeDeps({
         store: makeStoreMock(session),
@@ -1008,14 +1053,19 @@ describe('handleMessage', () => {
         deps,
       );
 
+      await Promise.resolve();
+      await Promise.resolve();
+
       const [, init] = fetchSpy.mock.calls[0]!;
       const headers = (init as RequestInit).headers as Record<string, string>;
       expect(headers['Authorization']).toBe(`Bearer ${session.accessToken}`);
+      expect(headers['DPoP']).toBeUndefined();
     });
 
     it('does not include the refresh token in the labeler emit payload', async () => {
       const session = makeSession();
       const xrpc = makeXrpcMock();
+      const getCurrentPdsUrlSpy = vi.spyOn(constants, 'getCurrentPdsUrl').mockResolvedValue('https://pds.test');
       const deps = makeDeps({
         store: makeStoreMock(session),
         createXrpc: vi.fn().mockReturnValue(xrpc),
@@ -1036,13 +1086,18 @@ describe('handleMessage', () => {
         },
         deps,
       );
+
+      await Promise.resolve();
+      await Promise.resolve();
 
       const [, init] = fetchSpy.mock.calls[0]!;
       const body = JSON.parse((init as RequestInit).body as string) as Record<string, unknown>;
       expect(body).not.toHaveProperty('refreshToken');
       expect(Object.values(body)).not.toContain(session.refreshToken);
       const headers = (init as RequestInit).headers as Record<string, string>;
-      expect(headers['Authorization']).toBe(`Bearer ${session.accessToken}`);
+      expect(headers['Authorization']).toBe(`DPoP ${session.accessToken}`);
+      expect(headers['DPoP']).toBe('test-dpop-proof');
+      getCurrentPdsUrlSpy.mockRestore();
     });
   });
 

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { validateEmitAuth } from '../src/auth.ts';
 import type { EmitPayload } from '../src/types.ts';
@@ -106,6 +106,24 @@ describe('validateEmitAuth', () => {
     expect(result).toEqual({ valid: true });
   });
 
+  it('accepts a valid DPoP token when a DPoP proof header is provided', async () => {
+    const jwt = makeJwt({ sub: DID_PLC, iat: 1_000_000, exp: 9_999_999 });
+    const fetchFn = vi.fn(makeFetch({ sessionStatus: 200 }));
+
+    const result = await validateEmitAuth(`DPoP ${jwt}`, VALID_PAYLOAD, fetchFn, 'test-dpop-proof');
+
+    expect(result).toEqual({ valid: true });
+    expect(fetchFn).toHaveBeenCalledWith(
+      `${PDS_URL}/xrpc/com.atproto.server.getSession`,
+      expect.objectContaining({
+        headers: {
+          Authorization: `DPoP ${jwt}`,
+          DPoP: 'test-dpop-proof',
+        },
+      }),
+    );
+  });
+
   // ── Invalid signature (rejected by issuer) ──────────────────────────────
 
   it('rejects a token whose signature is rejected by the PDS', async () => {
@@ -173,7 +191,15 @@ describe('validateEmitAuth', () => {
 
   it('rejects when Authorization header is not Bearer scheme', async () => {
     const result = await validateEmitAuth('Basic dXNlcjpwYXNz', VALID_PAYLOAD, makeFetch());
-    expect(result).toEqual({ valid: false, reason: 'Authorization header must be: Bearer <token>' });
+    expect(result).toEqual({ valid: false, reason: 'Authorization header must be: Bearer <token> or DPoP <token>' });
+  });
+
+  it('rejects a DPoP token when the matching DPoP proof header is missing', async () => {
+    const jwt = makeJwt({ sub: DID_PLC, iat: 1_000_000, exp: 9_999_999 });
+
+    const result = await validateEmitAuth(`DPoP ${jwt}`, VALID_PAYLOAD, makeFetch());
+
+    expect(result).toEqual({ valid: false, reason: 'Missing DPoP header for DPoP Authorization' });
   });
 
   it('rejects a JWT with only two segments', async () => {
