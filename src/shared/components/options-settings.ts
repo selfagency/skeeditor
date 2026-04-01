@@ -1,5 +1,6 @@
 import { EDIT_TIME_LIMIT_MAX, EDIT_TIME_LIMIT_MIN } from '../constants';
 import { sendMessage } from '../messages';
+import { showOptionsToast } from './options-toast';
 
 export class OptionsSettings extends HTMLElement {
   private readonly root: ShadowRoot;
@@ -180,6 +181,7 @@ export class OptionsSettings extends HTMLElement {
   }
 
   private emitStatus(message: string, type: 'info' | 'success' | 'error'): void {
+    showOptionsToast(message, type);
     this.dispatchEvent(
       new CustomEvent('status-update', {
         detail: { message, type },

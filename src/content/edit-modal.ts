@@ -1,6 +1,7 @@
 import globalStyles from '../shadow-styles.css?inline';
 import { normalizeMediaFiles } from './post-editor';
 import { graphemeLength } from '../shared/utils/text';
+import './spinner';
 
 const EDIT_MODAL_TEMPLATE = `
   <style>
@@ -24,6 +25,9 @@ const EDIT_MODAL_TEMPLATE = `
       </button>
     </div>
     <div class="edit-modal-body">
+      <div class="loading-state hidden" aria-live="polite">
+        <skeeditor-spinner label="Loading latest post…"></skeeditor-spinner>
+      </div>
       <div>
         <textarea aria-label="Edit post content" class="edit-modal-textarea"></textarea>
       </div>
@@ -53,6 +57,7 @@ export class EditModal {
   private uploadButton: HTMLButtonElement | null = null;
   private fileInput: HTMLInputElement | null = null;
   private mediaPreview: HTMLElement | null = null;
+  private loadingState: HTMLElement | null = null;
   private uploadedMedia: File[] = [];
   private objectUrls: Map<File, string> = new Map();
   private originalText = '';
@@ -63,6 +68,7 @@ export class EditModal {
   private previouslyFocused: Element | null = null;
   private isOpen = false;
   private editingEnabled = true;
+  private isLoading = false;
   private handleInputBound = this.handleInput.bind(this);
   private handleSaveBound = this.handleSave.bind(this);
   private closeBound = this.close.bind(this);
@@ -88,6 +94,7 @@ export class EditModal {
     this.fileInput = shadow.querySelector<HTMLInputElement>('input[type="file"]');
     this.mediaPreview = shadow.querySelector<HTMLElement>('.media-preview');
     this.statusMessage = shadow.querySelector<HTMLElement>('.status-message');
+    this.loadingState = shadow.querySelector<HTMLElement>('.loading-state');
 
     if (this.textarea) {
       this.textarea.addEventListener('input', this.handleInputBound);
@@ -138,6 +145,7 @@ export class EditModal {
     if (this.textarea) {
       this.textarea.value = text;
       this.setEditable(true);
+      this.setLoading(false);
       this.updateCharCount();
       this.updateSaveButtonState();
       this.textarea.focus();
@@ -201,6 +209,39 @@ export class EditModal {
     this.updateSaveButtonState();
   }
 
+  public setLoading(loading: boolean, message = 'Loading latest post…'): void {
+    this.isLoading = loading;
+
+    const spinner = this.loadingState?.querySelector('skeeditor-spinner');
+    if (spinner) {
+      spinner.setAttribute('label', message);
+    }
+
+    this.loadingState?.classList.toggle('hidden', !loading);
+
+    if (this.textarea?.parentElement) {
+      this.textarea.parentElement.classList.toggle('hidden', loading);
+    }
+    this.charCount?.classList.toggle('hidden', loading);
+    this.uploadButton?.parentElement?.classList.toggle('hidden', loading);
+
+    if (loading) {
+      this.setEditable(false);
+    } else {
+      this.setEditable(true);
+    }
+  }
+
+  public setText(text: string): void {
+    this.originalText = text;
+    this.currentText = text;
+    if (this.textarea) {
+      this.textarea.value = text;
+    }
+    this.updateCharCount();
+    this.updateSaveButtonState();
+  }
+
   public markSaved(text: string): void {
     this.originalText = text;
     this.currentText = text;
@@ -243,7 +284,7 @@ export class EditModal {
 
   private updateSaveButtonState(): void {
     if (this.saveButton && this.textarea) {
-      if (!this.editingEnabled) {
+      if (!this.editingEnabled || this.isLoading) {
         this.saveButton.disabled = true;
         return;
       }

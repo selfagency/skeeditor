@@ -471,6 +471,21 @@ const ACTION_AREA_SELECTORS = [
   'button[data-testid="postDropdownBtn"]',
 ];
 
+const REPOST_CONTEXT_SELECTORS = [
+  '[aria-label^="Reposted by "]',
+  '[data-testid*="repost"]',
+  '[data-testid*="socialContext"]',
+].join(', ');
+
+const isRepostItem = (postElement: HTMLElement): boolean => {
+  if (postElement.querySelector(REPOST_CONTEXT_SELECTORS)) {
+    return true;
+  }
+
+  const text = postElement.textContent?.trim() ?? '';
+  return /^Reposted by\s+/i.test(text);
+};
+
 const isElementOwnPost = (postElement: HTMLElement, postRepo: string): boolean => {
   if (currentDid === null) {
     return false;
@@ -673,50 +688,18 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
 
   const modal = getOrCreateEditModal();
   const initialText = extractPostText(postElement);
-
-  // Use the in-memory record cache when a save just happened (avoids stale AppView data from GET_RECORD).
-  const nowMs = Date.now();
   const normalizedAtUri = normalizeCacheKey(info.atUri, info.repo);
-  const cachedEntry = recentRecordsCache.get(normalizedAtUri);
-
-  let currentRecord: EditablePostRecord;
+  let currentRecord: EditablePostRecord | null = null;
   let currentCid: string | undefined;
+  let initialRecordText = initialText;
+  let saveStrategy: 'edit' | 'recreate' = 'recreate';
 
-  if (cachedEntry !== undefined && nowMs - cachedEntry.savedAt < RECORD_CACHE_TTL_MS) {
-    currentRecord = cachedEntry.record;
-    currentCid = cachedEntry.cid;
-  } else {
-    const recordResponse = await sendMessage({
-      type: 'GET_RECORD',
-      repo: info.repo,
-      collection: info.collection,
-      rkey: info.rkey,
-    });
-
-    if ('error' in recordResponse) {
-      modal.open(initialText);
-      modal.setError(recordResponse.error);
+  modal.open(initialText, undefined, async text => {
+    if (currentRecord === null) {
+      modal.setError('Still loading the latest post record. Please wait a moment.');
       return;
     }
 
-    currentRecord = recordResponse.value as EditablePostRecord;
-    currentCid = recordResponse.cid;
-  }
-
-  const initialRecordText = typeof currentRecord.text === 'string' ? currentRecord.text : initialText;
-
-  const settingsResponse = await sendMessage({ type: 'GET_SETTINGS' });
-  const editTimeLimit = 'error' in settingsResponse ? null : settingsResponse.editTimeLimit;
-  const saveStrategy = 'error' in settingsResponse ? 'recreate' : settingsResponse.saveStrategy;
-
-  if (exceedsEditTimeLimit(currentRecord.createdAt, editTimeLimit)) {
-    modal.open(initialRecordText);
-    modal.setEditable(false);
-    modal.setError(`This post is older than your edit time limit of ${formatEditTimeLimit(editTimeLimit!)}.`);
-    return;
-  }
-
-  modal.open(initialRecordText, undefined, async text => {
     const uploadedMedia = modal.getUploadedMedia();
     const updatedRecord = buildUpdatedPostRecord(currentRecord, text, uploadedMedia, {
       updateCreatedAt: saveStrategy === 'recreate',
@@ -741,14 +724,16 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
         if (updatedRecord.embed && 'images' in updatedRecord.embed) {
           updatedRecord.embed.images = updatedRecord.embed.images.map((image, index) => {
             const result = uploadResults[index];
-            if (!result || 'error' in result)
+            if (!result || 'error' in result) {
               throw new Error(result && 'error' in result ? result.error : 'Upload failed');
+            }
             return { ...image, image: result.blobRef };
           });
         } else if (updatedRecord.embed && 'video' in updatedRecord.embed) {
           const result = uploadResults[0];
-          if (!result || 'error' in result)
+          if (!result || 'error' in result) {
             throw new Error(result && 'error' in result ? result.error : 'Upload failed');
+          }
           updatedRecord.embed.video = result.blobRef;
         }
       } catch (error) {
@@ -833,9 +818,6 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
     if (saveStrategy === 'recreate') {
       updatePostTimestamp(postElement, validatedRecord.createdAt);
     }
-    // Normalize to DID form so cache lookups succeed regardless of whether the
-    // post was found via handle-form or DID-form URL.
-    const normalizedAtUri = normalizeCacheKey(info.atUri, info.repo);
     // Write to cache immediately — the MO path will keep applying the cached
     // text on React re-renders. No setTimeout hack needed.
     setCached(normalizedAtUri, text, initialRecordText);
@@ -844,6 +826,50 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
     showToast(toastMsg);
     console.info(`${APP_NAME}: edit saved`, { atUri: normalizedAtUri, uri: writeResponse.uri, cid: writeResponse.cid });
   });
+
+  modal.setLoading(true, 'Loading latest post…');
+
+  // Use the in-memory record cache when a save just happened (avoids stale AppView data from GET_RECORD).
+  const nowMs = Date.now();
+  const cachedEntry = recentRecordsCache.get(normalizedAtUri);
+
+  if (cachedEntry !== undefined && nowMs - cachedEntry.savedAt < RECORD_CACHE_TTL_MS) {
+    currentRecord = cachedEntry.record;
+    currentCid = cachedEntry.cid;
+  } else {
+    const recordResponse = await sendMessage({
+      type: 'GET_RECORD',
+      repo: info.repo,
+      collection: info.collection,
+      rkey: info.rkey,
+    });
+
+    if ('error' in recordResponse) {
+      modal.setLoading(false);
+      modal.setError(recordResponse.error);
+      return;
+    }
+
+    currentRecord = recordResponse.value as EditablePostRecord;
+    currentCid = recordResponse.cid;
+  }
+
+  initialRecordText = typeof currentRecord.text === 'string' ? currentRecord.text : initialText;
+
+  const settingsResponse = await sendMessage({ type: 'GET_SETTINGS' });
+  const editTimeLimit = 'error' in settingsResponse ? null : settingsResponse.editTimeLimit;
+  saveStrategy = 'error' in settingsResponse ? 'recreate' : settingsResponse.saveStrategy;
+
+  modal.setText(initialRecordText);
+  modal.setLoading(false);
+
+  if (exceedsEditTimeLimit(currentRecord.createdAt, editTimeLimit)) {
+    modal.setEditable(false);
+    modal.setError(`This post is older than your edit time limit of ${formatEditTimeLimit(editTimeLimit!)}.`);
+    return;
+  }
+
+  modal.setEditable(true);
 };
 
 const hasActionArea = (postElement: HTMLElement): boolean =>
@@ -884,9 +910,22 @@ const createEditButton = (): HTMLButtonElement => {
   button.type = 'button';
   button.setAttribute(EDIT_BUTTON_ATTRIBUTE, 'true');
   button.className = 'skeeditor-edit-button';
+  button.setAttribute('data-skeeditor-fallback', 'true');
   button.setAttribute('aria-label', 'Edit post');
   button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>`;
   return button;
+};
+
+const adoptButtonPresentation = (button: HTMLButtonElement, referenceButton: HTMLElement): void => {
+  const referenceClassName = referenceButton.getAttribute('class');
+  if (referenceClassName) {
+    button.className = `${referenceClassName} skeeditor-edit-button`;
+  }
+  const inlineStyle = referenceButton.getAttribute('style');
+  if (inlineStyle) {
+    button.setAttribute('style', inlineStyle);
+  }
+  button.removeAttribute('data-skeeditor-fallback');
 };
 
 const placeEditButton = (postElement: HTMLElement, button: HTMLButtonElement): void => {
@@ -895,6 +934,7 @@ const placeEditButton = (postElement: HTMLElement, button: HTMLButtonElement): v
   const optionsContainer = optionsButton?.parentElement;
 
   if (optionsContainer && optionsButton) {
+    adoptButtonPresentation(button, optionsButton);
     if (optionsContainer.querySelectorAll('button').length > 1) {
       // Options button is a direct child of the action row — insert button directly
       // before the options button so it appears as an adjacent sibling.
@@ -1137,6 +1177,9 @@ const scanForPosts = (): void => {
   // posts is always defined when currentDid !== null (see lazy guard above).
   for (const postInfo of posts ?? []) {
     visiblePosts += 1;
+    if (isRepostItem(postInfo.element)) {
+      continue;
+    }
     if (!isElementOwnPost(postInfo.element, postInfo.repo)) {
       continue;
     }

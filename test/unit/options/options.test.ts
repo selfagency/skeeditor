@@ -98,6 +98,14 @@ describe('options page', () => {
       expect(cards.length).toBe(2);
     });
 
+    it('renders account rows without nested bordered cards', async () => {
+      await setupComponents([makeAccount({ did: 'did:plc:user1', isActive: true })]);
+
+      const [card] = getAccountCards();
+      expect(card?.shadowRoot?.querySelector('.account-card')).toBeNull();
+      expect(card?.shadowRoot?.querySelector('.account-row')).toBeTruthy();
+    });
+
     it('displays the handle when available', async () => {
       await setupComponents([makeAccount({ handle: 'alice.bsky.social' })]);
 
@@ -253,6 +261,18 @@ describe('options page', () => {
         expect.objectContaining({ type: 'AUTH_SIGN_IN' }),
       );
     });
+
+    it('shows a toast for account action status updates', async () => {
+      await setupComponents([]);
+
+      const pdsInput = accountsEl.shadowRoot?.getElementById('add-pds-url') as HTMLInputElement;
+      pdsInput.value = 'http://not-secure.example.com';
+
+      (accountsEl.shadowRoot?.getElementById('add-account') as HTMLButtonElement)?.click();
+      await flushPromises();
+
+      expect(document.querySelector('options-toast')).toBeTruthy();
+    });
   });
 
   // ── Settings section ───────────────────────────────────────────────────────
@@ -343,6 +363,17 @@ describe('options page', () => {
       expect(firstEvent).toBeDefined();
       const detail = (firstEvent as CustomEvent).detail;
       expect(detail.message).toContain('Storage full');
+    });
+
+    it('shows a toast when settings are saved', async () => {
+      await setupComponents([]);
+
+      (settingsEl.shadowRoot?.getElementById('save-settings') as HTMLButtonElement)?.click();
+      await flushPromises();
+
+      const toast = document.querySelector('options-toast');
+      expect(toast).toBeTruthy();
+      expect(toast?.getAttribute('message')).toContain('Settings saved');
     });
 
     it('sends SET_SETTINGS with recreate mode when selected', async () => {

@@ -108,11 +108,8 @@ export class AccountCard extends HTMLElement {
       return;
     }
 
-    const card = document.createElement('div');
-    card.className = 'account-card rounded-lg border border-gray-200 p-3 dark:border-white/10';
-
     const row = document.createElement('div');
-    row.className = 'flex items-center justify-between gap-2';
+    row.className = 'account-row flex items-center justify-between gap-2';
 
     const accountLabel = document.createElement('div');
     accountLabel.className = 'min-w-0 flex-1 flex items-center gap-1';
@@ -152,8 +149,7 @@ export class AccountCard extends HTMLElement {
     actions.appendChild(removeButton);
 
     row.append(accountLabel, actions);
-    card.appendChild(row);
-    this.root.appendChild(card);
+    this.root.appendChild(row);
   }
 }
 

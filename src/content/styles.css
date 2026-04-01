@@ -55,7 +55,7 @@ html.theme--dim {
   --skeeditor-primary-hover: #4d8aff;
 }
 
-.skeeditor-edit-button {
+.skeeditor-edit-button[data-skeeditor-fallback='true'] {
   appearance: none;
   display: inline-flex;
   align-items: center;
@@ -75,7 +75,7 @@ html.theme--dim {
     transform 0.15s ease;
 }
 
-.skeeditor-edit-button:hover {
+.skeeditor-edit-button[data-skeeditor-fallback='true']:hover {
   background: rgba(128, 128, 128, 0.05);
 }
 
@@ -84,7 +84,7 @@ html.theme--dim {
   outline-offset: 2px;
 }
 
-.skeeditor-edit-button:active {
+.skeeditor-edit-button[data-skeeditor-fallback='true']:active {
   transform: scale(0.95);
 }
 

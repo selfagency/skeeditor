@@ -163,6 +163,38 @@ describe('content-script', () => {
     expect(document.querySelector('[data-skeeditor-edit-button]')).toBeTruthy();
   });
 
+  it('should not inject an edit button on repost items', async () => {
+    document.body.innerHTML = `
+      <article role="article" data-testid="feedItem-by-did:plc:alice123">
+        <div aria-label="Reposted by alice.bsky.social">Reposted by alice.bsky.social</div>
+        <a href="https://bsky.app/profile/alice.bsky.social/post/3abc">
+          <p data-testid="post-text">My original post shown as a repost item</p>
+        </a>
+        <div data-testid="postButtonInline"></div>
+      </article>
+    `;
+
+    const sendMessage = vi.fn(async request => {
+      if (request.type === 'AUTH_GET_STATUS') {
+        return {
+          authenticated: true,
+          did: 'did:plc:alice123',
+          handle: 'alice.bsky.social',
+          expiresAt: Date.now() + 60_000,
+        };
+      }
+
+      return { ok: true };
+    });
+
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    await import('@src/content/content-script');
+    await flushMicrotasks(3);
+
+    expect(document.querySelector('[data-skeeditor-edit-button]')).toBeNull();
+  });
+
   it('should remove injected edit button when session is cleared via storage change', async () => {
     const sendMessage = vi.fn(async request => {
       if (request.type === 'AUTH_GET_STATUS') {
@@ -232,6 +264,42 @@ describe('content-script', () => {
     expect(editButton?.nextElementSibling).toBe(optionsButton);
   });
 
+  it('should inherit the options button classes for spacing and colors when available', async () => {
+    document.body.innerHTML = `
+      <article role="article">
+        <a href="https://bsky.app/profile/alice.bsky.social/post/3abc">
+          <p data-testid="post-text">Hello Bluesky</p>
+        </a>
+        <div class="action-row">
+          <button aria-label="Reply (0 replies)" type="button"></button>
+          <button aria-label="Open post options menu" type="button" class="bsky-action-btn themed-action"></button>
+        </div>
+      </article>
+    `;
+
+    const sendMessage = vi.fn(async request => {
+      if (request.type === 'AUTH_GET_STATUS') {
+        return {
+          authenticated: true,
+          did: 'did:plc:alice123',
+          handle: 'alice.bsky.social',
+          expiresAt: Date.now() + 60_000,
+        };
+      }
+
+      return { ok: true };
+    });
+
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    await import('@src/content/content-script');
+    await flushMicrotasks(3);
+
+    const editButton = document.querySelector<HTMLButtonElement>('[data-skeeditor-edit-button]');
+    expect(editButton?.className).toContain('bsky-action-btn');
+    expect(editButton?.className).toContain('themed-action');
+  });
+
   it('should close and remove the edit modal when session is cleared via storage change', async () => {
     const sendMessage = vi.fn(async request => {
       if (request.type === 'AUTH_GET_STATUS') {
@@ -270,6 +338,55 @@ describe('content-script', () => {
     onChanged._emit({ activeDid: { newValue: null } });
 
     expect(document.querySelector('[data-skeeditor-modal]')).toBeNull();
+  });
+
+  it('should open the modal immediately with a loading spinner while fetching the latest record', async () => {
+    let resolveRecord: ((value: unknown) => void) | undefined;
+    const recordPromise = new Promise(resolve => {
+      resolveRecord = resolve;
+    });
+
+    const sendMessage = vi.fn(async request => {
+      if (request.type === 'AUTH_GET_STATUS') {
+        return {
+          authenticated: true,
+          did: 'did:plc:alice123',
+          handle: 'alice.bsky.social',
+          expiresAt: Date.now() + 60_000,
+        };
+      }
+
+      if (request.type === 'GET_RECORD') {
+        return recordPromise;
+      }
+
+      if (request.type === 'GET_SETTINGS') return { editTimeLimit: null, saveStrategy: 'recreate' };
+
+      return { ok: true };
+    });
+
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    await import('@src/content/content-script');
+    await flushMicrotasks(2);
+
+    const editButton = document.querySelector<HTMLButtonElement>('[data-skeeditor-edit-button]');
+    editButton?.click();
+    await flushMicrotasks(2);
+
+    const modal = document.querySelector<HTMLElement>('[data-skeeditor-modal]');
+    const shadowRoot = modal?.shadowRoot;
+    expect(modal).toBeTruthy();
+    expect(shadowRoot?.querySelector('skeeditor-spinner')).toBeTruthy();
+
+    resolveRecord?.({
+      value: { $type: 'app.bsky.feed.post', text: 'Hello Bluesky', createdAt: '2026-03-26T00:00:00.000Z' },
+      cid: 'bafyreitest',
+    });
+    await flushMicrotasks(5);
+
+    expect(shadowRoot?.querySelector('.loading-state')?.classList.contains('hidden')).toBe(true);
+    expect(shadowRoot?.querySelector<HTMLTextAreaElement>('textarea')?.value).toBe('Hello Bluesky');
   });
 
   // ── Phase F: auto-switch on profile navigation ────────────────────────────
