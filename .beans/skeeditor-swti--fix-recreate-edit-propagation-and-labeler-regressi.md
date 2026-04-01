@@ -1,6 +1,7 @@
 ---
 # skeeditor-swti
 branch: fix/recreate-edit-labeler-regression
+pr: https://github.com/selfagency/skeeditor/pull/96
 title: fix recreate edit propagation and labeler regressi
 status: completed
 type: task
