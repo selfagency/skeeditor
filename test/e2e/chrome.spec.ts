@@ -6,6 +6,7 @@ import {
   TEST_AT_URI,
   TEST_DID,
   TEST_RKEY,
+  makeMockApplyWritesResult,
   test as bskyTest,
   makeMockGetRecordResult,
   makeMockPutRecordResult,
@@ -118,6 +119,7 @@ bskyTest(
     // Modal should appear with the record text.
     const modal = page.locator('edit-modal');
     await expect(modal).toBeAttached({ timeout: 5_000 });
+
     const textarea = modal.locator('textarea');
     await expect(textarea).toHaveValue(OWN_POST_TEXT, { timeout: 5_000 });
 
@@ -187,5 +189,91 @@ bskyTest(
     const statusMsg = modal.locator('.status-message.error');
     await expect(statusMsg).toBeVisible({ timeout: 5_000 });
     await expect(statusMsg).toContainText('This post changed while you were editing.');
+  },
+);
+
+/**
+ * Verifies that when saveStrategy is 'edit', the extension still uses PUT_RECORD
+ * and preserves the original createdAt in the stored record body.
+ */
+bskyTest(
+  'PUT_RECORD body preserves createdAt when saveStrategy is edit',
+  async ({ page, setAuthState, routeBskyApp, routeXrpcGetRecord, capturePutRecord, context, extensionId }) => {
+    // Set saveStrategy to 'edit' in storage before navigating.
+    const popupPage = await context.newPage();
+    await popupPage.goto(`chrome-extension://${extensionId}/popup.html`);
+    await popupPage.evaluate(async () => {
+      await chrome.storage.local.set({ settings: { editTimeLimit: null, saveStrategy: 'edit' } });
+    });
+    await popupPage.close();
+
+    await setAuthState(TEST_DID);
+    await routeBskyApp();
+    await routeXrpcGetRecord(makeMockGetRecordResult());
+    const { getBody } = await capturePutRecord(makeMockPutRecordResult());
+    await page.goto(`https://bsky.app/profile/${TEST_DID}/post/${TEST_RKEY}`);
+
+    const editButton = page.locator(`[data-at-uri="${TEST_AT_URI}"] .skeeditor-edit-button`);
+    await expect(editButton).toBeVisible({ timeout: 10_000 });
+    await editButton.click();
+
+    const modal = page.locator('edit-modal');
+    await expect(modal.locator('textarea')).toBeVisible({ timeout: 5_000 });
+    await modal.locator('textarea').fill('Updated text preserving record identity');
+    await modal.locator('.save-button').click();
+    await expect(modal).not.toBeAttached({ timeout: 5_000 });
+
+    const body = getBody();
+    expect(body).not.toBeNull();
+    const record = (body as Record<string, unknown>)['record'] as Record<string, unknown>;
+    expect(record['createdAt']).toBe('2026-03-25T12:00:00.000Z');
+  },
+);
+
+/**
+ * Verifies that when saveStrategy is 'recreate', the extension uses applyWrites
+ * with delete+create and generates a fresh createdAt in the recreated record.
+ */
+bskyTest(
+  'RECREATE_RECORD uses applyWrites with a fresh createdAt when saveStrategy is recreate',
+  async ({ page, setAuthState, routeBskyApp, routeXrpcGetRecord, captureApplyWrites, context, extensionId }) => {
+    const popupPage = await context.newPage();
+    await popupPage.goto(`chrome-extension://${extensionId}/popup.html`);
+    await popupPage.evaluate(async () => {
+      await chrome.storage.local.set({ settings: { editTimeLimit: null, saveStrategy: 'recreate' } });
+    });
+    await popupPage.close();
+
+    await setAuthState(TEST_DID);
+    await routeBskyApp();
+    await routeXrpcGetRecord(makeMockGetRecordResult());
+    const { getBody } = await captureApplyWrites(makeMockApplyWritesResult());
+
+    const before = Date.now();
+
+    await page.goto(`https://bsky.app/profile/${TEST_DID}/post/${TEST_RKEY}`);
+
+    const editButton = page.locator(`[data-at-uri="${TEST_AT_URI}"] .skeeditor-edit-button`);
+    await expect(editButton).toBeVisible({ timeout: 10_000 });
+    await editButton.click();
+
+    const modal = page.locator('edit-modal');
+    await expect(modal.locator('textarea')).toBeVisible({ timeout: 5_000 });
+    await modal.locator('textarea').fill('Updated text recreated as fresh');
+    await modal.locator('.save-button').click();
+    await expect(modal).not.toBeAttached({ timeout: 5_000 });
+
+    const body = getBody();
+    expect(body).not.toBeNull();
+    const writes = (body as Record<string, unknown>)['writes'] as Array<Record<string, unknown>>;
+    expect(writes).toHaveLength(2);
+    expect(writes[0]?.['$type']).toBe('com.atproto.repo.applyWrites#delete');
+    expect(writes[1]?.['$type']).toBe('com.atproto.repo.applyWrites#create');
+    const record = writes[1]?.['value'] as Record<string, unknown>;
+    expect(record['createdAt']).not.toBe('2026-03-25T12:00:00.000Z');
+    const savedMs = new Date(record['createdAt'] as string).getTime();
+    const after = Date.now();
+    expect(savedMs).toBeGreaterThanOrEqual(before - 5000);
+    expect(savedMs).toBeLessThanOrEqual(after + 5000);
   },
 );

@@ -8,12 +8,12 @@ export const APP_BSKY_FEED_POST_COLLECTION = 'app.bsky.feed.post';
 
 export interface ExtensionSettings {
   editTimeLimit: number | null;
-  postDateStrategy: 'preserve' | 'update';
+  saveStrategy: 'edit' | 'recreate';
 }
 
 const DEFAULT_SETTINGS: ExtensionSettings = {
   editTimeLimit: null,
-  postDateStrategy: 'update',
+  saveStrategy: 'edit',
 };
 
 const getStorage = (): typeof browser.storage.local => {
@@ -33,7 +33,11 @@ export const isValidEditTimeLimit = (value: unknown): value is number | null => 
   );
 };
 
-export const isValidPostDateStrategy = (value: unknown): value is ExtensionSettings['postDateStrategy'] => {
+export const isValidSaveStrategy = (value: unknown): value is ExtensionSettings['saveStrategy'] => {
+  return value === 'edit' || value === 'recreate';
+};
+
+const isValidLegacyPostDateStrategy = (value: unknown): value is 'preserve' | 'update' => {
   return value === 'preserve' || value === 'update';
 };
 
@@ -46,13 +50,17 @@ const normalizeExtensionSettings = (value: unknown): ExtensionSettings => {
   const editTimeLimit = isValidEditTimeLimit(raw['editTimeLimit'])
     ? raw['editTimeLimit']
     : DEFAULT_SETTINGS.editTimeLimit;
-  const postDateStrategy = isValidPostDateStrategy(raw['postDateStrategy'])
-    ? raw['postDateStrategy']
-    : DEFAULT_SETTINGS.postDateStrategy;
+  const saveStrategy = isValidSaveStrategy(raw['saveStrategy'])
+    ? raw['saveStrategy']
+    : isValidLegacyPostDateStrategy(raw['postDateStrategy'])
+      ? raw['postDateStrategy'] === 'update'
+        ? 'recreate'
+        : 'edit'
+      : DEFAULT_SETTINGS.saveStrategy;
 
   return {
     editTimeLimit,
-    postDateStrategy,
+    saveStrategy,
   };
 };
 

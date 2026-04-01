@@ -10,7 +10,7 @@ const EDIT_MODAL_TEMPLATE = `
       position: fixed;
       inset: 0;
       z-index: 10000;
-      background: rgba(0, 0, 0, 0.5);
+      background: var(--color-surface-overlay, rgba(0, 0, 0, 0.5));
     }
     ${globalStyles}
   </style>
@@ -30,7 +30,7 @@ const EDIT_MODAL_TEMPLATE = `
       <div class="edit-modal-char-count char-count"></div>
       <div class="media-upload" style="display:flex;flex-direction:column;gap:0.5rem;">
         <input type="file" accept="image/*,video/mp4" multiple class="hidden">
-        <button class="upload-button" style="border-radius:0.375rem;background:white;padding:0.375rem 0.625rem;font-size:0.875rem;font-weight:600;color:#111827;border:1px solid #d1d5db;cursor:pointer;" type="button">Add Media</button>
+        <button class="upload-button" style="border-radius:0.375rem;background:var(--color-secondary-bg);padding:0.375rem 0.625rem;font-size:0.875rem;font-weight:600;color:var(--color-secondary-text);border:1px solid var(--color-secondary-border);cursor:pointer;" type="button">Add Media</button>
         <div class="media-preview" style="display:flex;flex-wrap:wrap;gap:0.5rem;"></div>
       </div>
       <div class="status-message hidden" style="border-radius:0.375rem;padding:0.5rem 0.75rem;font-size:0.875rem;" aria-live="polite"></div>

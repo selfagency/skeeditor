@@ -11,6 +11,13 @@ type PopupState = 'loading' | 'unauthenticated' | 'authenticated';
 
 const LABELER_SUBSCRIBE_URL = `https://bsky.app/profile/${LABELER_DID}`;
 const BUG_REPORT_URL = 'https://github.com/selfagency/skeeditor/issues/new?template=bug-report.yml';
+const EXTENSION_VERSION =
+  typeof __SKEEDITOR_VERSION__ === 'string' && __SKEEDITOR_VERSION__.length > 0 ? __SKEEDITOR_VERSION__ : 'dev';
+const EXTENSION_COMMIT_SHA =
+  typeof __SKEEDITOR_COMMIT_SHA__ === 'string' && __SKEEDITOR_COMMIT_SHA__.length > 0
+    ? __SKEEDITOR_COMMIT_SHA__
+    : 'unknown';
+const BUILD_INFO_TEXT = `v${EXTENSION_VERSION} · ${EXTENSION_COMMIT_SHA}`;
 
 /**
  * `<auth-popup>` Web Component — renders login/logout UI inside the extension
@@ -82,71 +89,89 @@ class AuthPopup extends HTMLElement {
 
   private template(): string {
     const style = `<style>${globalStyles}</style>`;
+    const content = (() => {
+      switch (this.state) {
+        case 'loading':
+          return `
+            <div class="flex items-center justify-center p-6">
+              <span class="loading text-sm text-gray-500 dark:text-gray-400">Checking authentication\u2026</span>
+            </div>`;
 
-    switch (this.state) {
-      case 'loading':
-        return `
-          ${style}
-          <div class="flex items-center justify-center p-6">
-            <span class="loading text-sm text-gray-500 dark:text-gray-400">Checking authentication\u2026</span>
-          </div>`;
-
-      case 'unauthenticated':
-        return `
-          ${style}
-          <div class="space-y-4 p-4">
-            <p class="text-sm text-gray-600 dark:text-gray-400">Sign in with your Bluesky account to edit posts.</p>
-            <div>
-              <label for="pds-url" class="block text-sm/6 font-medium text-gray-900 dark:text-gray-100">PDS URL</label>
-              <div class="mt-2">
-                <input type="url" id="pds-url" value="https://bsky.social" placeholder="https://bsky.social"
-                  class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-indigo-500" />
+        case 'unauthenticated':
+          return `
+            <div class="space-y-4 p-4">
+              <p class="text-sm text-gray-600 dark:text-gray-400">Sign in with your Bluesky account to edit posts.</p>
+              <div>
+                <label for="pds-url" class="block text-sm/6 font-medium text-gray-900 dark:text-gray-100">PDS URL</label>
+                <div class="mt-2">
+                  <input type="url" id="pds-url" value="https://bsky.social" placeholder="https://bsky.social"
+                    class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-indigo-500" />
+                </div>
               </div>
-            </div>
-            <button id="sign-in" type="button"
-              class="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:bg-indigo-500 dark:shadow-none dark:hover:bg-indigo-400 dark:focus-visible:outline-indigo-500">
-              Sign in with Bluesky
-            </button>
-          </div>`;
-
-      case 'authenticated': {
-        const labelerBanner = this.showLabelerPrompt
-          ? `<div class="rounded-lg border border-indigo-500/30 bg-indigo-950/50 p-3">
-              <p class="text-xs text-indigo-200">Labeler subscription is managed on Bluesky.
-              This opens Bluesky so you can subscribe there and see
-              <strong>Edited</strong> labels on posts.</p>
-              <a id="subscribe-labeler" href="${escapeHTML(LABELER_SUBSCRIBE_URL)}" target="_blank" rel="noopener noreferrer"
-                class="mt-2 flex w-full items-center justify-center gap-1 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400">
-                Open labeler profile
-              </a>
-              <button id="dismiss-labeler-prompt" type="button"
-                class="mt-1.5 w-full text-center text-xs text-indigo-400 hover:text-indigo-200">Not now</button>
-            </div>`
-          : '';
-
-        const accountCards = this.accounts.map(account => this.renderAccountCard(account)).join('');
-
-        return `
-          ${style}
-          <div class="space-y-3 p-4">
-            ${labelerBanner}
-            ${accountCards}
-            <div class="border-t border-gray-200 pt-3 dark:border-white/10">
-              <button id="open-settings" type="button"
-                class="flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4" aria-hidden="true">
-                  <path fill-rule="evenodd" d="M6.955 1.45A.5.5 0 0 1 7.452 1h1.096a.5.5 0 0 1 .497.45l.17 1.699c.484.12.94.312 1.356.562l1.38-.966a.5.5 0 0 1 .633.062l.775.775a.5.5 0 0 1 .062.633l-.966 1.38c.25.417.441.872.562 1.356l1.699.17a.5.5 0 0 1 .45.497v1.096a.5.5 0 0 1-.45.497l-1.699.17c-.12.484-.312.94-.562 1.356l.966 1.38a.5.5 0 0 1-.062.633l-.775.775a.5.5 0 0 1-.633.062l-1.38-.966c-.417.25-.872.441-1.356.562l-.17 1.699a.5.5 0 0 1-.497.45H7.452a.5.5 0 0 1-.497-.45l-.17-1.699a5.002 5.002 0 0 1-1.356-.562l-1.38.966a.5.5 0 0 1-.633-.062l-.775-.775a.5.5 0 0 1-.062-.633l.966-1.38a5.002 5.002 0 0 1-.562-1.356l-1.699-.17A.5.5 0 0 1 1 8.548V7.452a.5.5 0 0 1 .45-.497l1.699-.17c.12-.484.312-.94.562-1.356l-.966-1.38a.5.5 0 0 1 .062-.633l.775-.775a.5.5 0 0 1 .633-.062l1.38.966c.417-.25.872-.441 1.356-.562l.17-1.699ZM8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" clip-rule="evenodd" />
-                </svg>
-                Settings
+              <button id="sign-in" type="button"
+                class="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:bg-indigo-500 dark:shadow-none dark:hover:bg-indigo-400 dark:focus-visible:outline-indigo-500">
+                Sign in with Bluesky
               </button>
-              <a id="report-bug" href="${escapeHTML(BUG_REPORT_URL)}" target="_blank" rel="noopener noreferrer"
-                class="mt-1 flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                Report a bug
-              </a>
-            </div>
-          </div>`;
+            </div>`;
+
+        case 'authenticated': {
+          const labelerBanner = this.showLabelerPrompt
+            ? `<div class="rounded-lg border border-indigo-500/30 bg-indigo-950/50 p-3">
+                <p class="text-xs text-indigo-200">Labeler subscription is managed on Bluesky.
+                This opens Bluesky so you can subscribe there and see
+                <strong>Edited</strong> labels on posts.</p>
+                <a id="subscribe-labeler" href="${escapeHTML(LABELER_SUBSCRIBE_URL)}" target="_blank" rel="noopener noreferrer"
+                  class="mt-2 flex w-full items-center justify-center gap-1 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400">
+                  Open labeler profile
+                </a>
+                <button id="dismiss-labeler-prompt" type="button"
+                  class="mt-1.5 w-full text-center text-xs text-indigo-400 hover:text-indigo-200">Not now</button>
+              </div>`
+            : '';
+
+          const accountCards = this.accounts.map(account => this.renderAccountCard(account)).join('');
+
+          return `
+            <div class="space-y-3 p-4">
+              ${labelerBanner}
+              ${accountCards}
+              <div class="border-t border-gray-200 pt-3 dark:border-white/10">
+                <button id="open-settings" type="button"
+                  class="flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M6.955 1.45A.5.5 0 0 1 7.452 1h1.096a.5.5 0 0 1 .497.45l.17 1.699c.484.12.94.312 1.356.562l1.38-.966a.5.5 0 0 1 .633.062l.775.775a.5.5 0 0 1 .062.633l-.966 1.38c.25.417.441.872.562 1.356l1.699.17a.5.5 0 0 1 .45.497v1.096a.5.5 0 0 1-.45.497l-1.699.17c-.12.484-.312.94-.562 1.356l.966 1.38a.5.5 0 0 1-.062.633l-.775.775a.5.5 0 0 1-.633.062l-1.38-.966c-.417.25-.872.441-1.356.562l-.17 1.699a.5.5 0 0 1-.497.45H7.452a.5.5 0 0 1-.497-.45l-.17-1.699a5.002 5.002 0 0 1-1.356-.562l-1.38.966a.5.5 0 0 1-.633-.062l-.775-.775a.5.5 0 0 1-.062-.633l.966-1.38a5.002 5.002 0 0 1-.562-1.356l-1.699-.17A.5.5 0 0 1 1 8.548V7.452a.5.5 0 0 1 .45-.497l1.699-.17c.12-.484.312-.94.562-1.356l-.966-1.38a.5.5 0 0 1 .062-.633l.775-.775a.5.5 0 0 1 .633-.062l1.38.966c.417-.25.872-.441 1.356-.562l.17-1.699ZM8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" clip-rule="evenodd" />
+                  </svg>
+                  Settings
+                </button>
+                <a id="report-bug" href="${escapeHTML(BUG_REPORT_URL)}" target="_blank" rel="noopener noreferrer"
+                  class="mt-1 flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                  Report a bug
+                </a>
+              </div>
+            </div>`;
+        }
       }
-    }
+    })();
+
+    return `
+      ${style}
+      <div class="flex flex-col">
+        ${content}
+        ${this.renderBuildInfoFooter()}
+      </div>`;
+  }
+
+  private renderBuildInfoFooter(): string {
+    return `
+      <div class="border-t border-gray-200 px-4 py-2 text-center dark:border-white/10">
+        <span
+          id="build-info"
+          class="font-mono text-xs text-gray-500 dark:text-gray-400"
+          title="Skeeditor build ${escapeHTML(BUILD_INFO_TEXT)}"
+        >
+          ${escapeHTML(BUILD_INFO_TEXT)}
+        </span>
+      </div>`;
   }
 
   private renderAccountCard(account: AuthListAccountsAccount): string {

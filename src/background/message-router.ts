@@ -8,6 +8,7 @@ import type {
   GetRecordResult,
   PutRecordResult,
   PutRecordWithSwapResult,
+  RecreateRecordParams,
   XrpcClientConfig,
 } from '../shared/api/xrpc-client';
 import { XrpcClient } from '../shared/api/xrpc-client';
@@ -25,7 +26,7 @@ import {
   getOAuthTokenUrl,
   getSettings,
   isValidEditTimeLimit,
-  isValidPostDateStrategy,
+  isValidSaveStrategy,
   LABELER_DID,
   LABELER_EMIT_URL,
   setCurrentPdsUrl,
@@ -228,6 +229,7 @@ interface XrpcInterface {
   createRecord: (
     params: import('../shared/api/xrpc-client').CreateRecordParams,
   ) => Promise<import('../shared/api/xrpc-client').CreateRecordResult>;
+  recreateRecord: (params: RecreateRecordParams) => Promise<PutRecordResult>;
   putRecord: (params: {
     repo: string;
     collection: string;
@@ -296,6 +298,7 @@ const KNOWN_TYPES = new Set([
   'GET_RECORD',
   'CREATE_RECORD',
   'PUT_RECORD',
+  'RECREATE_RECORD',
   'UPLOAD_BLOB',
   'SET_PDS_URL',
   'GET_PDS_URL',
@@ -397,6 +400,32 @@ function isValidPutRecordPayload(msg: IncomingMessage): msg is IncomingMessage &
   return true;
 }
 
+interface RecreateRecordPayload {
+  repo: string;
+  collection: string;
+  rkey: string;
+  record: Record<string, unknown> & { $type: string };
+}
+
+function isValidRecreateRecordPayload(msg: IncomingMessage): msg is IncomingMessage & RecreateRecordPayload {
+  if (!isNonEmptyString(msg['repo']) || !isNonEmptyString(msg['collection']) || !isNonEmptyString(msg['rkey'])) {
+    return false;
+  }
+  const record = msg['record'];
+  if (
+    record === null ||
+    typeof record !== 'object' ||
+    Array.isArray(record) ||
+    Object.getPrototypeOf(record) !== Object.prototype
+  ) {
+    return false;
+  }
+  if (!isNonEmptyString((record as Record<string, unknown>)['$type'])) {
+    return false;
+  }
+  return true;
+}
+
 function isUploadBlobPayload(message: unknown): message is { data: ArrayBuffer; mimeType: string; repo: string } {
   return (
     typeof message === 'object' &&
@@ -412,15 +441,15 @@ function isUploadBlobPayload(message: unknown): message is { data: ArrayBuffer; 
 
 function isValidSettingsPayload(
   msg: IncomingMessage,
-): msg is IncomingMessage & { settings: { editTimeLimit: number | null; postDateStrategy: 'preserve' | 'update' } } {
+): msg is IncomingMessage & { settings: { editTimeLimit: number | null; saveStrategy: 'edit' | 'recreate' } } {
   const settings = msg['settings'];
   if (settings === null || typeof settings !== 'object' || Array.isArray(settings)) {
     return false;
   }
 
   const editTimeLimit = (settings as Record<string, unknown>)['editTimeLimit'];
-  const postDateStrategy = (settings as Record<string, unknown>)['postDateStrategy'];
-  return isValidEditTimeLimit(editTimeLimit) && isValidPostDateStrategy(postDateStrategy);
+  const saveStrategy = (settings as Record<string, unknown>)['saveStrategy'];
+  return isValidEditTimeLimit(editTimeLimit) && isValidSaveStrategy(saveStrategy);
 }
 
 // ── Handler ──────────────────────────────────────────────────────────────────
@@ -851,6 +880,62 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
       } catch (err) {
         // Check for authentication/scope errors that require re-authentication
         const errorMessage = err instanceof Error ? err.message : 'Failed to update record';
+        const isAuthError =
+          errorMessage.toLowerCase().includes('invalid token') ||
+          errorMessage.toLowerCase().includes('bad token') ||
+          errorMessage.toLowerCase().includes('scope') ||
+          errorMessage.toLowerCase().includes('unauthorized') ||
+          errorMessage.toLowerCase().includes('forbidden') ||
+          (err instanceof Error && 'status' in err && (err.status === 401 || err.status === 403));
+
+        if (isAuthError) {
+          await deps.store.clear();
+          return {
+            type: 'PUT_RECORD_ERROR',
+            message: 'Authentication required. Please sign in again.',
+            requiresReauth: true,
+          } satisfies PutRecordErrorResponse;
+        }
+
+        return {
+          type: 'PUT_RECORD_ERROR',
+          message: errorMessage,
+        } satisfies PutRecordErrorResponse;
+      }
+    }
+
+    case 'RECREATE_RECORD': {
+      if (!isValidRecreateRecordPayload(message)) {
+        return {
+          type: 'PUT_RECORD_ERROR',
+          message: 'Invalid RECREATE_RECORD payload',
+        } satisfies PutRecordErrorResponse;
+      }
+      const stored = await deps.store.get();
+      const valid = await deps.store.isAccessTokenValid();
+      if (stored === null || !valid) {
+        return { type: 'PUT_RECORD_ERROR', message: 'Not authenticated' } satisfies PutRecordErrorResponse;
+      }
+      try {
+        const pdsUrl = await getCurrentPdsUrl(stored.did);
+        const client = deps.createXrpc({
+          service: pdsUrl,
+          did: stored.did,
+          accessJwt: stored.accessToken,
+          ...(stored.dpopEnabled !== undefined && { dpopEnabled: stored.dpopEnabled }),
+        });
+
+        const result = await client.recreateRecord({
+          repo: message.repo,
+          collection: message.collection,
+          rkey: message.rkey,
+          record: message.record,
+        });
+
+        emitLabelTrigger(result.uri, result.cid, stored.did, stored.accessToken);
+        return { type: 'PUT_RECORD_SUCCESS', uri: result.uri, cid: result.cid } satisfies PutRecordSuccessResponse;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to recreate record';
         const isAuthError =
           errorMessage.toLowerCase().includes('invalid token') ||
           errorMessage.toLowerCase().includes('bad token') ||

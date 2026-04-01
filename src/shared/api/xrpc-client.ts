@@ -60,6 +60,19 @@ export interface PutRecordResult {
   cid: string;
 }
 
+export interface RecreateRecordParams {
+  repo: string;
+  collection: string;
+  rkey: string;
+  record: Record<string, unknown> & { $type: string };
+  validate?: boolean;
+}
+
+export interface RecreateRecordResult {
+  uri: string;
+  cid: string;
+}
+
 export type PutRecordWithSwapErrorKind = 'auth' | 'conflict' | 'network' | 'validation';
 
 export interface PutRecordWithSwapError {
@@ -289,11 +302,19 @@ export function buildThreeWayMergeAdvisory(
 export class XrpcClient {
   /** @internal exposed as `_client` for unit-test mock injection */
   public readonly _client: Client;
+  private readonly service: string;
+  private readonly accessJwt: string | undefined;
+  private readonly dpopKeyPairLoader: (() => Promise<CryptoKeyPair>) | undefined;
+  private dpopNonce: string | undefined;
 
   public constructor(config: XrpcClientConfig) {
     if (!config.service) {
       throw new XrpcClientError('XrpcClient requires a service URL');
     }
+
+    this.service = config.service.replace(/\/+$/u, '');
+    this.accessJwt = config.accessJwt;
+    this.dpopKeyPairLoader = config.dpopKeyPairLoader;
 
     // AgentOptions = AgentConfig | string | URL; we use AgentConfig here.
     // did and headers are optional on AgentConfig; build without them then assign
@@ -357,6 +378,76 @@ export class XrpcClient {
     this._client = new Client(agentConfig);
   }
 
+  private async buildAuthenticatedHeaders(url: string, nonce?: string): Promise<Headers> {
+    if (!this.accessJwt) {
+      throw new XrpcClientError('Authenticated XRPC write requires an access token');
+    }
+
+    const headers = new Headers({ 'Content-Type': 'application/json' });
+
+    if (this.dpopKeyPairLoader !== undefined) {
+      const keyPair = await this.dpopKeyPairLoader();
+      const proof = await createDpopProof(keyPair, 'POST', url, this.accessJwt, nonce);
+      headers.set('Authorization', `DPoP ${this.accessJwt}`);
+      headers.set('DPoP', proof);
+      return headers;
+    }
+
+    headers.set('Authorization', `Bearer ${this.accessJwt}`);
+    return headers;
+  }
+
+  private async postJson<T>(path: string, body: Record<string, unknown>, context: string): Promise<T> {
+    const url = `${this.service}${path}`;
+
+    const makeRequest = async (nonce?: string): Promise<Response> => {
+      return globalThis.fetch(url, {
+        method: 'POST',
+        headers: await this.buildAuthenticatedHeaders(url, nonce),
+        body: JSON.stringify(body),
+      });
+    };
+
+    let response = await makeRequest(this.dpopNonce);
+
+    if (this.dpopKeyPairLoader !== undefined && (response.status === 400 || response.status === 401)) {
+      const serverNonce = response.headers.get('DPoP-Nonce');
+      if (serverNonce !== null && serverNonce !== this.dpopNonce) {
+        this.dpopNonce = serverNonce;
+        response = await makeRequest(this.dpopNonce);
+      }
+    } else if (this.dpopKeyPairLoader !== undefined) {
+      const refreshedNonce = response.headers.get('DPoP-Nonce');
+      if (refreshedNonce !== null) {
+        this.dpopNonce = refreshedNonce;
+      }
+    }
+
+    if (!response.ok) {
+      const contentType = response.headers.get('content-type') ?? '';
+      let message = `${context} failed`;
+
+      if (contentType.includes('application/json')) {
+        const errorBody = (await response.json().catch(() => null)) as Record<string, unknown> | null;
+        const errorCode = typeof errorBody?.['error'] === 'string' ? errorBody['error'] : null;
+        const errorMessage = typeof errorBody?.['message'] === 'string' ? errorBody['message'] : null;
+        const parts = [errorCode, errorMessage].filter((part): part is string => part !== null && part.length > 0);
+        if (parts.length > 0) {
+          message = parts.join(': ');
+        }
+      } else {
+        const text = await response.text().catch(() => '');
+        if (text.length > 0) {
+          message = text;
+        }
+      }
+
+      throw new XrpcClientError(`${context}: ${message}`, { status: response.status });
+    }
+
+    return (await response.json()) as T;
+  }
+
   /**
    * Fetch a single AT Protocol record from the PDS.
    *
@@ -410,9 +501,9 @@ export class XrpcClient {
    * @throws `XrpcClientError` on any XRPC or network failure, including conflicts
    */
   public async putRecord(params: PutRecordParams): Promise<PutRecordResult> {
-    const { repo, collection: _collection, rkey, record, swapRecord, validate = true } = params;
+    const { repo, collection, rkey, record, swapRecord, validate = true } = params;
 
-    const options: Record<string, unknown> = { repo, validate };
+    const options: Record<string, unknown> = { repo, collection, validate };
     if (swapRecord !== undefined) {
       options['swapRecord'] = swapRecord;
     }
@@ -426,6 +517,56 @@ export class XrpcClient {
     } catch (err) {
       throw mapXrpcError(err, 'putRecord');
     }
+  }
+
+  public async recreateRecord(params: RecreateRecordParams): Promise<RecreateRecordResult> {
+    const { repo, collection, rkey, record, validate = true } = params;
+
+    type ApplyWritesResult = {
+      results?: Array<Record<string, unknown>>;
+    };
+
+    const response = await this.postJson<ApplyWritesResult>(
+      '/xrpc/com.atproto.repo.applyWrites',
+      {
+        repo,
+        validate,
+        writes: [
+          {
+            $type: 'com.atproto.repo.applyWrites#delete',
+            collection,
+            rkey,
+          },
+          {
+            $type: 'com.atproto.repo.applyWrites#create',
+            collection,
+            rkey,
+            value: record,
+          },
+        ],
+      },
+      'applyWrites',
+    );
+
+    const createResult = response.results?.find(result => {
+      return (
+        result['$type'] === 'com.atproto.repo.applyWrites#createResult' ||
+        (typeof result['uri'] === 'string' && typeof result['cid'] === 'string')
+      );
+    });
+
+    if (createResult === undefined) {
+      throw new XrpcClientError('applyWrites: missing create result');
+    }
+
+    const uri = createResult['uri'];
+    const cid = createResult['cid'];
+
+    if (typeof uri !== 'string' || typeof cid !== 'string') {
+      throw new XrpcClientError('applyWrites: missing recreate uri/cid');
+    }
+
+    return { uri, cid };
   }
 
   /**

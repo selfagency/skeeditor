@@ -66,6 +66,15 @@ The editor modal contains:
 
 Edit the text as needed, then click **Save**.
 
+### Choose how Skeeditor saves
+
+The options page lets you pick one of two save strategies:
+
+- **Edit record** — updates the existing post record in place. This keeps the same post identity/path and is the most conservative choice for typo fixes and small corrections.
+- **Recreate record** — atomically deletes and recreates the post at the same record key with a fresh `createdAt`. This is more likely to make the edit behave like a fresh post in Bluesky, but it is also a more invasive rewrite of the record.
+
+Use **Edit record** when you want the least surprising write path. Use **Recreate record** when visible freshness in Bluesky matters more than preserving the exact original record instance.
+
 ::: warning Facets are recalculated
 When you save, Skeeditor scans the new text for links (URLs), @mentions, and #hashtags and recalculates the byte-offset facets automatically. You don't need to do anything special — just type normally.
 :::
@@ -80,13 +89,14 @@ If you have subscribed to the Skeeditor labeler (`@skeeditor.link`), an "edited"
 
 ## Edit time limit
 
-You can configure a time window after which the Edit button is hidden on older posts. This is useful if you only want to allow fast corrections rather than open-ended editing.
+You can configure a time window after which the Edit button is hidden on older posts, and you can choose how saved edits are written back to Bluesky.
 
 1. Click the **Skeeditor** toolbar icon.
 2. Click **Options** (or the gear icon).
 3. Under **Edit time limit**, choose a window between 0.5 and 5 minutes, or select **No limit** to allow editing at any time.
+4. Under **How Skeeditor saves an edit**, choose either **Edit record** or **Recreate record**.
 
-The setting is stored locally in the extension and takes effect immediately.
+Both settings are stored locally in the extension and take effect immediately.
 
 ---
 
@@ -107,7 +117,7 @@ You can manage your labeler subscriptions at any time from your [Bluesky moderat
 
 ## Conflict handling
 
-If the post was updated elsewhere (for example, by another device or app) after the editor was opened, Skeeditor detects the CID mismatch and shows a **conflict warning** before overwriting.
+If the post was updated elsewhere (for example, by another device or app) after the editor was opened, Skeeditor detects the CID mismatch and shows a **conflict warning** before overwriting when you are using **Edit record** mode.
 
 The warning describes what happened and asks you to:
 

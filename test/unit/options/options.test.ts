@@ -1,32 +1,27 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AuthListAccountsAccount } from '@src/shared/messages';
+import type { OptionsAccounts } from '@src/shared/components/options-accounts';
+import type { OptionsSettings } from '@src/shared/components/options-settings';
+import type { OptionsStatus } from '@src/shared/components/options-status';
 
 const flushPromises = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
 
-const getAccountCards = (): HTMLElement[] =>
-  Array.from(document.querySelectorAll<HTMLElement>('account-card.account-card'));
+// ── DOM helpers ───────────────────────────────────────────────────────────────
+
+let accountsEl: OptionsAccounts;
+let settingsEl: OptionsSettings;
+let statusEl: OptionsStatus;
+let statusUpdateListener: ((event: Event) => void) | null = null;
+
+const getAccountCards = (): HTMLElement[] => {
+  const cards = accountsEl.shadowRoot?.querySelectorAll<HTMLElement>('account-card.account-card') ?? [];
+  return Array.from(cards);
+};
 
 const queryAcrossAccountCardShadows = <T extends Element>(selector: string): T[] => {
   return getAccountCards().flatMap(card => Array.from(card.shadowRoot?.querySelectorAll<T>(selector) ?? []));
 };
-
-// ── DOM helpers ───────────────────────────────────────────────────────────────
-
-function setupDOM(): void {
-  document.body.innerHTML = `
-    <p id="status"></p>
-    <div id="accounts-list"></div>
-    <input id="add-pds-url" type="url" value="https://bsky.social" />
-    <button id="add-account"></button>
-    <input id="edit-time-limit" type="number" />
-    <select id="post-date-strategy">
-      <option value="update">Update</option>
-      <option value="preserve">Preserve</option>
-    </select>
-    <button id="save-settings">Save Settings</button>
-  `;
-}
 
 // ── Mock helpers ──────────────────────────────────────────────────────────────
 
@@ -41,7 +36,7 @@ function mockSendMessage(accounts: AuthListAccountsAccount[]): void {
   vi.mocked(browser.runtime.sendMessage).mockImplementation(async (msg: unknown) => {
     const type = (msg as { type?: string })?.type;
     if (type === 'AUTH_LIST_ACCOUNTS') return { accounts };
-    if (type === 'GET_SETTINGS') return { editTimeLimit: null, postDateStrategy: 'update' };
+    if (type === 'GET_SETTINGS') return { editTimeLimit: null, saveStrategy: 'edit' };
     return { ok: true };
   });
 }
@@ -49,17 +44,37 @@ function mockSendMessage(accounts: AuthListAccountsAccount[]): void {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('options page', () => {
-  beforeEach(() => {
-    setupDOM();
+  beforeEach(async () => {
+    // Register components
+    await import('@src/shared/components/options-status');
+    await import('@src/shared/components/options-accounts');
+    await import('@src/shared/components/options-settings');
   });
 
   afterEach(() => {
     vi.resetModules();
+    document.body.innerHTML = '';
+    if (statusUpdateListener !== null) {
+      document.removeEventListener('status-update', statusUpdateListener);
+      statusUpdateListener = null;
+    }
   });
 
-  async function loadOptionsModule(): Promise<void> {
-    mockSendMessage([]);
-    await import('@src/options/options');
+  async function setupComponents(accounts: AuthListAccountsAccount[] = []): Promise<void> {
+    mockSendMessage(accounts);
+
+    statusEl = document.createElement('options-status') as OptionsStatus;
+    accountsEl = document.createElement('options-accounts') as OptionsAccounts;
+    settingsEl = document.createElement('options-settings') as OptionsSettings;
+
+    // Wire up status routing like main.ts does
+    statusUpdateListener = (event: Event) => {
+      const { message, type } = (event as CustomEvent<{ message: string; type: 'info' | 'success' | 'error' }>).detail;
+      statusEl.setStatus(message, type);
+    };
+    document.addEventListener('status-update', statusUpdateListener);
+
+    document.body.append(statusEl, accountsEl, settingsEl);
     await flushPromises();
   }
 
@@ -67,65 +82,34 @@ describe('options page', () => {
 
   describe('accounts list', () => {
     it('shows "No accounts signed in" when there are no accounts', async () => {
-      mockSendMessage([]);
-      await import('@src/options/options');
-      await flushPromises();
+      await setupComponents([]);
 
-      expect(document.getElementById('accounts-list')?.textContent).toContain('No accounts signed in');
+      const list = accountsEl.shadowRoot?.getElementById('accounts-list');
+      expect(list?.textContent).toContain('No accounts signed in');
     });
 
     it('renders one card per account', async () => {
-      vi.mocked(browser.runtime.sendMessage).mockImplementation(async (msg: unknown) => {
-        const type = (msg as { type?: string })?.type;
-        if (type === 'AUTH_LIST_ACCOUNTS')
-          return {
-            accounts: [
-              makeAccount({ did: 'did:plc:user1', isActive: true }),
-              makeAccount({ did: 'did:plc:user2', isActive: false }),
-            ],
-          };
-        if (type === 'GET_SETTINGS') return { editTimeLimit: null, postDateStrategy: 'update' };
-        return { ok: true };
-      });
+      await setupComponents([
+        makeAccount({ did: 'did:plc:user1', isActive: true }),
+        makeAccount({ did: 'did:plc:user2', isActive: false }),
+      ]);
 
-      await import('@src/options/options');
-      await flushPromises();
-
-      const cards = document.querySelectorAll('.account-card');
+      const cards = getAccountCards();
       expect(cards.length).toBe(2);
     });
 
     it('displays the handle when available', async () => {
-      vi.mocked(browser.runtime.sendMessage).mockImplementation(async (msg: unknown) => {
-        const type = (msg as { type?: string })?.type;
-        if (type === 'AUTH_LIST_ACCOUNTS') return { accounts: [makeAccount({ handle: 'alice.bsky.social' })] };
-        if (type === 'GET_SETTINGS') return { editTimeLimit: null, postDateStrategy: 'update' };
-        return { ok: true };
-      });
-
-      await import('@src/options/options');
-      await flushPromises();
+      await setupComponents([makeAccount({ handle: 'alice.bsky.social' })]);
 
       const [card] = getAccountCards();
       expect(card?.shadowRoot?.textContent).toContain('alice.bsky.social');
     });
 
     it('shows "Set active" button only for non-active accounts', async () => {
-      vi.mocked(browser.runtime.sendMessage).mockImplementation(async (msg: unknown) => {
-        const type = (msg as { type?: string })?.type;
-        if (type === 'AUTH_LIST_ACCOUNTS')
-          return {
-            accounts: [
-              makeAccount({ did: 'did:plc:user1', isActive: true }),
-              makeAccount({ did: 'did:plc:user2', isActive: false }),
-            ],
-          };
-        if (type === 'GET_SETTINGS') return { editTimeLimit: null, postDateStrategy: 'update' };
-        return { ok: true };
-      });
-
-      await import('@src/options/options');
-      await flushPromises();
+      await setupComponents([
+        makeAccount({ did: 'did:plc:user1', isActive: true }),
+        makeAccount({ did: 'did:plc:user2', isActive: false }),
+      ]);
 
       const switchBtns = queryAcrossAccountCardShadows<HTMLButtonElement>('.account-switch');
       expect(switchBtns.length).toBe(1);
@@ -133,43 +117,29 @@ describe('options page', () => {
     });
 
     it('shows remove button for every account', async () => {
-      vi.mocked(browser.runtime.sendMessage).mockImplementation(async (msg: unknown) => {
-        const type = (msg as { type?: string })?.type;
-        if (type === 'AUTH_LIST_ACCOUNTS')
-          return {
-            accounts: [
-              makeAccount({ did: 'did:plc:user1', isActive: true }),
-              makeAccount({ did: 'did:plc:user2', isActive: false }),
-            ],
-          };
-        if (type === 'GET_SETTINGS') return { editTimeLimit: null, postDateStrategy: 'update' };
-        return { ok: true };
-      });
-
-      await import('@src/options/options');
-      await flushPromises();
+      await setupComponents([
+        makeAccount({ did: 'did:plc:user1', isActive: true }),
+        makeAccount({ did: 'did:plc:user2', isActive: false }),
+      ]);
 
       const removeBtns = queryAcrossAccountCardShadows('.account-remove');
       expect(removeBtns.length).toBe(2);
     });
 
-    it('shows error message without using innerHTML when account loading fails', async () => {
+    it('shows error message when account loading fails', async () => {
       vi.mocked(browser.runtime.sendMessage).mockImplementation(async (msg: unknown) => {
         const type = (msg as { type?: string })?.type;
         if (type === 'AUTH_LIST_ACCOUNTS') throw new Error('Network error');
-        if (type === 'GET_SETTINGS') return { editTimeLimit: null, postDateStrategy: 'update' };
+        if (type === 'GET_SETTINGS') return { editTimeLimit: null, saveStrategy: 'edit' };
         return { ok: true };
       });
 
-      const accountsList = document.getElementById('accounts-list')!;
-      const innerHTMLSpy = vi.spyOn(accountsList, 'innerHTML', 'set');
-
-      await import('@src/options/options');
+      accountsEl = document.createElement('options-accounts') as OptionsAccounts;
+      document.body.appendChild(accountsEl);
       await flushPromises();
 
-      expect(accountsList.textContent).toContain('Failed to load accounts');
-      expect(innerHTMLSpy).not.toHaveBeenCalled();
-      innerHTMLSpy.mockRestore();
+      const list = accountsEl.shadowRoot?.getElementById('accounts-list');
+      expect(list?.textContent).toContain('Failed to load accounts');
     });
   });
 
@@ -177,23 +147,12 @@ describe('options page', () => {
 
   describe('account actions', () => {
     it('sends AUTH_SWITCH_ACCOUNT with correct DID when "Set active" is clicked', async () => {
-      vi.mocked(browser.runtime.sendMessage).mockImplementation(async (msg: unknown) => {
-        const type = (msg as { type?: string })?.type;
-        if (type === 'AUTH_LIST_ACCOUNTS')
-          return {
-            accounts: [
-              makeAccount({ did: 'did:plc:user1', isActive: true }),
-              makeAccount({ did: 'did:plc:user2', isActive: false }),
-            ],
-          };
-        if (type === 'GET_SETTINGS') return { editTimeLimit: null, postDateStrategy: 'update' };
-        return { ok: true };
-      });
+      await setupComponents([
+        makeAccount({ did: 'did:plc:user1', isActive: true }),
+        makeAccount({ did: 'did:plc:user2', isActive: false }),
+      ]);
 
-      await import('@src/options/options');
-      await flushPromises();
-
-      const [card] = getAccountCards().filter(accountCard => accountCard.getAttribute('did') === 'did:plc:user2');
+      const [card] = getAccountCards().filter(c => c.getAttribute('did') === 'did:plc:user2');
       card?.dispatchEvent(
         new CustomEvent('account-switch', {
           detail: { did: 'did:plc:user2' },
@@ -210,15 +169,7 @@ describe('options page', () => {
     });
 
     it('sends AUTH_SIGN_OUT_ACCOUNT with correct DID when remove is clicked', async () => {
-      vi.mocked(browser.runtime.sendMessage).mockImplementation(async (msg: unknown) => {
-        const type = (msg as { type?: string })?.type;
-        if (type === 'AUTH_LIST_ACCOUNTS') return { accounts: [makeAccount({ did: 'did:plc:testuser123' })] };
-        if (type === 'GET_SETTINGS') return { editTimeLimit: null, postDateStrategy: 'update' };
-        return { ok: true };
-      });
-
-      await import('@src/options/options');
-      await flushPromises();
+      await setupComponents([makeAccount({ did: 'did:plc:testuser123' })]);
 
       const [card] = getAccountCards();
       card?.dispatchEvent(
@@ -244,11 +195,12 @@ describe('options page', () => {
           callCount++;
           return callCount === 1 ? { accounts: [makeAccount({ did: 'did:plc:testuser123' })] } : { accounts: [] };
         }
-        if (type === 'GET_SETTINGS') return { editTimeLimit: null, postDateStrategy: 'update' };
+        if (type === 'GET_SETTINGS') return { editTimeLimit: null, saveStrategy: 'edit' };
         return { ok: true };
       });
 
-      await import('@src/options/options');
+      accountsEl = document.createElement('options-accounts') as OptionsAccounts;
+      document.body.appendChild(accountsEl);
       await flushPromises();
 
       const [card] = getAccountCards();
@@ -262,16 +214,17 @@ describe('options page', () => {
       await flushPromises();
       await flushPromises();
 
-      expect(document.getElementById('accounts-list')?.textContent).toContain('No accounts signed in');
+      const list = accountsEl.shadowRoot?.getElementById('accounts-list');
+      expect(list?.textContent).toContain('No accounts signed in');
     });
 
     it('sends AUTH_SIGN_IN with pdsUrl when add-account is clicked', async () => {
-      await loadOptionsModule();
+      await setupComponents([]);
 
-      const pdsInput = document.getElementById('add-pds-url') as HTMLInputElement;
+      const pdsInput = accountsEl.shadowRoot?.getElementById('add-pds-url') as HTMLInputElement;
       pdsInput.value = 'https://pds.example.com';
 
-      document.getElementById('add-account')?.click();
+      (accountsEl.shadowRoot?.getElementById('add-account') as HTMLButtonElement)?.click();
       await flushPromises();
 
       expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({
@@ -280,16 +233,22 @@ describe('options page', () => {
       });
     });
 
-    it('shows an error and does not send AUTH_SIGN_IN for a non-https pdsUrl', async () => {
-      await loadOptionsModule();
+    it('emits a status-update error for a non-https pdsUrl and does not send AUTH_SIGN_IN', async () => {
+      await setupComponents([]);
+      const statusSpy = vi.fn();
+      document.addEventListener('status-update', statusSpy);
 
-      const pdsInput = document.getElementById('add-pds-url') as HTMLInputElement;
+      const pdsInput = accountsEl.shadowRoot?.getElementById('add-pds-url') as HTMLInputElement;
       pdsInput.value = 'http://not-secure.example.com';
 
-      document.getElementById('add-account')?.click();
+      (accountsEl.shadowRoot?.getElementById('add-account') as HTMLButtonElement)?.click();
       await flushPromises();
 
-      expect(document.getElementById('status')?.textContent).toContain('valid HTTPS URL');
+      expect(statusSpy).toHaveBeenCalled();
+      const firstEvent = statusSpy.mock.calls[0]?.[0];
+      expect(firstEvent).toBeDefined();
+      const detail = (firstEvent as CustomEvent).detail;
+      expect(detail.message).toContain('valid HTTPS URL');
       expect(vi.mocked(browser.runtime.sendMessage)).not.toHaveBeenCalledWith(
         expect.objectContaining({ type: 'AUTH_SIGN_IN' }),
       );
@@ -303,89 +262,102 @@ describe('options page', () => {
       vi.mocked(browser.runtime.sendMessage).mockImplementation(async (msg: unknown) => {
         const type = (msg as { type?: string })?.type;
         if (type === 'AUTH_LIST_ACCOUNTS') return { accounts: [] };
-        if (type === 'GET_SETTINGS') return { editTimeLimit: 2.5, postDateStrategy: 'update' };
+        if (type === 'GET_SETTINGS') return { editTimeLimit: 2.5, saveStrategy: 'edit' };
         return { ok: true };
       });
 
-      await import('@src/options/options');
+      settingsEl = document.createElement('options-settings') as OptionsSettings;
+      document.body.appendChild(settingsEl);
       await flushPromises();
 
-      expect((document.getElementById('edit-time-limit') as HTMLInputElement).value).toBe('2.5');
+      const input = settingsEl.shadowRoot?.getElementById('edit-time-limit') as HTMLInputElement;
+      expect(input.value).toBe('2.5');
     });
 
-    it('populates post date strategy from GET_SETTINGS on load', async () => {
+    it('populates save strategy from GET_SETTINGS on load', async () => {
       vi.mocked(browser.runtime.sendMessage).mockImplementation(async (msg: unknown) => {
         const type = (msg as { type?: string })?.type;
         if (type === 'AUTH_LIST_ACCOUNTS') return { accounts: [] };
-        if (type === 'GET_SETTINGS') return { editTimeLimit: null, postDateStrategy: 'preserve' };
+        if (type === 'GET_SETTINGS') return { editTimeLimit: null, saveStrategy: 'recreate' };
         return { ok: true };
       });
 
-      await import('@src/options/options');
+      settingsEl = document.createElement('options-settings') as OptionsSettings;
+      document.body.appendChild(settingsEl);
       await flushPromises();
 
-      expect((document.getElementById('post-date-strategy') as HTMLSelectElement).value).toBe('preserve');
+      const select = settingsEl.shadowRoot?.getElementById('save-strategy') as HTMLSelectElement;
+      expect(select.value).toBe('recreate');
     });
 
     it('sends SET_SETTINGS with the entered value when save is clicked', async () => {
-      await loadOptionsModule();
+      await setupComponents([]);
 
-      const input = document.getElementById('edit-time-limit') as HTMLInputElement;
+      const input = settingsEl.shadowRoot?.getElementById('edit-time-limit') as HTMLInputElement;
       input.value = '2';
 
-      document.getElementById('save-settings')?.click();
+      (settingsEl.shadowRoot?.getElementById('save-settings') as HTMLButtonElement)?.click();
       await flushPromises();
 
       expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({
         type: 'SET_SETTINGS',
-        settings: { editTimeLimit: 2, postDateStrategy: 'update' },
+        settings: { editTimeLimit: 2, saveStrategy: 'edit' },
       });
     });
 
     it('sends SET_SETTINGS with null when edit-time-limit is left blank', async () => {
-      await loadOptionsModule();
+      await setupComponents([]);
 
-      const input = document.getElementById('edit-time-limit') as HTMLInputElement;
+      const input = settingsEl.shadowRoot?.getElementById('edit-time-limit') as HTMLInputElement;
       input.value = '';
 
-      document.getElementById('save-settings')?.click();
+      (settingsEl.shadowRoot?.getElementById('save-settings') as HTMLButtonElement)?.click();
       await flushPromises();
 
       expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({
         type: 'SET_SETTINGS',
-        settings: { editTimeLimit: null, postDateStrategy: 'update' },
+        settings: { editTimeLimit: null, saveStrategy: 'edit' },
       });
     });
 
-    it('shows an error status when save fails', async () => {
+    it('emits a status-update error when save fails', async () => {
       vi.mocked(browser.runtime.sendMessage).mockImplementation(async (msg: unknown) => {
         const type = (msg as { type?: string })?.type;
         if (type === 'AUTH_LIST_ACCOUNTS') return { accounts: [] };
-        if (type === 'GET_SETTINGS') return { editTimeLimit: null, postDateStrategy: 'update' };
+        if (type === 'GET_SETTINGS') return { editTimeLimit: null, saveStrategy: 'edit' };
         if (type === 'SET_SETTINGS') return { error: 'Storage full' };
         return { ok: true };
       });
 
-      await import('@src/options/options');
+      const statusSpy = vi.fn();
+      document.addEventListener('status-update', statusSpy);
+
+      settingsEl = document.createElement('options-settings') as OptionsSettings;
+      document.body.appendChild(settingsEl);
       await flushPromises();
 
-      document.getElementById('save-settings')?.click();
+      (settingsEl.shadowRoot?.getElementById('save-settings') as HTMLButtonElement)?.click();
       await flushPromises();
 
-      expect(document.getElementById('status')?.textContent).toContain('Storage full');
+      const firstEvent = statusSpy.mock.calls[0]?.[0];
+      expect(firstEvent).toBeDefined();
+      const detail = (firstEvent as CustomEvent).detail;
+      expect(detail.message).toContain('Storage full');
     });
 
-    it('sends SET_SETTINGS with preserve mode when selected', async () => {
-      await loadOptionsModule();
+    it('sends SET_SETTINGS with recreate mode when selected', async () => {
+      await setupComponents([]);
 
-      (document.getElementById('post-date-strategy') as HTMLSelectElement).value = 'preserve';
+      const saveStrategySelect = settingsEl.shadowRoot?.getElementById('save-strategy');
+      expect(saveStrategySelect).toBeInstanceOf(HTMLSelectElement);
+      (saveStrategySelect as HTMLSelectElement).value = 'recreate';
 
-      document.getElementById('save-settings')?.click();
+      (settingsEl.shadowRoot?.getElementById('save-settings') as HTMLButtonElement)?.click();
       await flushPromises();
 
       expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({
         type: 'SET_SETTINGS',
-        settings: { editTimeLimit: null, postDateStrategy: 'preserve' },
+        settings: { editTimeLimit: null, saveStrategy: 'recreate' },
       });
     });
   });

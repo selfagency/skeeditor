@@ -1,6 +1,10 @@
-import '@src/content/toast';
+import { ensureToastRegistered } from '@src/content/toast';
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+
+beforeAll(() => {
+  ensureToastRegistered();
+});
 
 const createToast = (message: string): HTMLElement => {
   const toast = document.createElement('skeeditor-toast');

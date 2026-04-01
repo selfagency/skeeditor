@@ -81,6 +81,18 @@ describe('auth-popup Web Component', () => {
 
       expect(el.shadowRoot?.querySelector('#pds-url')).not.toBeNull();
     });
+
+    it('shows a build metadata footer for debugging stale extension loads', async () => {
+      mockSendMessage([]);
+
+      const el = createElement();
+      await attach(el);
+
+      const footer = el.shadowRoot?.querySelector<HTMLElement>('#build-info');
+
+      expect(footer).not.toBeNull();
+      expect(footer?.textContent?.trim()).toMatch(/^v.+ · [a-z0-9]+$/i);
+    });
   });
 
   describe('authenticated state (single account)', () => {

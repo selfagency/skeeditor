@@ -75,6 +75,10 @@ const makeXrpcMock = () => ({
     uri: 'at://did:plc:testuser/app.bsky.feed.post/new',
     cid: 'bafyreinewrecord',
   }),
+  recreateRecord: vi.fn<() => Promise<PutRecordResult>>().mockResolvedValue({
+    uri: 'at://did:plc:testuser/app.bsky.feed.post/abc',
+    cid: 'bafyreirecreated',
+  }),
   putRecord: vi.fn<() => Promise<PutRecordResult>>().mockResolvedValue({
     uri: 'at://did:plc:testuser/app.bsky.feed.post/abc',
     cid: 'bafyreinew',
@@ -285,28 +289,28 @@ describe('handleMessage', () => {
 
   describe('settings', () => {
     it('returns stored settings for GET_SETTINGS', async () => {
-      vi.spyOn(constants, 'getSettings').mockResolvedValue({ editTimeLimit: 5, postDateStrategy: 'update' });
+      vi.spyOn(constants, 'getSettings').mockResolvedValue({ editTimeLimit: 5, saveStrategy: 'edit' });
 
       const result = await handleMessage({ type: 'GET_SETTINGS' }, makeDeps());
 
-      expect(result).toEqual({ editTimeLimit: 5, postDateStrategy: 'update' });
+      expect(result).toEqual({ editTimeLimit: 5, saveStrategy: 'edit' });
     });
 
     it('persists settings for SET_SETTINGS', async () => {
       const setSettingsSpy = vi.spyOn(constants, 'setSettings').mockResolvedValue(undefined);
 
       const result = await handleMessage(
-        { type: 'SET_SETTINGS', settings: { editTimeLimit: 0.5, postDateStrategy: 'update' } },
+        { type: 'SET_SETTINGS', settings: { editTimeLimit: 0.5, saveStrategy: 'recreate' } },
         makeDeps(),
       );
 
-      expect(setSettingsSpy).toHaveBeenCalledWith({ editTimeLimit: 0.5, postDateStrategy: 'update' });
+      expect(setSettingsSpy).toHaveBeenCalledWith({ editTimeLimit: 0.5, saveStrategy: 'recreate' });
       expect(result).toEqual({ ok: true });
     });
 
     it('rejects invalid settings payloads', async () => {
       const result = await handleMessage(
-        { type: 'SET_SETTINGS', settings: { editTimeLimit: 10, postDateStrategy: 'update' } },
+        { type: 'SET_SETTINGS', settings: { editTimeLimit: 10, saveStrategy: 'edit' } },
         makeDeps(),
       );
 
@@ -1114,6 +1118,74 @@ describe('handleMessage', () => {
         type: 'CREATE_RECORD_SUCCESS',
         uri: 'at://did:plc:testuser/app.bsky.feed.post/new',
         cid: 'bafyreinewrecord',
+      });
+    });
+  });
+
+  describe('RECREATE_RECORD', () => {
+    it('returns PUT_RECORD_ERROR when payload is invalid', async () => {
+      const deps = makeDeps({ store: makeStoreMock(makeSession()) });
+
+      const result = await handleMessage(
+        {
+          type: 'RECREATE_RECORD',
+          repo: 'did:plc:alice',
+          collection: 'app.bsky.feed.post',
+        },
+        deps,
+      );
+
+      expect(result).toEqual({ type: 'PUT_RECORD_ERROR', message: 'Invalid RECREATE_RECORD payload' });
+    });
+
+    it('returns PUT_RECORD_ERROR when unauthenticated', async () => {
+      const deps = makeDeps({ store: makeStoreMock(null) });
+
+      const result = await handleMessage(
+        {
+          type: 'RECREATE_RECORD',
+          repo: 'did:plc:alice',
+          collection: 'app.bsky.feed.post',
+          rkey: 'abc',
+          record: { $type: 'app.bsky.feed.post', text: 'hello' },
+        },
+        deps,
+      );
+
+      expect(result).toEqual({ type: 'PUT_RECORD_ERROR', message: 'Not authenticated' });
+    });
+
+    it('calls xrpc recreateRecord and returns PUT_RECORD_SUCCESS when authenticated', async () => {
+      const session = makeSession();
+      const xrpc = makeXrpcMock();
+      const deps = makeDeps({
+        store: makeStoreMock(session),
+        createXrpc: vi.fn().mockReturnValue(xrpc),
+      });
+      const record = { $type: 'app.bsky.feed.post', text: 'recreated text' };
+
+      const result = await handleMessage(
+        {
+          type: 'RECREATE_RECORD',
+          repo: 'did:plc:alice',
+          collection: 'app.bsky.feed.post',
+          rkey: 'abc',
+          record,
+          swapRecord: 'bafyreiabc',
+        },
+        deps,
+      );
+
+      expect(vi.mocked(xrpc.recreateRecord)).toHaveBeenCalledWith({
+        repo: 'did:plc:alice',
+        collection: 'app.bsky.feed.post',
+        rkey: 'abc',
+        record,
+      });
+      expect(result).toEqual({
+        type: 'PUT_RECORD_SUCCESS',
+        uri: 'at://did:plc:testuser/app.bsky.feed.post/abc',
+        cid: 'bafyreirecreated',
       });
     });
   });

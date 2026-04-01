@@ -233,6 +233,56 @@ export function* findPosts(root: Document | HTMLElement = document): Generator<P
   }
 }
 
+/**
+ * Format an ISO datetime string as a short human-readable timestamp for
+ * immediate display after a save, before bsky.app re-renders from the AppView.
+ *
+ * Mirrors the condensed format bsky.app uses in feed items (e.g. "Mar 31").
+ * Falls back to a locale string on parse failure.
+ */
+function formatShortDate(isoString: string): string {
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) return isoString;
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+
+  if (diffMs < 60_000) return 'just now';
+  if (diffMs < 3_600_000) return `${Math.floor(diffMs / 60_000)}m`;
+  if (diffMs < 86_400_000) return `${Math.floor(diffMs / 3_600_000)}h`;
+
+  // Older than a day: "Mar 31" style (same year) or "Mar 31, 2025" cross-year
+  const opts: Intl.DateTimeFormatOptions =
+    date.getFullYear() === now.getFullYear()
+      ? { month: 'short', day: 'numeric' }
+      : { month: 'short', day: 'numeric', year: 'numeric' };
+  return date.toLocaleDateString(undefined, opts);
+}
+
+/**
+ * Immediately update the visible timestamp in the DOM after a successful save
+ * that changes `createdAt`.  bsky.app won't re-fetch from the AppView until the
+ * React tree re-renders, so we patch the `<time datetime="...">` elements
+ * directly to give immediate feedback.
+ */
+export function updatePostTimestamp(element: HTMLElement, datetimeIso: string): void {
+  // Find all <time> elements whose datetime attribute looks like a post timestamp.
+  // Exclude any that are inside a nested post/embed (i.e. not owned by this container).
+  const timeEls = Array.from(element.querySelectorAll<HTMLTimeElement>('time[datetime]')).filter(el =>
+    isOwnedByContainer(el, element),
+  );
+
+  const targets =
+    timeEls.length > 0 ? timeEls : Array.from(element.querySelectorAll<HTMLTimeElement>('time[datetime]'));
+
+  for (const timeEl of targets) {
+    timeEl.setAttribute('datetime', datetimeIso);
+    timeEl.textContent = formatShortDate(datetimeIso);
+    // Keep the title/tooltip accurate too if bsky.app sets one.
+    timeEl.title = new Date(datetimeIso).toLocaleString();
+  }
+}
+
 export function isOwnPost(element: HTMLElement, did: string): boolean {
   const info = extractPostInfo(element);
   return info?.repo === did;
