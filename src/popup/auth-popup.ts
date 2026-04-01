@@ -1,11 +1,12 @@
 import { browser } from 'wxt/browser';
 
 import globalStyles from '../shadow-styles.css?inline';
-import '../shared/components/account-card';
+import '../shared/components/accounts-list';
 import { LABELER_DID } from '../shared/constants';
 import type { AuthListAccountsAccount } from '../shared/messages';
 import { sendMessage } from '../shared/messages';
 import { escapeHTML } from '../shared/utils/escape-html';
+import type { SkeeditorAccountsList } from '../shared/components/accounts-list';
 
 type PopupState = 'loading' | 'unauthenticated' | 'authenticated';
 
@@ -129,12 +130,10 @@ class AuthPopup extends HTMLElement {
               </div>`
             : '';
 
-          const accountCards = this.accounts.map(account => this.renderAccountCard(account)).join('');
-
           return `
             <div class="space-y-3 p-4">
               ${labelerBanner}
-              ${accountCards}
+              <skeeditor-accounts-list id="popup-accounts-list" show-reauthorize="true"></skeeditor-accounts-list>
               <div class="border-t border-gray-200 pt-3 dark:border-white/10">
                 <button id="open-settings" type="button"
                   class="flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
@@ -174,20 +173,6 @@ class AuthPopup extends HTMLElement {
       </div>`;
   }
 
-  private renderAccountCard(account: AuthListAccountsAccount): string {
-    const attrs: string[] = ['class="account-card"', `did="${escapeHTML(account.did)}"`, 'show-reauthorize="true"'];
-
-    if (account.handle) {
-      attrs.push(`handle="${escapeHTML(account.handle)}"`);
-    }
-
-    if (account.isActive) {
-      attrs.push('is-active="true"');
-    }
-
-    return `<account-card ${attrs.join(' ')}></account-card>`;
-  }
-
   private attachHandlers(): void {
     this.shadow.getElementById('sign-in')?.addEventListener('click', () => {
       const pdsUrlInput = this.shadow.getElementById('pds-url') as HTMLInputElement | null;
@@ -221,6 +206,11 @@ class AuthPopup extends HTMLElement {
     this.shadow.addEventListener('account-switch', this.onAccountSwitch as EventListener);
     this.shadow.addEventListener('account-remove', this.onAccountRemove as EventListener);
     this.shadow.addEventListener('account-reauthorize', this.onAccountReauthorize as EventListener);
+
+    const accountsList = this.shadow.getElementById('popup-accounts-list') as SkeeditorAccountsList | null;
+    if (accountsList) {
+      accountsList.accounts = this.accounts;
+    }
   }
 }
 

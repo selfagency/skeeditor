@@ -1,11 +1,12 @@
-import './account-card';
+import './accounts-list';
 import type { AuthListAccountsAccount } from '../messages';
 import { sendMessage } from '../messages';
 import { showOptionsToast } from './options-toast';
+import type { SkeeditorAccountsList } from './accounts-list';
 
 export class OptionsAccounts extends HTMLElement {
   private readonly root: ShadowRoot;
-  private accountsList: HTMLElement | null = null;
+  private accountsContainer: HTMLElement | null = null;
 
   public constructor() {
     super();
@@ -24,12 +25,13 @@ export class OptionsAccounts extends HTMLElement {
         :host { display: block; }
         .card {
           overflow: hidden;
-          border-radius: 0.5rem;
+          border-radius: var(--radius-card);
           border: 1px solid var(--color-border);
           background: var(--color-surface-raised);
+          box-shadow: 0 1px 2px 0 oklch(0% 0 none / 0.05);
         }
         .card-header {
-          padding: 1.25rem 1rem;
+          padding: 1.25rem 1.25rem;
           border-bottom: 1px solid var(--color-border);
         }
         .card-header h2 {
@@ -39,23 +41,20 @@ export class OptionsAccounts extends HTMLElement {
           color: var(--color-text-primary);
         }
         .card-section {
-          padding: 1.25rem 1rem;
+          padding: 1.25rem;
           border-bottom: 1px solid var(--color-border);
         }
         .card-section:last-child { border-bottom: none; }
-        .accounts-list {
-          list-style: none;
-          margin: 0;
-          padding: 0;
-        }
-        .accounts-list > li {
-          padding: 1rem 1.5rem;
-        }
-        .accounts-list > li:not(:last-child) {
-          border-bottom: 1px solid var(--color-border);
-        }
         .empty-text { margin: 0; font-size: 0.875rem; color: var(--color-text-secondary); }
         .err-text { margin: 0; font-size: 0.875rem; color: var(--color-error); }
+        .accounts-state {
+          overflow: hidden;
+          border-radius: var(--radius-surface);
+          background: var(--color-surface-subtle);
+          outline: 1px solid var(--color-border-subtle);
+          outline-offset: 0;
+          padding: 1rem 1.5rem;
+        }
         label {
           display: block;
           font-size: 0.875rem;
@@ -64,7 +63,7 @@ export class OptionsAccounts extends HTMLElement {
         }
         input[type="url"] {
           display: block; width: 100%; margin-top: 0.5rem; box-sizing: border-box;
-          border-radius: 0.375rem; padding: 0.375rem 0.75rem;
+          border-radius: var(--radius-control); padding: 0.5rem 0.75rem;
           font-size: 0.875rem;
           color: var(--color-input-text);
           background: var(--color-input-bg);
@@ -85,7 +84,7 @@ export class OptionsAccounts extends HTMLElement {
         }
         button.add-btn {
           align-self: flex-start;
-          border-radius: 0.375rem; padding: 0.5rem 0.75rem;
+          border-radius: var(--radius-control); padding: 0.5rem 0.875rem;
           font-size: 0.875rem; font-weight: 600; cursor: pointer;
           color: var(--color-secondary-text);
           background: var(--color-secondary-bg);
@@ -97,9 +96,9 @@ export class OptionsAccounts extends HTMLElement {
       <div class="card">
         <div class="card-header"><h2>Accounts</h2></div>
         <div class="card-section">
-          <ul role="list" class="accounts-list" id="accounts-list">
-            <li><p class="empty-text">Loading accounts…</p></li>
-          </ul>
+          <div id="accounts-container" class="accounts-state">
+            <p class="empty-text">Loading accounts…</p>
+          </div>
         </div>
         <div class="card-section add-section">
           <h3>Add account</h3>
@@ -112,7 +111,7 @@ export class OptionsAccounts extends HTMLElement {
       </div>
     `;
 
-    this.accountsList = this.root.getElementById('accounts-list');
+    this.accountsContainer = this.root.getElementById('accounts-container');
   }
 
   private attachHandlers(): void {
@@ -143,45 +142,35 @@ export class OptionsAccounts extends HTMLElement {
       this.renderAccounts(response.accounts);
     } catch (error) {
       console.error('Error loading accounts:', error);
-      if (this.accountsList) {
-        this.accountsList.innerHTML = '';
-        const li = document.createElement('li');
+      if (this.accountsContainer) {
+        this.accountsContainer.innerHTML = '';
         const p = document.createElement('p');
         p.className = 'err-text';
         p.textContent = 'Failed to load accounts.';
-        li.appendChild(p);
-        this.accountsList.appendChild(li);
+        this.accountsContainer.appendChild(p);
       }
     }
   }
 
   private renderAccounts(accounts: AuthListAccountsAccount[]): void {
-    if (!this.accountsList) return;
+    if (!this.accountsContainer) return;
 
     if (accounts.length === 0) {
-      this.accountsList.innerHTML = '';
-      const li = document.createElement('li');
+      this.accountsContainer.innerHTML = '';
       const p = document.createElement('p');
       p.className = 'empty-text';
       p.textContent = 'No accounts signed in.';
-      li.appendChild(p);
-      this.accountsList.appendChild(li);
+      this.accountsContainer.appendChild(p);
       return;
     }
 
-    this.accountsList.innerHTML = '';
-    for (const account of accounts) {
-      const li = document.createElement('li');
-      const card = document.createElement('account-card');
-      card.className = 'account-card';
-      card.setAttribute('did', account.did);
-      card.setAttribute('switch-label', 'Set active');
-      card.setAttribute('remove-label', 'Remove');
-      if (account.handle) card.setAttribute('handle', account.handle);
-      if (account.isActive) card.setAttribute('is-active', 'true');
-      li.appendChild(card);
-      this.accountsList.appendChild(li);
-    }
+    this.accountsContainer.className = '';
+    this.accountsContainer.innerHTML = '';
+    const accountsList = document.createElement('skeeditor-accounts-list') as SkeeditorAccountsList;
+    accountsList.setAttribute('switch-label', 'Set active');
+    accountsList.setAttribute('remove-label', 'Remove');
+    accountsList.accounts = accounts;
+    this.accountsContainer.appendChild(accountsList);
   }
 
   private async handleSwitchAccount(did: string): Promise<void> {

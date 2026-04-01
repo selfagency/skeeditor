@@ -45,7 +45,12 @@ export class OptionsStatus extends HTMLElement {
     this.root.innerHTML = `
       <style>
         :host { display: block; min-height: 1.25rem; }
-        p { margin: 0; font-size: 0.875rem; color: ${colorVar}; }
+        p {
+          margin: 0;
+          font-size: 0.875rem;
+          color: ${colorVar};
+          padding: 0 0.125rem;
+        }
       </style>
       <p>${this.escapeHTML(this.message)}</p>
     `;

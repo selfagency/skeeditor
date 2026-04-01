@@ -48,11 +48,18 @@
   /* Surface / card backgrounds */
   --color-surface: oklch(100% 0 none);
   --color-surface-raised: oklch(100% 0 none);
+  --color-surface-subtle: oklch(97.58% 0.0046 264.6);
   --color-surface-overlay: oklch(0% 0 none / 0.5);
 
   /* Borders */
   --color-border: oklch(92.76% 0.0058 264.5);
   --color-border-strong: oklch(87.17% 0.0093 258.3);
+  --color-border-subtle: oklch(92.76% 0.0058 264.5 / 0.9);
+
+  /* Shared radii */
+  --radius-card: 0.75rem;
+  --radius-surface: 0.375rem;
+  --radius-control: 0.5rem;
 
   /* Text */
   --color-text-primary: oklch(21.01% 0.0318 264.7);
@@ -102,10 +109,12 @@
 
   --color-surface: oklch(14.53% 0.0219 261.7);
   --color-surface-raised: oklch(27.81% 0.0296 256.8 / 0.5);
+  --color-surface-subtle: oklch(100% 0 none / 0.06);
   --color-surface-overlay: oklch(0% 0 none / 0.5);
 
   --color-border: oklch(100% 0 none / 0.1);
   --color-border-strong: oklch(100% 0 none / 0.15);
+  --color-border-subtle: oklch(100% 0 none / 0.1);
 
   --color-text-primary: oklch(100% 0 none);
   --color-text-secondary: oklch(71.37% 0.0192 261.3);

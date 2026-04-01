@@ -25,12 +25,13 @@ export class OptionsSettings extends HTMLElement {
         :host { display: block; }
         .card {
           overflow: hidden;
-          border-radius: 0.5rem;
+          border-radius: var(--radius-card);
           border: 1px solid var(--color-border);
           background: var(--color-surface-raised);
+          box-shadow: 0 1px 2px 0 oklch(0% 0 none / 0.05);
         }
         .card-header {
-          padding: 1.25rem 1rem;
+          padding: 1.25rem 1.25rem;
           border-bottom: 1px solid var(--color-border);
         }
         .card-header h2 {
@@ -40,7 +41,7 @@ export class OptionsSettings extends HTMLElement {
           color: var(--color-text-primary);
         }
         .card-body {
-          padding: 1.25rem 1rem;
+          padding: 1.25rem;
           display: flex;
           flex-direction: column;
           gap: 1rem;
@@ -53,7 +54,7 @@ export class OptionsSettings extends HTMLElement {
         }
         input[type="number"], select {
           display: block; width: 100%; margin-top: 0.5rem; box-sizing: border-box;
-          border-radius: 0.375rem; padding: 0.375rem 0.75rem;
+          border-radius: var(--radius-control); padding: 0.5rem 0.75rem;
           font-size: 0.875rem;
           color: var(--color-input-text);
           background: var(--color-input-bg);
@@ -69,7 +70,7 @@ export class OptionsSettings extends HTMLElement {
         .hint { margin: 0; font-size: 0.875rem; color: var(--color-text-secondary); }
         button.save-btn {
           align-self: flex-start;
-          border-radius: 0.375rem; padding: 0.5rem 0.75rem;
+          border-radius: var(--radius-control); padding: 0.5rem 0.875rem;
           font-size: 0.875rem; font-weight: 600; cursor: pointer;
           color: var(--color-primary-text);
           background: var(--color-primary);

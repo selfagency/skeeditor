@@ -195,6 +195,41 @@ describe('content-script', () => {
     expect(document.querySelector('[data-skeeditor-edit-button]')).toBeNull();
   });
 
+  it('should not inject an edit button for another account post just because it mentions the active account', async () => {
+    document.body.innerHTML = `
+      <article role="article" data-at-uri="at://did:plc:other456/app.bsky.feed.post/3xyz">
+        <div class="post-header">
+          <a href="https://bsky.app/profile/other.bsky.social">other.bsky.social</a>
+          <button aria-label="Edited" type="button">Edited</button>
+        </div>
+        <p data-testid="post-text">
+          Thanks <a href="https://bsky.app/profile/alice.bsky.social">@alice.bsky.social</a> for the help.
+        </p>
+        <div data-testid="postButtonInline"></div>
+      </article>
+    `;
+
+    const sendMessage = vi.fn(async request => {
+      if (request.type === 'AUTH_GET_STATUS') {
+        return {
+          authenticated: true,
+          did: 'did:plc:alice123',
+          handle: 'alice.bsky.social',
+          expiresAt: Date.now() + 60_000,
+        };
+      }
+
+      return { ok: true };
+    });
+
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    await import('@src/content/content-script');
+    await flushMicrotasks(3);
+
+    expect(document.querySelector('[data-skeeditor-edit-button]')).toBeNull();
+  });
+
   it('should remove injected edit button when session is cleared via storage change', async () => {
     const sendMessage = vi.fn(async request => {
       if (request.type === 'AUTH_GET_STATUS') {

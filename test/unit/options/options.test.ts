@@ -14,8 +14,12 @@ let settingsEl: OptionsSettings;
 let statusEl: OptionsStatus;
 let statusUpdateListener: ((event: Event) => void) | null = null;
 
+const getAccountsList = (): HTMLElement | null => {
+  return accountsEl.shadowRoot?.querySelector<HTMLElement>('skeeditor-accounts-list') ?? null;
+};
+
 const getAccountCards = (): HTMLElement[] => {
-  const cards = accountsEl.shadowRoot?.querySelectorAll<HTMLElement>('account-card.account-card') ?? [];
+  const cards = getAccountsList()?.shadowRoot?.querySelectorAll<HTMLElement>('account-card.account-card') ?? [];
   return Array.from(cards);
 };
 
@@ -84,8 +88,9 @@ describe('options page', () => {
     it('shows "No accounts signed in" when there are no accounts', async () => {
       await setupComponents([]);
 
-      const list = accountsEl.shadowRoot?.getElementById('accounts-list');
-      expect(list?.textContent).toContain('No accounts signed in');
+      const list = accountsEl.shadowRoot?.getElementById('accounts-container');
+      expect(list).toBeTruthy();
+      expect(list?.textContent ?? '').toContain('No accounts signed in');
     });
 
     it('renders one card per account', async () => {
@@ -101,7 +106,9 @@ describe('options page', () => {
     it('renders account rows without nested bordered cards', async () => {
       await setupComponents([makeAccount({ did: 'did:plc:user1', isActive: true })]);
 
+      const surface = getAccountsList()?.shadowRoot?.querySelector('.surface');
       const [card] = getAccountCards();
+      expect(surface).toBeTruthy();
       expect(card?.shadowRoot?.querySelector('.account-card')).toBeNull();
       expect(card?.shadowRoot?.querySelector('.account-row')).toBeTruthy();
     });
@@ -146,8 +153,9 @@ describe('options page', () => {
       document.body.appendChild(accountsEl);
       await flushPromises();
 
-      const list = accountsEl.shadowRoot?.getElementById('accounts-list');
-      expect(list?.textContent).toContain('Failed to load accounts');
+      const list = accountsEl.shadowRoot?.getElementById('accounts-container');
+      expect(list).toBeTruthy();
+      expect(list?.textContent ?? '').toContain('Failed to load accounts');
     });
   });
 
@@ -222,8 +230,9 @@ describe('options page', () => {
       await flushPromises();
       await flushPromises();
 
-      const list = accountsEl.shadowRoot?.getElementById('accounts-list');
-      expect(list?.textContent).toContain('No accounts signed in');
+      const list = accountsEl.shadowRoot?.getElementById('accounts-container');
+      expect(list).toBeTruthy();
+      expect(list?.textContent ?? '').toContain('No accounts signed in');
     });
 
     it('sends AUTH_SIGN_IN with pdsUrl when add-account is clicked', async () => {

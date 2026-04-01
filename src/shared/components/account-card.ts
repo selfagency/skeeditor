@@ -1,11 +1,5 @@
 import globalStyles from '../../shadow-styles.css?inline';
 
-const BASE_BTN =
-  'inline-flex items-center justify-center h-7 rounded px-2 text-xs focus-visible:outline-2 focus-visible:outline-offset-2';
-const INDIGO_BTN = `${BASE_BTN} bg-indigo-600 text-white hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400 focus-visible:outline-indigo-600`;
-const RED_BTN = `${BASE_BTN} bg-red-600 text-white hover:bg-red-500 dark:bg-red-500 dark:hover:bg-red-400 focus-visible:outline-red-600`;
-const GHOST_BTN = `${BASE_BTN} bg-white text-gray-900 inset-ring inset-ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:inset-ring-white/5 dark:hover:bg-white/20`;
-
 function parseBooleanAttribute(value: string | null): boolean {
   if (value === null) return false;
   if (value === '' || value === 'true') return true;
@@ -102,49 +96,127 @@ export class AccountCard extends HTMLElement {
   }
 
   private render(): void {
-    this.root.innerHTML = `<style>${globalStyles}</style>`;
+    this.root.innerHTML = `
+      <style>
+        ${globalStyles}
+        :host { display: block; }
+        .account-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 0.75rem;
+        }
+        .account-label {
+          min-width: 0;
+          flex: 1;
+          display: flex;
+          align-items: center;
+          gap: 0.375rem;
+        }
+        .account-name {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          font-size: 0.875rem;
+          color: var(--color-text-primary);
+        }
+        .account-name.did {
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+          font-size: 0.75rem;
+          color: var(--color-text-secondary);
+        }
+        .active-indicator {
+          margin-left: 0.125rem;
+          width: 0.875rem;
+          height: 0.875rem;
+          flex-shrink: 0;
+          color: var(--color-primary);
+        }
+        .actions {
+          display: flex;
+          flex-shrink: 0;
+          align-items: center;
+          gap: 0.5rem;
+        }
+        .btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 1.75rem;
+          border-radius: var(--radius-control);
+          padding: 0.375rem 0.625rem;
+          font-size: 0.75rem;
+          font-weight: 600;
+          cursor: pointer;
+          border: 1px solid transparent;
+          transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+        }
+        .btn:focus-visible {
+          outline: 2px solid var(--color-input-focus);
+          outline-offset: 2px;
+        }
+        .btn.primary {
+          background: var(--color-primary);
+          color: var(--color-primary-text);
+        }
+        .btn.primary:hover { background: var(--color-primary-hover); }
+        .btn.secondary {
+          background: var(--color-secondary-bg);
+          color: var(--color-secondary-text);
+          border-color: var(--color-secondary-border);
+        }
+        .btn.secondary:hover { background: var(--color-secondary-bg-hover); }
+        .btn.danger {
+          background: var(--color-danger);
+          color: var(--color-danger-text);
+        }
+        .btn.danger:hover { background: var(--color-danger-hover); }
+      </style>
+    `;
 
     if (!this.did) {
       return;
     }
 
     const row = document.createElement('div');
-    row.className = 'account-row flex items-center justify-between gap-2';
+    row.className = 'account-row';
 
     const accountLabel = document.createElement('div');
-    accountLabel.className = 'min-w-0 flex-1 flex items-center gap-1';
+    accountLabel.className = 'account-label';
 
     const label = document.createElement('span');
     if (this.handle) {
-      label.className = 'truncate text-sm font-medium text-gray-900 dark:text-gray-100';
+      label.className = 'account-name';
       label.textContent = this.handle;
     } else {
-      label.className = 'truncate font-mono text-xs text-gray-600 dark:text-gray-400';
+      label.className = 'account-name did';
       label.textContent = this.did;
     }
     accountLabel.appendChild(label);
 
     if (this.isActive) {
-      accountLabel.appendChild(createActiveIndicator());
+      const indicator = createActiveIndicator();
+      indicator.setAttribute('class', 'active-indicator');
+      accountLabel.appendChild(indicator);
     }
 
     const actions = document.createElement('div');
-    actions.className = 'flex shrink-0 items-center gap-1';
+    actions.className = 'actions';
 
     if (!this.isActive) {
-      const switchButton = this.createActionButton(`account-switch ${INDIGO_BTN}`, this.switchLabel);
+      const switchButton = this.createActionButton('account-switch btn primary', this.switchLabel);
       switchButton.addEventListener('click', () => this.emitAction('account-switch'));
       actions.appendChild(switchButton);
     }
 
     if (this.isActive && this.showReauthorize) {
-      const reauthorizeButton = this.createActionButton(`account-reauthorize ${GHOST_BTN}`, 'Reauthorize');
+      const reauthorizeButton = this.createActionButton('account-reauthorize btn secondary', 'Reauthorize');
       reauthorizeButton.id = 'reauthorize';
       reauthorizeButton.addEventListener('click', () => this.emitAction('account-reauthorize'));
       actions.appendChild(reauthorizeButton);
     }
 
-    const removeButton = this.createActionButton(`account-sign-out account-remove ${RED_BTN}`, this.removeLabel);
+    const removeButton = this.createActionButton('account-sign-out account-remove btn danger', this.removeLabel);
     removeButton.addEventListener('click', () => this.emitAction('account-remove'));
     actions.appendChild(removeButton);
 

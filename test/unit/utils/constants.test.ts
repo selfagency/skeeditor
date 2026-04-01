@@ -33,7 +33,7 @@ describe('shared constants', () => {
   });
 
   it('defaults saveStrategy to recreate when settings are missing', async () => {
-    vi.mocked(browser.storage.local.get).mockResolvedValue({});
+    vi.mocked(browser.storage.local.get).mockImplementation(async () => ({}));
 
     await expect(getSettings()).resolves.toEqual({
       editTimeLimit: null,

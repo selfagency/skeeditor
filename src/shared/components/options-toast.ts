@@ -78,8 +78,8 @@ export class OptionsToast extends HTMLElement {
         :host { display: block; }
         .toast {
           max-width: min(24rem, calc(100vw - 2rem));
-          border: 1px solid var(--color-border);
-          border-radius: 0.75rem;
+          border: 1px solid var(--color-border-subtle);
+          border-radius: var(--radius-card);
           padding: 0.75rem 1rem;
           box-shadow: 0 10px 25px oklch(0% 0 none / 0.12);
           background: ${palette.bg};

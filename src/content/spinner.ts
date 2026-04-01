@@ -43,8 +43,13 @@ export class SkeeditorSpinner extends HTMLElement {
         }
       </style>
       <span class="spinner" aria-hidden="true"></span>
-      <span>${label}</span>
+      <span class="spinner-label"></span>
     `;
+
+    const labelElement = this.root.querySelector<HTMLElement>('.spinner-label');
+    if (labelElement) {
+      labelElement.textContent = label;
+    }
   }
 }
 

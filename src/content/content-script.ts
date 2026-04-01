@@ -6,7 +6,9 @@ import type {
   AuthListAccountsAccount,
   LabelReceivedNotification,
   PutRecordConflictResponse,
+  PutRecordRequest,
   PutRecordResponse,
+  RecreateRecordRequest,
 } from '../shared/messages';
 import { sendMessage } from '../shared/messages';
 import { EditModal } from './edit-modal';
@@ -471,6 +473,13 @@ const ACTION_AREA_SELECTORS = [
   'button[data-testid="postDropdownBtn"]',
 ];
 
+const POST_TEXT_CONTAINER_SELECTORS = [
+  '[data-testid="postDetailedText"]',
+  '[data-testid="post-text"]',
+  '[data-testid="postText"]',
+  '[data-testid="post-content"]',
+].join(', ');
+
 const REPOST_CONTEXT_SELECTORS = [
   '[aria-label^="Reposted by "]',
   '[data-testid*="repost"]',
@@ -503,10 +512,17 @@ const isElementOwnPost = (postElement: HTMLElement, postRepo: string): boolean =
     return true;
   }
 
-  const profileAnchors = postElement.querySelectorAll<HTMLAnchorElement>('a[href*="/profile/"]');
-  for (const anchor of profileAnchors) {
+  const ownedProfileAnchors = Array.from(
+    postElement.querySelectorAll<HTMLAnchorElement>('a[href*="/profile/"]'),
+  ).filter(anchor => {
     const href = anchor.getAttribute('href') ?? anchor.href;
-    if (!href) continue;
+    if (!href || href.includes('/post/')) return false;
+    if (anchor.closest(POST_TEXT_CONTAINER_SELECTORS)) return false;
+    return true;
+  });
+
+  if (ownedProfileAnchors.length === 1) {
+    const href = ownedProfileAnchors[0]?.getAttribute('href') ?? ownedProfileAnchors[0]?.href ?? '';
     if (href.includes(`/profile/${currentDid}`)) return true;
     if (currentHandle !== null && href.includes(`/profile/${currentHandle}`)) return true;
   }
@@ -773,24 +789,29 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
       // We do not abort the actual edit if archiving fails.
     }
 
-    const writeResponse = await sendMessage(
-      saveStrategy === 'recreate'
-        ? {
-            type: 'RECREATE_RECORD',
-            repo: info.repo,
-            collection: info.collection,
-            rkey: info.rkey,
-            record: validatedRecord,
-          }
-        : {
-            type: 'PUT_RECORD',
-            repo: info.repo,
-            collection: info.collection,
-            rkey: info.rkey,
-            record: validatedRecord,
-            swapRecord: currentCid,
-          },
-    );
+    let writeResponse: PutRecordResponse;
+    if (saveStrategy === 'recreate') {
+      const request: RecreateRecordRequest = {
+        type: 'RECREATE_RECORD',
+        repo: info.repo,
+        collection: info.collection,
+        rkey: info.rkey,
+        record: validatedRecord,
+      };
+      writeResponse = await sendMessage(request);
+    } else {
+      const request: PutRecordRequest = {
+        type: 'PUT_RECORD',
+        repo: info.repo,
+        collection: info.collection,
+        rkey: info.rkey,
+        record: validatedRecord,
+      };
+      if (currentCid !== undefined) {
+        request.swapRecord = currentCid;
+      }
+      writeResponse = await sendMessage(request);
+    }
 
     if (writeResponse.type === 'PUT_RECORD_ERROR') {
       if (writeResponse.requiresReauth) {
