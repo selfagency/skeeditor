@@ -158,14 +158,20 @@ export default {
     if (url.pathname === '/xrpc/tools.skeeditor.emitLabel' && request.method === 'POST') {
       const hub = getHub(env);
       const hubUrl = new URL('/emit', 'http://do');
-      // Forward Authorization header and body through to the DO
+      // Forward Authorization header and body through to the DO.
+      // Only include the DPoP header when the incoming request actually has one,
+      // to avoid forwarding an empty DPoP string for Bearer-auth requests.
+      const dpopValue = request.headers.get('DPoP');
+      const forwardedHeaders: Record<string, string> = {
+        Authorization: request.headers.get('Authorization') ?? '',
+        'Content-Type': 'application/json',
+      };
+      if (dpopValue !== null) {
+        forwardedHeaders['DPoP'] = dpopValue;
+      }
       const forwarded = new Request(hubUrl.toString(), {
         method: 'POST',
-        headers: {
-          Authorization: request.headers.get('Authorization') ?? '',
-          'Content-Type': 'application/json',
-          DPoP: request.headers.get('DPoP') ?? '',
-        },
+        headers: forwardedHeaders,
         body: request.body,
         duplex: 'half',
       });

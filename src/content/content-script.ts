@@ -486,14 +486,8 @@ const REPOST_CONTEXT_SELECTORS = [
   '[data-testid*="socialContext"]',
 ].join(', ');
 
-const isRepostItem = (postElement: HTMLElement): boolean => {
-  if (postElement.querySelector(REPOST_CONTEXT_SELECTORS)) {
-    return true;
-  }
-
-  const text = postElement.textContent?.trim() ?? '';
-  return /^Reposted by\s+/i.test(text);
-};
+const isRepostItem = (postElement: HTMLElement): boolean =>
+  postElement.querySelector(REPOST_CONTEXT_SELECTORS) !== null;
 
 const isElementOwnPost = (postElement: HTMLElement, postRepo: string): boolean => {
   if (currentDid === null) {

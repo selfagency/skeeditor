@@ -195,6 +195,37 @@ describe('content-script', () => {
     expect(document.querySelector('[data-skeeditor-edit-button]')).toBeNull();
   });
 
+  it('should still inject an edit button when post text begins with "Reposted by" but has no social context marker', async () => {
+    document.body.innerHTML = `
+      <article role="article" data-testid="feedItem-by-did:plc:alice123">
+        <a href="https://bsky.app/profile/alice.bsky.social/post/3abc">
+          <p data-testid="post-text">Reposted by popular demand: here is my original thought.</p>
+        </a>
+        <div data-testid="postButtonInline"></div>
+      </article>
+    `;
+
+    const sendMessage = vi.fn(async request => {
+      if (request.type === 'AUTH_GET_STATUS') {
+        return {
+          authenticated: true,
+          did: 'did:plc:alice123',
+          handle: 'alice.bsky.social',
+          expiresAt: Date.now() + 60_000,
+        };
+      }
+
+      return { ok: true };
+    });
+
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    await import('@src/content/content-script');
+    await flushMicrotasks(3);
+
+    expect(document.querySelector('[data-skeeditor-edit-button]')).toBeTruthy();
+  });
+
   it('should not inject an edit button for another account post just because it mentions the active account', async () => {
     document.body.innerHTML = `
       <article role="article" data-at-uri="at://did:plc:other456/app.bsky.feed.post/3xyz">

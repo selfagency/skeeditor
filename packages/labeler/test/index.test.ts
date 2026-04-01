@@ -105,6 +105,38 @@ describe('labeler worker routes', () => {
     expect((forwarded as Request).headers.get('Authorization')).toBe('DPoP token-123');
     expect((forwarded as Request).headers.get('DPoP')).toBe('proof-abc');
   });
+
+  it('does not forward a DPoP header when the incoming request uses Bearer auth', async () => {
+    const hubFetch = vi.fn().mockResolvedValue(Response.json({ ok: true }));
+    const env = makeEnv({
+      BROADCAST_HUB: {
+        idFromName: vi.fn().mockReturnValue({}),
+        get: vi.fn().mockReturnValue({ fetch: hubFetch }),
+      } as unknown as DurableObjectNamespace,
+    });
+
+    await worker.fetch(
+      new Request('https://labeler.skeeditor.link/xrpc/tools.skeeditor.emitLabel', {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer bearer-token-456',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          uri: `at://${env.LABELER_DID}/app.bsky.feed.post/abc`,
+          cid: 'bafy123',
+          did: env.LABELER_DID,
+        }),
+      }),
+      env,
+    );
+
+    expect(hubFetch).toHaveBeenCalledOnce();
+    const [forwarded] = hubFetch.mock.calls[0] ?? [];
+    expect(forwarded).toBeInstanceOf(Request);
+    expect((forwarded as Request).headers.get('Authorization')).toBe('Bearer bearer-token-456');
+    expect((forwarded as Request).headers.get('DPoP')).toBeNull();
+  });
 });
 
 describe('serveDidDocument', () => {
