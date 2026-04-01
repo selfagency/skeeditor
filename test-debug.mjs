@@ -3,6 +3,8 @@ import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 
 const extensionPath = resolve('dist/chrome');
+// Extensions require headless:false; --headless=new activates Chrome-native headless
+// so the process stays non-interactive while still loading the unpacked extension.
 const context = await chromium.launchPersistentContext('', {
   headless: false,
   args: [

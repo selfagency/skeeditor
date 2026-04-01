@@ -7,8 +7,8 @@ priority: high
 branch: feat/skeeditor-l11x-refactor-ui-web-components
 created_at: 2026-04-01T03:28:39Z
 updated_at: 2026-04-01T03:49:21Z
+id: skeeditor-kaal
 ---
-
 ## Todo
 - [x] Replace timestamp-only settings model with binary save strategy
 - [x] Update options UI copy and persistence for Edit record vs Recreate record

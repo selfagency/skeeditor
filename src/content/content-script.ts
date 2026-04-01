@@ -796,7 +796,6 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
             collection: info.collection,
             rkey: info.rkey,
             record: validatedRecord,
-            swapRecord: currentCid,
           }
         : {
             type: 'PUT_RECORD',

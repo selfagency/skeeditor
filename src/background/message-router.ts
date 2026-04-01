@@ -400,8 +400,30 @@ function isValidPutRecordPayload(msg: IncomingMessage): msg is IncomingMessage &
   return true;
 }
 
-function isValidRecreateRecordPayload(msg: IncomingMessage): msg is IncomingMessage & PutRecordPayload {
-  return isValidPutRecordPayload(msg);
+interface RecreateRecordPayload {
+  repo: string;
+  collection: string;
+  rkey: string;
+  record: Record<string, unknown> & { $type: string };
+}
+
+function isValidRecreateRecordPayload(msg: IncomingMessage): msg is IncomingMessage & RecreateRecordPayload {
+  if (!isNonEmptyString(msg['repo']) || !isNonEmptyString(msg['collection']) || !isNonEmptyString(msg['rkey'])) {
+    return false;
+  }
+  const record = msg['record'];
+  if (
+    record === null ||
+    typeof record !== 'object' ||
+    Array.isArray(record) ||
+    Object.getPrototypeOf(record) !== Object.prototype
+  ) {
+    return false;
+  }
+  if (!isNonEmptyString((record as Record<string, unknown>)['$type'])) {
+    return false;
+  }
+  return true;
 }
 
 function isUploadBlobPayload(message: unknown): message is { data: ArrayBuffer; mimeType: string; repo: string } {
@@ -904,10 +926,10 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
         });
 
         const result = await client.recreateRecord({
-          repo: message['repo'],
-          collection: message['collection'],
-          rkey: message['rkey'],
-          record: message['record'],
+          repo: message.repo,
+          collection: message.collection,
+          rkey: message.rkey,
+          record: message.record,
         });
 
         emitLabelTrigger(result.uri, result.cid, stored.did, stored.accessToken);

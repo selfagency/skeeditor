@@ -158,7 +158,6 @@ export interface RecreateRecordRequest {
   collection: string;
   rkey: string;
   record: Record<string, unknown> & { $type: string };
-  swapRecord?: string;
 }
 
 export type PutRecordResponse = PutRecordSuccessResponse | PutRecordErrorResponse | PutRecordConflictResponse;

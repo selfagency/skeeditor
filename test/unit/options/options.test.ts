@@ -12,6 +12,7 @@ const flushPromises = (): Promise<void> => new Promise(resolve => setTimeout(res
 let accountsEl: OptionsAccounts;
 let settingsEl: OptionsSettings;
 let statusEl: OptionsStatus;
+let statusUpdateListener: ((event: Event) => void) | null = null;
 
 const getAccountCards = (): HTMLElement[] => {
   const cards = accountsEl.shadowRoot?.querySelectorAll<HTMLElement>('account-card.account-card') ?? [];
@@ -53,6 +54,10 @@ describe('options page', () => {
   afterEach(() => {
     vi.resetModules();
     document.body.innerHTML = '';
+    if (statusUpdateListener !== null) {
+      document.removeEventListener('status-update', statusUpdateListener);
+      statusUpdateListener = null;
+    }
   });
 
   async function setupComponents(accounts: AuthListAccountsAccount[] = []): Promise<void> {
@@ -63,10 +68,11 @@ describe('options page', () => {
     settingsEl = document.createElement('options-settings') as OptionsSettings;
 
     // Wire up status routing like main.ts does
-    document.addEventListener('status-update', (event: Event) => {
+    statusUpdateListener = (event: Event) => {
       const { message, type } = (event as CustomEvent<{ message: string; type: 'info' | 'success' | 'error' }>).detail;
       statusEl.setStatus(message, type);
-    });
+    };
+    document.addEventListener('status-update', statusUpdateListener);
 
     document.body.append(statusEl, accountsEl, settingsEl);
     await flushPromises();
