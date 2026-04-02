@@ -8,7 +8,8 @@
     "coverage",
     "playwright-report",
     "test-results",
-    "src/lexicons"
+    "src/lexicons",
+    "devnet"
   ],
   "arrowParens": "avoid",
   "bracketSpacing": true,
