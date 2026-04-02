@@ -53,6 +53,6 @@ export class SkeeditorSpinner extends HTMLElement {
   }
 }
 
-if (!customElements.get('skeeditor-spinner')) {
+if (typeof customElements !== 'undefined' && customElements !== null && !customElements.get('skeeditor-spinner')) {
   customElements.define('skeeditor-spinner', SkeeditorSpinner);
 }

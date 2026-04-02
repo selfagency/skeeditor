@@ -1,7 +1,5 @@
 import { resolve } from 'node:path';
 
-import type { Page } from '@playwright/test';
-
 import {
   OTHER_DID,
   OWN_POST_TEXT,
@@ -14,10 +12,8 @@ import {
   makeMockPutRecordResult,
 } from './fixtures/bsky-route-extension';
 import { expect, test } from './fixtures/chromium-extension';
-
-const waitForContentScriptReady = async (page: Page): Promise<void> => {
-  await page.waitForSelector(':root[data-skeeditor-initialized]', { timeout: 15_000 });
-};
+import { waitForContentScriptReady } from './fixtures/content-script-ready';
+import { waitForEditModalReady } from './fixtures/edit-modal-ready';
 
 // ── Popup smoke tests ─────────────────────────────────────────────────────────
 
@@ -107,15 +103,15 @@ bskyTest('edit button is injected on own posts and absent on others', async ({ p
  * Verifies the full happy-path edit flow:
  * - Clicking Edit opens the modal pre-populated with the record text from GET_RECORD.
  * - Editing the text enables the Save button.
- * - Clicking Save triggers PUT_RECORD and the modal shows a success message.
+ * - Clicking Save triggers RECREATE_RECORD/applyWrites and the modal closes successfully.
  */
 bskyTest(
   'edit modal opens with post text and saves successfully',
-  async ({ page, setAuthState, routeBskyApp, routeXrpcGetRecord, routeXrpcPutRecord }) => {
+  async ({ page, setAuthState, routeBskyApp, routeXrpcGetRecord, captureApplyWrites }) => {
     await setAuthState(TEST_DID);
     await routeBskyApp();
     await routeXrpcGetRecord(makeMockGetRecordResult());
-    await routeXrpcPutRecord(makeMockPutRecordResult());
+    await captureApplyWrites(makeMockApplyWritesResult());
 
     await page.goto(`https://bsky.app/profile/${TEST_DID}/post/${TEST_RKEY}`);
     await waitForContentScriptReady(page);
@@ -127,10 +123,7 @@ bskyTest(
 
     // Modal should appear with the record text.
     const modal = page.locator('edit-modal');
-    await expect(modal).toBeAttached({ timeout: 5_000 });
-
-    const textarea = modal.locator('textarea');
-    await expect(textarea).toHaveValue(OWN_POST_TEXT, { timeout: 5_000 });
+    const textarea = await waitForEditModalReady(modal, OWN_POST_TEXT);
 
     // Edit the text and save.
     await textarea.fill('Updated post text for E2E test');
@@ -173,7 +166,22 @@ bskyTest('unauthenticated user sees no edit buttons', async ({ page, routeBskyAp
  */
 bskyTest(
   'conflict on save shows retry prompt in modal',
-  async ({ page, setAuthState, routeBskyApp, routeXrpcGetRecord, routeXrpcPutRecordConflict }) => {
+  async ({
+    page,
+    setAuthState,
+    routeBskyApp,
+    routeXrpcGetRecord,
+    routeXrpcPutRecordConflict,
+    context,
+    extensionId,
+  }) => {
+    const popupPage = await context.newPage();
+    await popupPage.goto(`chrome-extension://${extensionId}/popup.html`);
+    await popupPage.evaluate(async () => {
+      await chrome.storage.local.set({ settings: { editTimeLimit: null, saveStrategy: 'edit' } });
+    });
+    await popupPage.close();
+
     await setAuthState(TEST_DID);
     await routeBskyApp();
     // getRecord is called twice: once to populate the modal, once by putRecordWithSwap
@@ -189,7 +197,7 @@ bskyTest(
     await editButton.click();
 
     const modal = page.locator('edit-modal');
-    await expect(modal.locator('textarea')).toHaveValue(OWN_POST_TEXT, { timeout: 10_000 });
+    await waitForEditModalReady(modal, OWN_POST_TEXT);
 
     // Edit the text so Save is enabled.
     await modal.locator('textarea').fill('Attempted edit that will conflict');
@@ -229,8 +237,8 @@ bskyTest(
     await editButton.click();
 
     const modal = page.locator('edit-modal');
-    await expect(modal.locator('textarea')).toBeVisible({ timeout: 5_000 });
-    await modal.locator('textarea').fill('Updated text preserving record identity');
+    const textarea = await waitForEditModalReady(modal, OWN_POST_TEXT);
+    await textarea.fill('Updated text preserving record identity');
     await modal.locator('.save-button').click();
     await expect(modal).not.toBeAttached({ timeout: 5_000 });
 
@@ -270,8 +278,8 @@ bskyTest(
     await editButton.click();
 
     const modal = page.locator('edit-modal');
-    await expect(modal.locator('textarea')).toBeVisible({ timeout: 5_000 });
-    await modal.locator('textarea').fill('Updated text recreated as fresh');
+    const textarea = await waitForEditModalReady(modal, OWN_POST_TEXT);
+    await textarea.fill('Updated text recreated as fresh');
     await modal.locator('.save-button').click();
     await expect(modal).not.toBeAttached({ timeout: 5_000 });
 

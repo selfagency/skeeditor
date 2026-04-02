@@ -17,6 +17,8 @@
  * Run this project: `pnpm test:e2e:chromium:devnet`
  */
 import { expect, test } from './fixtures/chromium-devnet-extension';
+import { waitForContentScriptReady } from './fixtures/content-script-ready';
+import { waitForEditModalReady } from './fixtures/edit-modal-ready';
 import { getDevnetPostText, updateDevnetPostExternal } from './fixtures/devnet-records';
 
 // ── Test suite ──────────────────────────────────────────────────────────────
@@ -37,6 +39,7 @@ test('content script injects Edit button for own real devnet post', async ({
 }) => {
   await routeDevnetBskyApp();
   await page.goto(`https://bsky.app/profile/${devnetSession.did}/post/${devnetPost.rkey}`);
+  await waitForContentScriptReady(page);
 
   const ownPost = page.locator(`[data-at-uri="${devnetPost.uri}"]`);
   await expect(ownPost.locator('.skeeditor-edit-button')).toBeVisible({ timeout: 15_000 });
@@ -51,6 +54,7 @@ test('content script injects Edit button for own real devnet post', async ({
 test('edit button is absent on other users posts', async ({ page, devnetSession, devnetPost, routeDevnetBskyApp }) => {
   await routeDevnetBskyApp();
   await page.goto(`https://bsky.app/profile/${devnetSession.did}/post/${devnetPost.rkey}`);
+  await waitForContentScriptReady(page);
 
   const ownPost = page.locator(`[data-at-uri="${devnetPost.uri}"]`);
   await expect(ownPost.locator('.skeeditor-edit-button')).toBeVisible({ timeout: 15_000 });
@@ -78,6 +82,7 @@ test('edit modal saves real post text to devnet PDS', async ({
 }) => {
   await routeDevnetBskyApp();
   await page.goto(`https://bsky.app/profile/${devnetSession.did}/post/${devnetPost.rkey}`);
+  await waitForContentScriptReady(page);
 
   const ownPost = page.locator(`[data-at-uri="${devnetPost.uri}"]`);
   const editButton = ownPost.locator('.skeeditor-edit-button');
@@ -85,11 +90,7 @@ test('edit modal saves real post text to devnet PDS', async ({
   await editButton.click();
 
   const modal = page.locator('edit-modal');
-  await expect(modal).toBeAttached({ timeout: 5_000 });
-
-  // The modal must be pre-populated with the original post text from the real PDS.
-  const textarea = modal.locator('textarea');
-  await expect(textarea).toHaveValue(devnetPost.text, { timeout: 10_000 });
+  const textarea = await waitForEditModalReady(modal, devnetPost.text);
 
   // Edit and save.
   const updatedText = `${devnetPost.text} [edited by devnet E2E]`;
@@ -99,7 +100,7 @@ test('edit modal saves real post text to devnet PDS', async ({
   await saveButton.click();
 
   // Wait for success indication.
-  await expect(modal).not.toBeAttached({ timeout: 10_000 });
+  await expect(modal).not.toBeAttached({ timeout: 30_000 });
 
   // Confirm the PDS record was actually updated.
   const savedText = await getDevnetPostText(devnetSession, devnetPost.did, devnetPost.rkey);
@@ -123,7 +124,7 @@ test('unauthenticated user sees no Edit buttons on devnet post page', async ({
   await page.goto(`https://bsky.app/profile/${devnetPost.did}/post/${devnetPost.rkey}`);
 
   // Wait for the content script to complete its auth check.
-  await page.waitForSelector(':root[data-skeeditor-initialized]', { timeout: 15_000 });
+  await waitForContentScriptReady(page);
 
   await expect(page.locator('.skeeditor-edit-button')).toHaveCount(0);
 });
@@ -138,19 +139,31 @@ test('unauthenticated user sees no Edit buttons on devnet post page', async ({
  * 4. The PDS returns 409 InvalidSwap.
  * 5. The modal must display the "post changed while editing" conflict message.
  */
-test('concurrent edit conflict shows retry prompt', async ({ page, devnetSession, devnetPost, routeDevnetBskyApp }) => {
+test('concurrent edit conflict shows retry prompt', async ({
+  page,
+  devnetSession,
+  devnetPost,
+  routeDevnetBskyApp,
+  context,
+  extensionId,
+}) => {
+  const popupPage = await context.newPage();
+  await popupPage.goto(`chrome-extension://${extensionId}/popup.html`);
+  await popupPage.evaluate(async () => {
+    await chrome.storage.local.set({ settings: { editTimeLimit: null, saveStrategy: 'edit' } });
+  });
+  await popupPage.close();
+
   await routeDevnetBskyApp();
   await page.goto(`https://bsky.app/profile/${devnetSession.did}/post/${devnetPost.rkey}`);
+  await waitForContentScriptReady(page);
 
   const editButton = page.locator(`[data-at-uri="${devnetPost.uri}"] .skeeditor-edit-button`);
   await expect(editButton).toBeVisible({ timeout: 15_000 });
   await editButton.click();
 
   const modal = page.locator('edit-modal');
-  const textarea = modal.locator('textarea');
-
-  // Wait for the modal to be fully loaded with the record text (GET_RECORD completed).
-  await expect(textarea).toHaveValue(devnetPost.text, { timeout: 10_000 });
+  const textarea = await waitForEditModalReady(modal, devnetPost.text);
 
   // NOW update the post externally — the PDS record CID changes, causing a conflict.
   await updateDevnetPostExternal(
