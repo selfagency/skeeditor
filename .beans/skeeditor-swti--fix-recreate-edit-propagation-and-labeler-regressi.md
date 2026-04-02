@@ -8,8 +8,8 @@ type: task
 priority: critical
 created_at: 2026-04-01T17:40:27Z
 updated_at: 2026-04-02T02:20:00Z
+id: skeeditor-swti
 ---
-
 ## Context
 Users report edited posts still do not visibly change across clients, even after recent save-strategy changes. The labeler flow has also stopped working.
 
