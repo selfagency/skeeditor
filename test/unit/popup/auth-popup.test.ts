@@ -29,8 +29,11 @@ const attach = async (el: HTMLElement): Promise<void> => {
   await flushPromises();
 };
 
+const getAccountsList = (el: HTMLElement): HTMLElement | null =>
+  el.shadowRoot?.querySelector<HTMLElement>('skeeditor-accounts-list') ?? null;
+
 const getAccountCards = (el: HTMLElement): HTMLElement[] =>
-  Array.from(el.shadowRoot?.querySelectorAll<HTMLElement>('account-card.account-card') ?? []);
+  Array.from(getAccountsList(el)?.shadowRoot?.querySelectorAll<HTMLElement>('account-card.account-card') ?? []);
 
 const queryAcrossAccountCardShadows = <T extends Element>(el: HTMLElement, selector: string): T[] => {
   return getAccountCards(el).flatMap(card => Array.from(card.shadowRoot?.querySelectorAll<T>(selector) ?? []));
@@ -219,6 +222,7 @@ describe('auth-popup Web Component', () => {
       const el = createElement();
       await attach(el);
 
+      expect(getAccountsList(el)).not.toBeNull();
       expect(getAccountCards(el).length).toBe(2);
     });
 

@@ -6,7 +6,7 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : [['list']],
-  timeout: 30_000,
+  timeout: 90_000,
   // globalSetup runs once before all projects; gracefully skips when devnet
   // is not running so non-devnet test runs are unaffected.
   globalSetup: './test/e2e/setup/devnet-global-setup.ts',

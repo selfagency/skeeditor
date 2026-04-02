@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,8 +7,11 @@
   </head>
 
   <body class="m-0 min-h-screen" style="background-color: var(--color-surface); color: var(--color-text-primary)">
-    <main class="mx-auto max-w-2xl p-6 space-y-6">
-      <h1 class="mb-1 text-2xl font-bold" style="color: var(--color-text-primary)">skeeditor settings</h1>
+    <main class="mx-auto max-w-5xl p-8 space-y-6">
+      <h1 class="mb-1 flex items-center gap-3 text-2xl font-bold" style="color: var(--color-text-primary)">
+        <img src="/icons/32.png" alt="" width="30" height="30" class="rounded-md" />
+        <span>skeeditor settings</span>
+      </h1>
       <options-status></options-status>
       <options-accounts></options-accounts>
       <options-settings></options-settings>

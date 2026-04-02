@@ -14,8 +14,12 @@ let settingsEl: OptionsSettings;
 let statusEl: OptionsStatus;
 let statusUpdateListener: ((event: Event) => void) | null = null;
 
+const getAccountsList = (): HTMLElement | null => {
+  return accountsEl.shadowRoot?.querySelector<HTMLElement>('skeeditor-accounts-list') ?? null;
+};
+
 const getAccountCards = (): HTMLElement[] => {
-  const cards = accountsEl.shadowRoot?.querySelectorAll<HTMLElement>('account-card.account-card') ?? [];
+  const cards = getAccountsList()?.shadowRoot?.querySelectorAll<HTMLElement>('account-card.account-card') ?? [];
   return Array.from(cards);
 };
 
@@ -84,8 +88,9 @@ describe('options page', () => {
     it('shows "No accounts signed in" when there are no accounts', async () => {
       await setupComponents([]);
 
-      const list = accountsEl.shadowRoot?.getElementById('accounts-list');
-      expect(list?.textContent).toContain('No accounts signed in');
+      const list = accountsEl.shadowRoot?.getElementById('accounts-container');
+      expect(list).toBeTruthy();
+      expect(list?.textContent ?? '').toContain('No accounts signed in');
     });
 
     it('renders one card per account', async () => {
@@ -96,6 +101,16 @@ describe('options page', () => {
 
       const cards = getAccountCards();
       expect(cards.length).toBe(2);
+    });
+
+    it('renders account rows without nested bordered cards', async () => {
+      await setupComponents([makeAccount({ did: 'did:plc:user1', isActive: true })]);
+
+      const surface = getAccountsList()?.shadowRoot?.querySelector('.surface');
+      const [card] = getAccountCards();
+      expect(surface).toBeTruthy();
+      expect(card?.shadowRoot?.querySelector('.account-card')).toBeNull();
+      expect(card?.shadowRoot?.querySelector('.account-row')).toBeTruthy();
     });
 
     it('displays the handle when available', async () => {
@@ -138,8 +153,9 @@ describe('options page', () => {
       document.body.appendChild(accountsEl);
       await flushPromises();
 
-      const list = accountsEl.shadowRoot?.getElementById('accounts-list');
-      expect(list?.textContent).toContain('Failed to load accounts');
+      const list = accountsEl.shadowRoot?.getElementById('accounts-container');
+      expect(list).toBeTruthy();
+      expect(list?.textContent ?? '').toContain('Failed to load accounts');
     });
   });
 
@@ -214,8 +230,9 @@ describe('options page', () => {
       await flushPromises();
       await flushPromises();
 
-      const list = accountsEl.shadowRoot?.getElementById('accounts-list');
-      expect(list?.textContent).toContain('No accounts signed in');
+      const list = accountsEl.shadowRoot?.getElementById('accounts-container');
+      expect(list).toBeTruthy();
+      expect(list?.textContent ?? '').toContain('No accounts signed in');
     });
 
     it('sends AUTH_SIGN_IN with pdsUrl when add-account is clicked', async () => {
@@ -253,6 +270,18 @@ describe('options page', () => {
         expect.objectContaining({ type: 'AUTH_SIGN_IN' }),
       );
     });
+
+    it('shows a toast for account action status updates', async () => {
+      await setupComponents([]);
+
+      const pdsInput = accountsEl.shadowRoot?.getElementById('add-pds-url') as HTMLInputElement;
+      pdsInput.value = 'http://not-secure.example.com';
+
+      (accountsEl.shadowRoot?.getElementById('add-account') as HTMLButtonElement)?.click();
+      await flushPromises();
+
+      expect(document.querySelector('options-toast')).toBeTruthy();
+    });
   });
 
   // ── Settings section ───────────────────────────────────────────────────────
@@ -262,7 +291,7 @@ describe('options page', () => {
       vi.mocked(browser.runtime.sendMessage).mockImplementation(async (msg: unknown) => {
         const type = (msg as { type?: string })?.type;
         if (type === 'AUTH_LIST_ACCOUNTS') return { accounts: [] };
-        if (type === 'GET_SETTINGS') return { editTimeLimit: 2.5, saveStrategy: 'edit' };
+        if (type === 'GET_SETTINGS') return { editTimeLimit: 3, saveStrategy: 'edit' };
         return { ok: true };
       });
 
@@ -270,8 +299,8 @@ describe('options page', () => {
       document.body.appendChild(settingsEl);
       await flushPromises();
 
-      const input = settingsEl.shadowRoot?.getElementById('edit-time-limit') as HTMLInputElement;
-      expect(input.value).toBe('2.5');
+      const select = settingsEl.shadowRoot?.getElementById('edit-time-limit') as HTMLSelectElement;
+      expect(select.value).toBe('3');
     });
 
     it('populates save strategy from GET_SETTINGS on load', async () => {
@@ -293,23 +322,23 @@ describe('options page', () => {
     it('sends SET_SETTINGS with the entered value when save is clicked', async () => {
       await setupComponents([]);
 
-      const input = settingsEl.shadowRoot?.getElementById('edit-time-limit') as HTMLInputElement;
-      input.value = '2';
+      const select = settingsEl.shadowRoot?.getElementById('edit-time-limit') as HTMLSelectElement;
+      select.value = '3';
 
       (settingsEl.shadowRoot?.getElementById('save-settings') as HTMLButtonElement)?.click();
       await flushPromises();
 
       expect(vi.mocked(browser.runtime.sendMessage)).toHaveBeenCalledWith({
         type: 'SET_SETTINGS',
-        settings: { editTimeLimit: 2, saveStrategy: 'edit' },
+        settings: { editTimeLimit: 3, saveStrategy: 'edit' },
       });
     });
 
     it('sends SET_SETTINGS with null when edit-time-limit is left blank', async () => {
       await setupComponents([]);
 
-      const input = settingsEl.shadowRoot?.getElementById('edit-time-limit') as HTMLInputElement;
-      input.value = '';
+      const select = settingsEl.shadowRoot?.getElementById('edit-time-limit') as HTMLSelectElement;
+      select.value = '';
 
       (settingsEl.shadowRoot?.getElementById('save-settings') as HTMLButtonElement)?.click();
       await flushPromises();
@@ -343,6 +372,17 @@ describe('options page', () => {
       expect(firstEvent).toBeDefined();
       const detail = (firstEvent as CustomEvent).detail;
       expect(detail.message).toContain('Storage full');
+    });
+
+    it('shows a toast when settings are saved', async () => {
+      await setupComponents([]);
+
+      (settingsEl.shadowRoot?.getElementById('save-settings') as HTMLButtonElement)?.click();
+      await flushPromises();
+
+      const toast = document.querySelector('options-toast');
+      expect(toast).toBeTruthy();
+      expect(toast?.getAttribute('message')).toContain('Settings saved');
     });
 
     it('sends SET_SETTINGS with recreate mode when selected', async () => {

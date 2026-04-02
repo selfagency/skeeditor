@@ -109,7 +109,12 @@ export class BroadcastHub implements DurableObject {
 
     const payload = body as { uri: string; cid: string; did: string };
 
-    const authResult = await validateEmitAuth(request.headers.get('Authorization'), payload);
+    const authResult = await validateEmitAuth(
+      request.headers.get('Authorization'),
+      payload,
+      fetch,
+      request.headers.get('DPoP'),
+    );
     if (!authResult.valid) {
       return Response.json({ error: authResult.reason }, { status: 401 });
     }

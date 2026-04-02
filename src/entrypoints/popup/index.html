@@ -1,14 +1,17 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>skeeditor</title>
   </head>
 
-  <body class="m-0 min-w-80 bg-gray-950 text-gray-100">
-    <main class="p-4">
-      <h1 class="mb-4 text-xl font-bold text-white">skeeditor</h1>
+  <body class="m-0 min-w-[26rem]" style="background-color: var(--color-surface); color: var(--color-text-primary)">
+    <main class="p-5">
+      <h1 class="mb-4 flex items-center gap-3 text-xl font-bold" style="color: var(--color-text-primary)">
+        <img src="/icons/32.png" alt="" width="28" height="28" class="rounded-md" />
+        <span>skeeditor</span>
+      </h1>
       <auth-popup></auth-popup>
     </main>
     <script type="module" src="./main.ts"></script>
