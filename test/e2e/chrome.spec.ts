@@ -1,5 +1,7 @@
 import { resolve } from 'node:path';
 
+import type { Page } from '@playwright/test';
+
 import {
   OTHER_DID,
   OWN_POST_TEXT,
@@ -12,6 +14,10 @@ import {
   makeMockPutRecordResult,
 } from './fixtures/bsky-route-extension';
 import { expect, test } from './fixtures/chromium-extension';
+
+const waitForContentScriptReady = async (page: Page): Promise<void> => {
+  await page.waitForSelector(':root[data-skeeditor-initialized]', { timeout: 15_000 });
+};
 
 // ── Popup smoke tests ─────────────────────────────────────────────────────────
 
@@ -58,10 +64,11 @@ bskyTest(
     await setAuthState(TEST_DID);
     await routeBskyApp();
     await page.goto(`https://bsky.app/profile/${TEST_DID}/post/${TEST_RKEY}`);
+    await waitForContentScriptReady(page);
 
     // Wait for content script to inject Edit button on the own post.
     const ownPost = page.locator(`[data-at-uri="${TEST_AT_URI}"]`);
-    await expect(ownPost.locator('.skeeditor-edit-button')).toBeVisible({ timeout: 10_000 });
+    await expect(ownPost.locator('.skeeditor-edit-button')).toBeVisible({ timeout: 15_000 });
 
     // Post should be marked as processed by the content script.
     await expect(ownPost).toHaveAttribute('data-skeeditor-processed', 'true');
@@ -82,12 +89,13 @@ bskyTest('edit button is injected on own posts and absent on others', async ({ p
   await setAuthState(TEST_DID);
   await routeBskyApp();
   await page.goto(`https://bsky.app/profile/${TEST_DID}/post/${TEST_RKEY}`);
+  await waitForContentScriptReady(page);
 
   const ownPost = page.locator(`[data-at-uri="${TEST_AT_URI}"]`);
   const otherPost = page.locator(`[data-at-uri^="at://${OTHER_DID}"]`);
 
   // Own post must have the Edit button.
-  await expect(ownPost.locator('.skeeditor-edit-button')).toBeVisible({ timeout: 10_000 });
+  await expect(ownPost.locator('.skeeditor-edit-button')).toBeVisible({ timeout: 15_000 });
 
   // Other user's post must NOT have an Edit button.
   await expect(otherPost.locator('.skeeditor-edit-button')).toHaveCount(0);
@@ -110,10 +118,11 @@ bskyTest(
     await routeXrpcPutRecord(makeMockPutRecordResult());
 
     await page.goto(`https://bsky.app/profile/${TEST_DID}/post/${TEST_RKEY}`);
+    await waitForContentScriptReady(page);
 
     const ownPost = page.locator(`[data-at-uri="${TEST_AT_URI}"]`);
     const editButton = ownPost.locator('.skeeditor-edit-button');
-    await expect(editButton).toBeVisible({ timeout: 10_000 });
+    await expect(editButton).toBeVisible({ timeout: 15_000 });
     await editButton.click();
 
     // Modal should appear with the record text.
@@ -149,7 +158,7 @@ bskyTest('unauthenticated user sees no edit buttons', async ({ page, routeBskyAp
   // Wait for the content script to complete its AUTH_GET_STATUS round-trip. The content
   // script stamps data-skeeditor-initialized on <html> after refreshAuthState() settles.
   await page.goto(`https://bsky.app/profile/${TEST_DID}/post/${TEST_RKEY}`);
-  await page.waitForSelector(':root[data-skeeditor-initialized]', { timeout: 10_000 });
+  await waitForContentScriptReady(page);
 
   // Neither the own post nor the other user's post should have an Edit button.
   await expect(page.locator('.skeeditor-edit-button')).toHaveCount(0);
@@ -173,13 +182,14 @@ bskyTest(
     await routeXrpcPutRecordConflict();
 
     await page.goto(`https://bsky.app/profile/${TEST_DID}/post/${TEST_RKEY}`);
+    await waitForContentScriptReady(page);
 
     const editButton = page.locator(`[data-at-uri="${TEST_AT_URI}"] .skeeditor-edit-button`);
-    await expect(editButton).toBeVisible({ timeout: 10_000 });
+    await expect(editButton).toBeVisible({ timeout: 15_000 });
     await editButton.click();
 
     const modal = page.locator('edit-modal');
-    await expect(modal.locator('textarea')).toBeVisible({ timeout: 5_000 });
+    await expect(modal.locator('textarea')).toHaveValue(OWN_POST_TEXT, { timeout: 10_000 });
 
     // Edit the text so Save is enabled.
     await modal.locator('textarea').fill('Attempted edit that will conflict');
@@ -212,9 +222,10 @@ bskyTest(
     await routeXrpcGetRecord(makeMockGetRecordResult());
     const { getBody } = await capturePutRecord(makeMockPutRecordResult());
     await page.goto(`https://bsky.app/profile/${TEST_DID}/post/${TEST_RKEY}`);
+    await waitForContentScriptReady(page);
 
     const editButton = page.locator(`[data-at-uri="${TEST_AT_URI}"] .skeeditor-edit-button`);
-    await expect(editButton).toBeVisible({ timeout: 10_000 });
+    await expect(editButton).toBeVisible({ timeout: 15_000 });
     await editButton.click();
 
     const modal = page.locator('edit-modal');
@@ -252,9 +263,10 @@ bskyTest(
     const before = Date.now();
 
     await page.goto(`https://bsky.app/profile/${TEST_DID}/post/${TEST_RKEY}`);
+    await waitForContentScriptReady(page);
 
     const editButton = page.locator(`[data-at-uri="${TEST_AT_URI}"] .skeeditor-edit-button`);
-    await expect(editButton).toBeVisible({ timeout: 10_000 });
+    await expect(editButton).toBeVisible({ timeout: 15_000 });
     await editButton.click();
 
     const modal = page.locator('edit-modal');
