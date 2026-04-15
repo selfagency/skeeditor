@@ -74,6 +74,10 @@ function handleOptions(): Response {
   return new Response(null, { status: 204, headers: corsHeaders() });
 }
 
+function handlePrivateOptions(): Response {
+  return new Response(null, { status: 204 });
+}
+
 function addCors(response: Response): Response {
   const h = new Headers(response.headers);
   for (const [k, v] of Object.entries(corsHeaders())) {
@@ -95,7 +99,12 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
-    if (request.method === 'OPTIONS') return handleOptions();
+    if (request.method === 'OPTIONS') {
+      if (url.pathname === '/xrpc/tools.skeeditor.emitLabel') {
+        return handlePrivateOptions();
+      }
+      return handleOptions();
+    }
 
     // ── GET /.well-known/did.json ──────────────────────────────────────────
     if (url.pathname === '/.well-known/did.json') {
@@ -176,7 +185,7 @@ export default {
         duplex: 'half',
       });
       const resp = await hub.fetch(forwarded);
-      return addCors(resp);
+      return resp;
     }
 
     // ── GET /health ────────────────────────────────────────────────────────

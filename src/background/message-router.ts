@@ -5,6 +5,7 @@ import { createDpopProof, loadOrCreateDpopKeyPair } from '../shared/auth/dpop';
 
 import { getHandleForDid, getPdsUrlForDid } from '../shared/api/resolve-did';
 import type {
+  CreateRecordParams,
   GetRecordResult,
   PutRecordResult,
   PutRecordWithSwapResult,
@@ -762,13 +763,13 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
           ...(stored.dpopEnabled !== undefined && { dpopEnabled: stored.dpopEnabled }),
         });
 
-        const params: any = {
+        const params: CreateRecordParams = {
           repo: message['repo'],
           collection: message['collection'],
           record: message['record'],
         };
-        if (message['rkey'] !== undefined) params.rkey = message['rkey'];
-        if (message['validate'] !== undefined) params.validate = message['validate'];
+        if (typeof message['rkey'] === 'string') params.rkey = message['rkey'];
+        if (typeof message['validate'] === 'boolean') params.validate = message['validate'];
 
         const result = await client.createRecord(params);
         return {

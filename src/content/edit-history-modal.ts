@@ -142,9 +142,7 @@ export class EditHistoryModal {
       this.originalDateStrong.textContent = originalDate;
     }
 
-    if (this.versionsContainer) {
-      this.versionsContainer.innerHTML = '<div class="loading-text">Loading edit history…</div>';
-    }
+    this.setLoadingMessage('Loading edit history…');
 
     this.element.removeEventListener('click', this.handleBackgroundClickBound);
     this.element.addEventListener('click', this.handleBackgroundClickBound);
@@ -159,36 +157,38 @@ export class EditHistoryModal {
     if (!this.versionsContainer) return;
 
     if (versions.length === 0) {
-      this.versionsContainer.innerHTML = '<div class="loading-text">No edit history found.</div>';
+      this.setLoadingMessage('No edit history found.');
       return;
     }
 
-    const items = versions
-      .map((v, i) => {
-        const label =
-          i === 0
-            ? 'Original version'
-            : `Version ${i + 1} — edited ${new Date(v.editedAt).toLocaleString(undefined, {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-              })}`;
-        const escapedText = v.text
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;');
-        return `
-          <div class="history-version">
-            <div class="history-version-header">${label}</div>
-            <div class="history-version-text">${escapedText}</div>
-          </div>`;
-      })
-      .join('');
+    this.versionsContainer.replaceChildren();
 
-    this.versionsContainer.innerHTML = items;
+    for (const [i, version] of versions.entries()) {
+      const label =
+        i === 0
+          ? 'Original version'
+          : `Version ${i + 1} — edited ${new Date(version.editedAt).toLocaleString(undefined, {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+            })}`;
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'history-version';
+
+      const header = document.createElement('div');
+      header.className = 'history-version-header';
+      header.textContent = label;
+
+      const text = document.createElement('div');
+      text.className = 'history-version-text';
+      text.textContent = version.text;
+
+      wrapper.append(header, text);
+      this.versionsContainer.appendChild(wrapper);
+    }
   }
 
   public showError(message: string): void {
@@ -211,6 +211,15 @@ export class EditHistoryModal {
       this.previouslyFocused.focus();
     }
     this.previouslyFocused = null;
+  }
+
+  private setLoadingMessage(message: string): void {
+    if (!this.versionsContainer) return;
+    this.versionsContainer.replaceChildren();
+    const container = document.createElement('div');
+    container.className = 'loading-text';
+    container.textContent = message;
+    this.versionsContainer.appendChild(container);
   }
 
   private handleKeydown(event: KeyboardEvent): void {

@@ -57,6 +57,7 @@ function showToast(message: string): void {
 // ── Recent record cache (avoids stale GET_RECORD after a fresh save) ──────────
 
 const RECORD_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const RECENT_RECORD_CACHE_MAX_ENTRIES = 250;
 
 interface RecentRecordEntry {
   record: EditablePostRecord;
@@ -65,6 +66,27 @@ interface RecentRecordEntry {
 }
 
 const recentRecordsCache = new Map<string, RecentRecordEntry>();
+
+function purgeRecentRecordsCache(now = Date.now()): void {
+  for (const [key, entry] of recentRecordsCache) {
+    if (now - entry.savedAt >= RECORD_CACHE_TTL_MS) {
+      recentRecordsCache.delete(key);
+    }
+  }
+
+  if (recentRecordsCache.size <= RECENT_RECORD_CACHE_MAX_ENTRIES) {
+    return;
+  }
+
+  const entriesByAge = [...recentRecordsCache.entries()].sort((left, right) => left[1].savedAt - right[1].savedAt);
+  const overflowCount = recentRecordsCache.size - RECENT_RECORD_CACHE_MAX_ENTRIES;
+  for (let i = 0; i < overflowCount; i++) {
+    const key = entriesByAge[i]?.[0];
+    if (key !== undefined) {
+      recentRecordsCache.delete(key);
+    }
+  }
+}
 
 function applyEditedPostsFromCache(posts?: PostInfo[]): void {
   if (getCacheSize() === 0) return;
@@ -837,6 +859,7 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
     // text on React re-renders. No setTimeout hack needed.
     setCached(normalizedAtUri, text, initialRecordText);
     recentRecordsCache.set(normalizedAtUri, { record: validatedRecord, cid: writeResponse.cid, savedAt: Date.now() });
+    purgeRecentRecordsCache();
     const toastMsg = saveStrategy === 'recreate' ? 'Edit saved. Post recreated.' : 'Edit saved.';
     showToast(toastMsg);
     console.info(`${APP_NAME}: edit saved`, { atUri: normalizedAtUri, uri: writeResponse.uri, cid: writeResponse.cid });
@@ -846,6 +869,7 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
 
   // Use the in-memory record cache when a save just happened (avoids stale AppView data from GET_RECORD).
   const nowMs = Date.now();
+  purgeRecentRecordsCache(nowMs);
   const cachedEntry = recentRecordsCache.get(normalizedAtUri);
 
   if (cachedEntry !== undefined && nowMs - cachedEntry.savedAt < RECORD_CACHE_TTL_MS) {
