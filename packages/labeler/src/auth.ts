@@ -106,6 +106,18 @@ export async function validateEmitAuth(
     return { valid: false, reason: 'JWT missing sub claim' };
   }
 
+  const exp = jwtPayload['exp'];
+  if (exp !== undefined) {
+    if (typeof exp !== 'number' || !Number.isFinite(exp)) {
+      return { valid: false, reason: 'JWT exp claim is invalid' };
+    }
+
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    if (exp <= nowSeconds) {
+      return { valid: false, reason: 'JWT is expired' };
+    }
+  }
+
   // The AT URI repo segment must match the authenticating DID
   const atUri = payload.uri;
   const uriMatch = /^at:\/\/([^/]+)\//.exec(atUri);

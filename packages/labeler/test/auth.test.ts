@@ -40,6 +40,7 @@ const WEB_DID_DOC = {
 
 /** Session response returned by the PDS for a valid token. */
 const SESSION_OK = { did: DID_PLC, handle: 'user.bsky.social', email: 'user@example.com' };
+const futureExp = (): number => Math.floor(Date.now() / 1000) + 3600;
 
 /**
  * Build a mock fetch function that intercepts:
@@ -86,13 +87,13 @@ describe('validateEmitAuth', () => {
   // ── Valid token ─────────────────────────────────────────────────────────
 
   it('accepts a valid token whose signature is confirmed by the PDS (did:plc)', async () => {
-    const jwt = makeJwt({ sub: DID_PLC, iat: 1_000_000, exp: 9_999_999 });
+    const jwt = makeJwt({ sub: DID_PLC, iat: 1_000_000, exp: futureExp() });
     const result = await validateEmitAuth(`Bearer ${jwt}`, VALID_PAYLOAD, makeFetch({ sessionStatus: 200 }));
     expect(result).toEqual({ valid: true });
   });
 
   it('accepts a valid token for a did:web subject', async () => {
-    const jwt = makeJwt({ sub: DID_WEB, iat: 1_000_000, exp: 9_999_999 });
+    const jwt = makeJwt({ sub: DID_WEB, iat: 1_000_000, exp: futureExp() });
     const payload: EmitPayload = { uri: AT_URI_WEB, cid: 'bafyreiexamplecid', did: DID_WEB };
     const result = await validateEmitAuth(
       `Bearer ${jwt}`,
@@ -107,7 +108,7 @@ describe('validateEmitAuth', () => {
   });
 
   it('accepts a valid DPoP token when a DPoP proof header is provided', async () => {
-    const jwt = makeJwt({ sub: DID_PLC, iat: 1_000_000, exp: 9_999_999 });
+    const jwt = makeJwt({ sub: DID_PLC, iat: 1_000_000, exp: futureExp() });
     const fetchFn = vi.fn(makeFetch({ sessionStatus: 200 }));
 
     const result = await validateEmitAuth(`DPoP ${jwt}`, VALID_PAYLOAD, fetchFn, 'test-dpop-proof');
@@ -125,7 +126,7 @@ describe('validateEmitAuth', () => {
   });
 
   it('normalizes a trailing slash in the PDS serviceEndpoint before calling getSession', async () => {
-    const jwt = makeJwt({ sub: DID_PLC, iat: 1_000_000, exp: 9_999_999 });
+    const jwt = makeJwt({ sub: DID_PLC, iat: 1_000_000, exp: futureExp() });
     const didDocWithSlash = {
       id: DID_PLC,
       service: [
@@ -147,7 +148,7 @@ describe('validateEmitAuth', () => {
   // ── Invalid signature (rejected by issuer) ──────────────────────────────
 
   it('rejects a token whose signature is rejected by the PDS', async () => {
-    const jwt = makeJwt({ sub: DID_PLC, iat: 1_000_000, exp: 9_999_999 });
+    const jwt = makeJwt({ sub: DID_PLC, iat: 1_000_000, exp: futureExp() });
     const result = await validateEmitAuth(`Bearer ${jwt}`, VALID_PAYLOAD, makeFetch({ sessionStatus: 401 }));
     expect(result).toEqual({ valid: false, reason: 'Token rejected by issuer' });
   });
@@ -159,7 +160,7 @@ describe('validateEmitAuth', () => {
   });
 
   it('rejects when getSession succeeds but session did does not match JWT sub', async () => {
-    const jwt = makeJwt({ sub: DID_PLC, iat: 1_000_000, exp: 9_999_999 });
+    const jwt = makeJwt({ sub: DID_PLC, iat: 1_000_000, exp: futureExp() });
     const result = await validateEmitAuth(
       `Bearer ${jwt}`,
       VALID_PAYLOAD,
@@ -215,7 +216,7 @@ describe('validateEmitAuth', () => {
   });
 
   it('rejects a DPoP token when the matching DPoP proof header is missing', async () => {
-    const jwt = makeJwt({ sub: DID_PLC, iat: 1_000_000, exp: 9_999_999 });
+    const jwt = makeJwt({ sub: DID_PLC, iat: 1_000_000, exp: futureExp() });
 
     const result = await validateEmitAuth(`DPoP ${jwt}`, VALID_PAYLOAD, makeFetch());
 
@@ -236,6 +237,18 @@ describe('validateEmitAuth', () => {
     const jwt = makeJwt({ iat: 1_000_000 }); // no sub
     const result = await validateEmitAuth(`Bearer ${jwt}`, VALID_PAYLOAD, makeFetch());
     expect(result).toEqual({ valid: false, reason: 'JWT missing sub claim' });
+  });
+
+  it('rejects an expired JWT', async () => {
+    const jwt = makeJwt({ sub: DID_PLC, exp: Math.floor(Date.now() / 1000) - 60 });
+    const result = await validateEmitAuth(`Bearer ${jwt}`, VALID_PAYLOAD, makeFetch());
+    expect(result).toEqual({ valid: false, reason: 'JWT is expired' });
+  });
+
+  it('rejects a JWT whose exp claim is not a finite number', async () => {
+    const jwt = makeJwt({ sub: DID_PLC, exp: 'not-a-number' });
+    const result = await validateEmitAuth(`Bearer ${jwt}`, VALID_PAYLOAD, makeFetch());
+    expect(result).toEqual({ valid: false, reason: 'JWT exp claim is invalid' });
   });
 
   // ── PDS resolution failure ──────────────────────────────────────────────
