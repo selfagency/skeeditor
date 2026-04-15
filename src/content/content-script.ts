@@ -547,7 +547,7 @@ const isElementOwnPost = (postElement: HTMLElement, postRepo: string): boolean =
 };
 
 // Debug: Log when content script loads
-console.log(`${APP_NAME}: content script loaded on ${document.location.href}`);
+log.debug('content-script-module-loaded', { href: document.location.href });
 
 let mutationObserver: MutationObserver | null = null;
 let isApplyingCache = false;
@@ -595,13 +595,13 @@ const isPutRecordConflictResponse = (response: PutRecordResponse): response is P
 
 const refreshAuthState = async (): Promise<void> => {
   try {
-    console.log(`${APP_NAME}: querying background for auth status...`);
+    log.debug('auth-status-request');
     const status = await sendMessage({ type: 'AUTH_GET_STATUS' });
-    console.log(`${APP_NAME}: received auth status response:`, status);
+    log.debug('auth-status-response', status);
     currentDid = status.authenticated ? status.did : null;
     currentHandle = status.authenticated ? (status.handle ?? null) : null;
     setIdentity(currentDid, currentHandle);
-    console.log(`${APP_NAME}: currentDid=${currentDid}, currentHandle=${currentHandle}`);
+    log.debug('auth-state-updated', { currentDid, currentHandle });
   } catch (err) {
     console.error(`${APP_NAME}: failed to load auth state`, err);
     currentDid = null;
@@ -1189,7 +1189,7 @@ const scanForPosts = (): void => {
   // (and edited badges on own posts)
   interceptArchivedPostButtons(posts);
 
-  console.log(`${APP_NAME}: scanning for posts, currentDid=${currentDid}, currentHandle=${currentHandle}`);
+  log.debug('scan-start', { currentDid, currentHandle });
 
   // Trigger 2: detect "Edited" badges in the DOM and fetch from Slingshot.
   // This runs async — the MO path will apply the results once they land in cache.
@@ -1205,7 +1205,7 @@ const scanForPosts = (): void => {
 
   // No authenticated DID → don't inject any edit buttons.
   if (currentDid === null) {
-    console.log(`${APP_NAME}: no auth session, skipping edit button injection`);
+    log.debug('scan-no-auth-session-skip-injection');
     log.debug('scan-no-auth');
     return;
   }
