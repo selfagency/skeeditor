@@ -58,7 +58,7 @@ The `<auth-popup>` Web Component UI rendered when the user clicks the toolbar bu
 A full-tab settings page accessible from the popup. Currently manages:
 
 - **Edit time limit** — the window after a post is created during which the Edit button is visible (0.5–5 minutes, or unlimited).
-- **Save strategy** — whether saves use an in-place `PUT_RECORD` edit or an atomic `applyWrites` recreate.
+- **Save strategy** — whether saves use an in-place `PUT_RECORD` edit or a `RECREATE_RECORD` flow that deletes and recreates the record at the same `rkey`.
 
 Settings are persisted in `browser.storage.local` under `"settings"` via the `GET_SETTINGS` / `SET_SETTINGS` messages.
 
@@ -132,7 +132,7 @@ Browser API differences are isolated in `src/platform/<browser>/`. Shared code a
 
 When the user selects **Edit record**, `putRecord` passes the CID from the fetched record as a `swapCid`. The PDS rejects writes where the record has changed, preventing silent overwrites. The extension surfaces the conflict to the user rather than silently discarding either version.
 
-When the user selects **Recreate record**, the background worker uses `com.atproto.repo.applyWrites` to atomically delete and recreate the post at the same `rkey`. This path refreshes `createdAt` and is more behaviorally visible in Bluesky, but it is intentionally presented as the more invasive option.
+When the user selects **Recreate record**, the background worker follows a `RECREATE_RECORD` flow that deletes and recreates the post at the same `rkey`. This path refreshes `createdAt` and is more behaviorally visible in Bluesky, but it is intentionally presented as the more invasive option.
 
 ### Labeler subscription is opt-in
 
