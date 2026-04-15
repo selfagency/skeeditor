@@ -1,6 +1,5 @@
 import { browser } from 'wxt/browser';
 import {
-  APP_NAME,
   BSKY_APP_ORIGIN,
   buildLabelerSubscribeWsUrl,
   LABELER_BACKOFF_STORAGE_KEY,
