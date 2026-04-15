@@ -19,7 +19,10 @@ const DEFAULT_SETTINGS: ExtensionSettings = {
 export const EDIT_TIME_LIMIT_OPTIONS = [0.5, 1, 3, 5, 15, 30] as const;
 
 const getStorage = (): typeof browser.storage.local => {
-  return browser.storage.local ?? browser.storage.sync;
+  if (!browser.storage.local) {
+    throw new Error('browser.storage.local is unavailable');
+  }
+  return browser.storage.local;
 };
 
 export const EDIT_TIME_LIMIT_MIN = 0.5;
