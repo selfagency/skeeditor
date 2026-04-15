@@ -1,7 +1,7 @@
 import { browser, type Browser } from 'wxt/browser';
 import { getHandleForDid } from '../shared/api/resolve-did';
 import { APP_BSKY_FEED_POST_COLLECTION, APP_NAME } from '../shared/constants';
-import { createLogger } from '../shared/logger';
+import { createLogger, DEBUG_ENABLED } from '../shared/logger';
 import type {
   AuthListAccountsAccount,
   LabelReceivedNotification,
@@ -1227,7 +1227,7 @@ const scanForPosts = (): void => {
     injectEditButton(postInfo.element);
   }
 
-  if (visiblePosts === 0) {
+  if (visiblePosts === 0 && DEBUG_ENABLED) {
     // Dump DOM diagnostics so we can see WHY no posts matched
     const diagnosticSelectors = [
       '[data-at-uri]',

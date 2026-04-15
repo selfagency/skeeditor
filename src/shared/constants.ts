@@ -161,6 +161,9 @@ export const LABELER_SUBSCRIBE_WS_BASE_URL = 'wss://labeler.skeeditor.link/xrpc/
 /** storage.local key for the last label sequence processed by the background WebSocket */
 export const LABELER_CURSOR_STORAGE_KEY = 'labelerCursor';
 
+/** storage.local key for persisted labeler websocket reconnect backoff (ms) */
+export const LABELER_BACKOFF_STORAGE_KEY = 'labelerBackoffMs';
+
 export function buildLabelerSubscribeWsUrl(cursor: number | null): string {
   if (cursor === null || !Number.isFinite(cursor) || cursor < 0) {
     return LABELER_SUBSCRIBE_WS_BASE_URL;
