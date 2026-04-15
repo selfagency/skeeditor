@@ -1,13 +1,13 @@
 ---
 # skeeditor-l11x
 title: Refactor UI to web components
-status: in-progress
+status: completed
 type: feature
 priority: normal
 created_at: 2026-03-31T14:45:43Z
-updated_at: 2026-03-31T14:45:58Z
-branch: feat/skeeditor-l11x-refactor-ui-web-components
+updated_at: 2026-04-15T22:11:19Z
 ---
+
 Refactor all UI elements (EditModal, EditHistoryModal, options page sections) to proper web components following the existing auth-popup/account-card/toast patterns.
 
 ## Todo
