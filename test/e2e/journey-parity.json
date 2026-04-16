@@ -1,0 +1,193 @@
+{
+  "version": 1,
+  "generatedFrom": "docs/dev/e2e-journey-matrix.md",
+  "journeys": [
+    {
+      "id": "J-001",
+      "title": "Extension popup bootstrap",
+      "chrome": "test/e2e/chrome.spec.ts#should load the extension popup in Chromium",
+      "firefox": "test/e2e/firefox-webext-smoke.mjs#web-ext-firefox-smoke",
+      "waiver": null
+    },
+    {
+      "id": "J-002",
+      "title": "OAuth sign-in flow handoff",
+      "chrome": "test/e2e/chrome.spec.ts#sign in triggers OAuth tab handoff",
+      "firefox": null,
+      "waiver": {
+        "reason": "Full Firefox extension UI automation is temporarily constrained; web-ext smoke path is active.",
+        "expiresOn": "2026-06-30"
+      }
+    },
+    {
+      "id": "J-003",
+      "title": "Reauthorize expired session",
+      "chrome": "test/e2e/chrome.spec.ts#reauthorize action opens OAuth tab when authenticated",
+      "firefox": null,
+      "waiver": {
+        "reason": "Full Firefox extension UI automation is temporarily constrained; web-ext smoke path is active.",
+        "expiresOn": "2026-06-30"
+      }
+    },
+    {
+      "id": "J-004",
+      "title": "Sign out (all sessions)",
+      "chrome": "test/e2e/chrome.spec.ts#sign out account transitions popup back to unauthenticated state",
+      "firefox": null,
+      "waiver": {
+        "reason": "Full Firefox extension UI automation is temporarily constrained; web-ext smoke path is active.",
+        "expiresOn": "2026-06-30"
+      }
+    },
+    {
+      "id": "J-005",
+      "title": "Multi-account list and switch",
+      "chrome": "test/e2e/chrome.spec.ts#account switch updates activeDid in storage",
+      "firefox": null,
+      "waiver": {
+        "reason": "Full Firefox extension UI automation is temporarily constrained; web-ext smoke path is active.",
+        "expiresOn": "2026-06-30"
+      }
+    },
+    {
+      "id": "J-006",
+      "title": "Sign out single account",
+      "chrome": "test/e2e/chrome.spec.ts#sign out account transitions popup back to unauthenticated state",
+      "firefox": null,
+      "waiver": {
+        "reason": "Full Firefox extension UI automation is temporarily constrained; web-ext smoke path is active.",
+        "expiresOn": "2026-06-30"
+      }
+    },
+    {
+      "id": "J-007",
+      "title": "Content-script initialization",
+      "chrome": "test/e2e/chrome.spec.ts#content script injects into bsky.app and processes own post",
+      "firefox": null,
+      "waiver": {
+        "reason": "Full Firefox extension UI automation is temporarily constrained; web-ext smoke path is active.",
+        "expiresOn": "2026-06-30"
+      }
+    },
+    {
+      "id": "J-008",
+      "title": "Own-post edit button visibility",
+      "chrome": "test/e2e/chrome.spec.ts#edit button is injected on own posts and absent on others",
+      "firefox": null,
+      "waiver": {
+        "reason": "Full Firefox extension UI automation is temporarily constrained; web-ext smoke path is active.",
+        "expiresOn": "2026-06-30"
+      }
+    },
+    {
+      "id": "J-009",
+      "title": "Unauthenticated visibility rules",
+      "chrome": "test/e2e/chrome.spec.ts#unauthenticated user sees no edit buttons",
+      "firefox": null,
+      "waiver": {
+        "reason": "Full Firefox extension UI automation is temporarily constrained; web-ext smoke path is active.",
+        "expiresOn": "2026-06-30"
+      }
+    },
+    {
+      "id": "J-010",
+      "title": "Edit modal load readiness",
+      "chrome": "test/e2e/chrome.spec.ts#edit modal opens with post text and saves successfully",
+      "firefox": null,
+      "waiver": {
+        "reason": "Full Firefox extension UI automation is temporarily constrained; web-ext smoke path is active.",
+        "expiresOn": "2026-06-30"
+      }
+    },
+    {
+      "id": "J-011",
+      "title": "Save strategy: edit in place",
+      "chrome": "test/e2e/chrome.spec.ts#PUT_RECORD body preserves createdAt when saveStrategy is edit",
+      "firefox": null,
+      "waiver": {
+        "reason": "Full Firefox extension UI automation is temporarily constrained; web-ext smoke path is active.",
+        "expiresOn": "2026-06-30"
+      }
+    },
+    {
+      "id": "J-012",
+      "title": "Save strategy: recreate record",
+      "chrome": "test/e2e/chrome.spec.ts#RECREATE_RECORD uses applyWrites with a fresh createdAt when saveStrategy is recreate",
+      "firefox": null,
+      "waiver": {
+        "reason": "Full Firefox extension UI automation is temporarily constrained; web-ext smoke path is active.",
+        "expiresOn": "2026-06-30"
+      }
+    },
+    {
+      "id": "J-013",
+      "title": "Conflict handling",
+      "chrome": "test/e2e/chrome.spec.ts#conflict on save shows retry prompt in modal",
+      "firefox": null,
+      "waiver": {
+        "reason": "Full Firefox extension UI automation is temporarily constrained; web-ext smoke path is active.",
+        "expiresOn": "2026-06-30"
+      }
+    },
+    {
+      "id": "J-014",
+      "title": "Edit time limit enforcement",
+      "chrome": "test/e2e/chrome.spec.ts#edit time limit prevents editing older posts",
+      "firefox": null,
+      "waiver": {
+        "reason": "Full Firefox extension UI automation is temporarily constrained; web-ext smoke path is active.",
+        "expiresOn": "2026-06-30"
+      }
+    },
+    {
+      "id": "J-015",
+      "title": "Options settings persistence",
+      "chrome": "test/e2e/chrome.spec.ts#settings button opens options page",
+      "firefox": null,
+      "waiver": {
+        "reason": "Full Firefox extension UI automation is temporarily constrained; web-ext smoke path is active.",
+        "expiresOn": "2026-06-30"
+      }
+    },
+    {
+      "id": "J-016",
+      "title": "Labeler prompt display/dismiss",
+      "chrome": "test/e2e/chrome.spec.ts#labeler prompt can be dismissed from popup",
+      "firefox": null,
+      "waiver": {
+        "reason": "Full Firefox extension UI automation is temporarily constrained; web-ext smoke path is active.",
+        "expiresOn": "2026-06-30"
+      }
+    },
+    {
+      "id": "J-017",
+      "title": "Edited/archived interception",
+      "chrome": "src/content/content-script.ts#interceptArchivedPostButtons",
+      "firefox": null,
+      "waiver": {
+        "reason": "No dedicated cross-browser E2E spec yet; tracked for upcoming journey expansion.",
+        "expiresOn": "2026-06-30"
+      }
+    },
+    {
+      "id": "J-018",
+      "title": "Devnet real-network save",
+      "chrome": "test/e2e/chrome-devnet.spec.ts#edit modal saves real post text to devnet PDS",
+      "firefox": null,
+      "waiver": {
+        "reason": "Firefox devnet full automation remains blocked by extension tooling constraints in this cycle.",
+        "expiresOn": "2026-06-30"
+      }
+    },
+    {
+      "id": "J-019",
+      "title": "Devnet real-network conflict",
+      "chrome": "test/e2e/chrome-devnet.spec.ts#concurrent edit conflict shows retry prompt",
+      "firefox": null,
+      "waiver": {
+        "reason": "Firefox devnet full automation remains blocked by extension tooling constraints in this cycle.",
+        "expiresOn": "2026-06-30"
+      }
+    }
+  ]
+}
