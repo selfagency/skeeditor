@@ -14,6 +14,7 @@ import {
 import { expect, test } from './fixtures/chromium-extension';
 import { waitForContentScriptReady } from './fixtures/content-script-ready';
 import { waitForEditModalReady } from './fixtures/edit-modal-ready';
+import { setExtensionSettings } from './fixtures/extension-storage';
 
 // ── Popup smoke tests ─────────────────────────────────────────────────────────
 
@@ -175,12 +176,7 @@ bskyTest(
     context,
     extensionId,
   }) => {
-    const popupPage = await context.newPage();
-    await popupPage.goto(`chrome-extension://${extensionId}/popup.html`);
-    await popupPage.evaluate(async () => {
-      await chrome.storage.local.set({ settings: { editTimeLimit: null, saveStrategy: 'edit' } });
-    });
-    await popupPage.close();
+    await setExtensionSettings(context, extensionId, { editTimeLimit: null, saveStrategy: 'edit' });
 
     await setAuthState(TEST_DID);
     await routeBskyApp();
@@ -218,12 +214,7 @@ bskyTest(
   'PUT_RECORD body preserves createdAt when saveStrategy is edit',
   async ({ page, setAuthState, routeBskyApp, routeXrpcGetRecord, capturePutRecord, context, extensionId }) => {
     // Set saveStrategy to 'edit' in storage before navigating.
-    const popupPage = await context.newPage();
-    await popupPage.goto(`chrome-extension://${extensionId}/popup.html`);
-    await popupPage.evaluate(async () => {
-      await chrome.storage.local.set({ settings: { editTimeLimit: null, saveStrategy: 'edit' } });
-    });
-    await popupPage.close();
+    await setExtensionSettings(context, extensionId, { editTimeLimit: null, saveStrategy: 'edit' });
 
     await setAuthState(TEST_DID);
     await routeBskyApp();
@@ -256,12 +247,7 @@ bskyTest(
 bskyTest(
   'RECREATE_RECORD uses applyWrites with a fresh createdAt when saveStrategy is recreate',
   async ({ page, setAuthState, routeBskyApp, routeXrpcGetRecord, captureApplyWrites, context, extensionId }) => {
-    const popupPage = await context.newPage();
-    await popupPage.goto(`chrome-extension://${extensionId}/popup.html`);
-    await popupPage.evaluate(async () => {
-      await chrome.storage.local.set({ settings: { editTimeLimit: null, saveStrategy: 'recreate' } });
-    });
-    await popupPage.close();
+    await setExtensionSettings(context, extensionId, { editTimeLimit: null, saveStrategy: 'recreate' });
 
     await setAuthState(TEST_DID);
     await routeBskyApp();
