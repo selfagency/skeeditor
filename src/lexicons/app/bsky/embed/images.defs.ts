@@ -71,11 +71,7 @@ const image = l.typedObject<Image>(
   'image',
   l.object({
     alt: l.string(),
-    image: l.blob({
-      accept: ['image/*'],
-      maxSize: 1000000,
-      allowLegacy: false,
-    }),
+    image: l.blob({ accept: ['image/*'], maxSize: 1000000 }),
     aspectRatio: l.optional(
       l.ref<EmbedDefs.AspectRatio>((() => EmbedDefs.aspectRatio) as any),
     ),

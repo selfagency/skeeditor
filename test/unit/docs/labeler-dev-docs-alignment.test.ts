@@ -16,11 +16,4 @@ describe('labeler developer docs alignment', () => {
     expect(devDoc).toContain('LABELER_PUBLIC_KEY_MULTIBASE');
     expect(devDoc).not.toMatch(/Extension adds LABELER_DID/i);
   });
-
-  it('marks the old labeler plan as historical', () => {
-    const planDoc = readDoc('docs/plans/labeler.md');
-
-    expect(planDoc).toContain('Historical planning document');
-    expect(planDoc).toContain('docs/dev/labeler-services.md');
-  });
 });

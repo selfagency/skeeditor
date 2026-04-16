@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { RouterDeps } from '@src/background/message-router';
 import { createDefaultDeps, handleMessage } from '@src/background/message-router';
-import * as constants from '@src/shared/constants';
 import type {
   CreateRecordResult,
   GetRecordResult,
@@ -11,6 +10,7 @@ import type {
 } from '@src/shared/api/xrpc-client';
 import type { AuthorizationRequest } from '@src/shared/auth/auth-client';
 import type { StoredSession } from '@src/shared/auth/session-store';
+import * as constants from '@src/shared/constants';
 
 vi.mock('@src/shared/auth/auth-client', () => ({
   buildAuthorizationRequest: vi.fn(),

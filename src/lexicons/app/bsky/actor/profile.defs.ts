@@ -54,18 +54,10 @@ const main = l.record<'literal:self', Main>(
   $nsid,
   l.object({
     avatar: l.optional(
-      l.blob({
-        accept: ['image/png', 'image/jpeg'],
-        maxSize: 1000000,
-        allowLegacy: false,
-      }),
+      l.blob({ accept: ['image/png', 'image/jpeg'], maxSize: 1000000 }),
     ),
     banner: l.optional(
-      l.blob({
-        accept: ['image/png', 'image/jpeg'],
-        maxSize: 1000000,
-        allowLegacy: false,
-      }),
+      l.blob({ accept: ['image/png', 'image/jpeg'], maxSize: 1000000 }),
     ),
     labels: l.optional(
       l.typedUnion(

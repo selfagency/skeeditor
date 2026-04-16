@@ -14,7 +14,7 @@ const main = l.procedure(
   $nsid,
   l.params(),
   l.payload('*/*'),
-  l.jsonPayload({ blob: l.blob({ allowLegacy: false }) }),
+  l.jsonPayload({ blob: l.blob() }),
 )
 export { main }
 

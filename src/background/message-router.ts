@@ -102,8 +102,8 @@ function emitLabelTrigger(
   void (async () => {
     const body = JSON.stringify({ uri, cid, did });
 
-    if (dpopEnabled === false) {
-      return fetchWithTimeout(LABELER_EMIT_URL, {
+    const emitWithBearer = (): Promise<Response> =>
+      fetchWithTimeout(LABELER_EMIT_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -111,31 +111,47 @@ function emitLabelTrigger(
         },
         body,
       });
+
+    if (dpopEnabled === false) {
+      return emitWithBearer();
     }
 
-    const pdsUrl = await getCurrentPdsUrl(did);
-    const sessionUrl = `${pdsUrl.replace(/\/+$/u, '')}/xrpc/com.atproto.server.getSession`;
-    const keyPair = await getDpopKeyPair(did);
+    try {
+      const pdsUrl = await getCurrentPdsUrl(did);
+      const sessionUrl = `${pdsUrl.replace(/\/+$/u, '')}/xrpc/com.atproto.server.getSession`;
+      const keyPair = await getDpopKeyPair(did);
 
-    const makeRequest = async (nonce?: string): Promise<Response> => {
-      const proof = await createDpopProof(keyPair, 'GET', sessionUrl, accessToken, nonce);
-      return fetchWithTimeout(LABELER_EMIT_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `DPoP ${accessToken}`,
-          DPoP: proof,
-        },
-        body,
-      });
-    };
+      const makeRequest = async (nonce?: string): Promise<Response> => {
+        const proof = await createDpopProof(keyPair, 'GET', sessionUrl, accessToken, nonce);
+        return fetchWithTimeout(LABELER_EMIT_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `DPoP ${accessToken}`,
+            DPoP: proof,
+          },
+          body,
+        });
+      };
 
-    let res = await makeRequest();
-    if (res.status === 400 || res.status === 401) {
-      const nonce = res.headers.get('DPoP-Nonce');
-      if (nonce !== null) res = await makeRequest(nonce);
+      let res = await makeRequest();
+      if (res.status === 400 || res.status === 401) {
+        const nonce = res.headers.get('DPoP-Nonce');
+        if (nonce !== null) {
+          res = await makeRequest(nonce);
+        }
+      }
+
+      if (!res.ok && (res.status === 400 || res.status === 401 || res.status === 403)) {
+        log.debug('emit-label-dpop-fallback-to-bearer', { status: res.status });
+        return emitWithBearer();
+      }
+
+      return res;
+    } catch {
+      log.debug('emit-label-dpop-fallback-to-bearer', { reason: 'dpop-request-failed' });
+      return emitWithBearer();
     }
-    return res;
   })()
     .then(async res => {
       const body = await res.text().catch(() => '');
