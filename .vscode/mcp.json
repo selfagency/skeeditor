@@ -8,9 +8,19 @@
       "command": "mcp-taskfile-server",
       "type": "stdio"
     },
-    "browsermcp": {
+    "firefox-devtools": {
       "command": "npx",
-      "args": ["@browsermcp/mcp@latest"]
+      "args": [
+        "-y",
+        "firefox-devtools-mcp@latest",
+        "--",
+        "--connect-existing",
+        "--enable-script",
+        "--enable-privileged-context"
+      ],
+      "env": {
+        "START_URL": "about:home"
+      }
     }
   }
 }
