@@ -14,6 +14,7 @@ import {
 import { expect, test } from './fixtures/chromium-extension';
 import { waitForContentScriptReady } from './fixtures/content-script-ready';
 import { waitForEditModalReady } from './fixtures/edit-modal-ready';
+import { createMockSession, seedPopupAuthState, setExtensionSettings } from './fixtures/extension-storage';
 
 // ── Popup smoke tests ─────────────────────────────────────────────────────────
 
@@ -33,6 +34,118 @@ test('should open the mock Bluesky fixture page for future content-script tests'
 
   await expect(page.getByTestId('post').first()).toBeVisible();
   await expect(page.getByTestId('post-text').first()).toContainText('Hello from my own post');
+});
+
+test('sign in triggers OAuth tab handoff', async ({ context, extensionId, page }) => {
+  await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+  const [authPage] = await Promise.all([
+    context.waitForEvent('page', { timeout: 10_000 }),
+    page.getByRole('button', { name: 'Sign in with Bluesky' }).click(),
+  ]);
+
+  await authPage.waitForLoadState('domcontentloaded');
+  await expect.poll(() => authPage.url()).toContain('/oauth/authorize');
+  await authPage.close();
+});
+
+test('reauthorize action opens OAuth tab when authenticated', async ({ context, extensionId, page }) => {
+  const primaryDid = TEST_DID;
+  await seedPopupAuthState(context, extensionId, {
+    sessions: { [primaryDid]: createMockSession(primaryDid, 'test.bsky.social') },
+    activeDid: primaryDid,
+  });
+
+  await page.goto(`chrome-extension://${extensionId}/popup.html`);
+  await expect(page.getByRole('button', { name: 'Reauthorize' })).toBeVisible();
+
+  const [authPage] = await Promise.all([
+    context.waitForEvent('page', { timeout: 10_000 }),
+    page.getByRole('button', { name: 'Reauthorize' }).click(),
+  ]);
+
+  await authPage.waitForLoadState('domcontentloaded');
+  await expect.poll(() => authPage.url()).toContain('/oauth/authorize');
+  await authPage.close();
+});
+
+test('account switch updates activeDid in storage', async ({ context, extensionId, page }) => {
+  const primaryDid = TEST_DID;
+  const secondaryDid = 'did:plc:secondaryuser00000000000';
+  await seedPopupAuthState(context, extensionId, {
+    sessions: {
+      [primaryDid]: createMockSession(primaryDid, 'test.bsky.social'),
+      [secondaryDid]: createMockSession(secondaryDid, 'second.bsky.social'),
+    },
+    activeDid: primaryDid,
+  });
+
+  await page.goto(`chrome-extension://${extensionId}/popup.html`);
+  await expect(page.getByText('second.bsky.social')).toBeVisible();
+  await page.getByRole('button', { name: 'Switch' }).click();
+
+  await expect
+    .poll(async () =>
+      page.evaluate(async () => {
+        const value = await chrome.storage.local.get('activeDid');
+        return value['activeDid'] as string | undefined;
+      }),
+    )
+    .toBe(secondaryDid);
+});
+
+test('sign out account transitions popup back to unauthenticated state', async ({ context, extensionId, page }) => {
+  await seedPopupAuthState(context, extensionId, {
+    sessions: { [TEST_DID]: createMockSession(TEST_DID, 'test.bsky.social') },
+    activeDid: TEST_DID,
+  });
+
+  await page.goto(`chrome-extension://${extensionId}/popup.html`);
+  await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
+  await page.getByRole('button', { name: 'Sign out' }).click();
+
+  await expect(page.getByRole('button', { name: 'Sign in with Bluesky' })).toBeVisible({ timeout: 10_000 });
+});
+
+test('labeler prompt can be dismissed from popup', async ({ context, extensionId, page }) => {
+  await seedPopupAuthState(context, extensionId, {
+    sessions: { [TEST_DID]: createMockSession(TEST_DID, 'test.bsky.social') },
+    activeDid: TEST_DID,
+    pendingLabelerPrompt: true,
+  });
+
+  await page.goto(`chrome-extension://${extensionId}/popup.html`);
+  const dismissButton = page.getByRole('button', { name: 'Not now' });
+  await expect(dismissButton).toBeVisible();
+  await dismissButton.click();
+
+  await expect(dismissButton).toHaveCount(0);
+  await expect
+    .poll(async () =>
+      page.evaluate(async () => {
+        const value = await chrome.storage.local.get('pendingLabelerPrompt');
+        return value['pendingLabelerPrompt'];
+      }),
+    )
+    .toBeUndefined();
+});
+
+test('settings button opens options page', async ({ context, extensionId, page }) => {
+  await seedPopupAuthState(context, extensionId, {
+    sessions: { [TEST_DID]: createMockSession(TEST_DID, 'test.bsky.social') },
+    activeDid: TEST_DID,
+  });
+
+  await page.goto(`chrome-extension://${extensionId}/popup.html`);
+
+  const [optionsPage] = await Promise.all([
+    context.waitForEvent('page', { timeout: 10_000 }),
+    page.getByRole('button', { name: 'Settings' }).click(),
+  ]);
+
+  await optionsPage.waitForLoadState('domcontentloaded');
+  await expect.poll(() => optionsPage.url()).toContain('chrome://extensions/?options=');
+  await optionsPage.close();
 });
 
 // ── Content-script E2E tests ──────────────────────────────────────────────────
@@ -157,6 +270,32 @@ bskyTest('unauthenticated user sees no edit buttons', async ({ page, routeBskyAp
   await expect(page.locator('.skeeditor-edit-button')).toHaveCount(0);
 });
 
+bskyTest(
+  'edit time limit prevents editing older posts',
+  async ({ page, setAuthState, routeBskyApp, routeXrpcGetRecord, context, extensionId }) => {
+    await setExtensionSettings(context, extensionId, { editTimeLimit: 0.5, saveStrategy: 'edit' });
+
+    await setAuthState(TEST_DID);
+    await routeBskyApp();
+    await routeXrpcGetRecord(makeMockGetRecordResult(OWN_POST_TEXT, '2020-01-01T00:00:00.000Z'));
+
+    await page.goto(`https://bsky.app/profile/${TEST_DID}/post/${TEST_RKEY}`);
+    await waitForContentScriptReady(page);
+
+    const editButton = page.locator(`[data-at-uri="${TEST_AT_URI}"] .skeeditor-edit-button`);
+    await expect(editButton).toBeVisible({ timeout: 15_000 });
+    await editButton.click();
+
+    const modal = page.locator('edit-modal');
+    await expect(modal).toBeAttached({ timeout: 10_000 });
+    await expect(modal.locator('.loading-state')).toHaveClass(/hidden/, { timeout: 10_000 });
+    await expect(modal.locator('textarea')).toHaveValue(OWN_POST_TEXT, { timeout: 10_000 });
+    await expect(modal.locator('.status-message.error')).toContainText('older than your edit time limit');
+    await expect(modal.locator('textarea')).toBeDisabled();
+    await expect(modal.locator('.save-button')).toBeDisabled();
+  },
+);
+
 /**
  * skeeditor-gz1w — E2E: concurrent edit conflict shows retry prompt
  *
@@ -175,12 +314,7 @@ bskyTest(
     context,
     extensionId,
   }) => {
-    const popupPage = await context.newPage();
-    await popupPage.goto(`chrome-extension://${extensionId}/popup.html`);
-    await popupPage.evaluate(async () => {
-      await chrome.storage.local.set({ settings: { editTimeLimit: null, saveStrategy: 'edit' } });
-    });
-    await popupPage.close();
+    await setExtensionSettings(context, extensionId, { editTimeLimit: null, saveStrategy: 'edit' });
 
     await setAuthState(TEST_DID);
     await routeBskyApp();
@@ -218,12 +352,7 @@ bskyTest(
   'PUT_RECORD body preserves createdAt when saveStrategy is edit',
   async ({ page, setAuthState, routeBskyApp, routeXrpcGetRecord, capturePutRecord, context, extensionId }) => {
     // Set saveStrategy to 'edit' in storage before navigating.
-    const popupPage = await context.newPage();
-    await popupPage.goto(`chrome-extension://${extensionId}/popup.html`);
-    await popupPage.evaluate(async () => {
-      await chrome.storage.local.set({ settings: { editTimeLimit: null, saveStrategy: 'edit' } });
-    });
-    await popupPage.close();
+    await setExtensionSettings(context, extensionId, { editTimeLimit: null, saveStrategy: 'edit' });
 
     await setAuthState(TEST_DID);
     await routeBskyApp();
@@ -256,12 +385,7 @@ bskyTest(
 bskyTest(
   'RECREATE_RECORD uses applyWrites with a fresh createdAt when saveStrategy is recreate',
   async ({ page, setAuthState, routeBskyApp, routeXrpcGetRecord, captureApplyWrites, context, extensionId }) => {
-    const popupPage = await context.newPage();
-    await popupPage.goto(`chrome-extension://${extensionId}/popup.html`);
-    await popupPage.evaluate(async () => {
-      await chrome.storage.local.set({ settings: { editTimeLimit: null, saveStrategy: 'recreate' } });
-    });
-    await popupPage.close();
+    await setExtensionSettings(context, extensionId, { editTimeLimit: null, saveStrategy: 'recreate' });
 
     await setAuthState(TEST_DID);
     await routeBskyApp();

@@ -5,6 +5,9 @@ on:
   push:
     branches:
       - main
+  schedule:
+    # Weekly full-matrix run every Monday at 04:00 UTC
+    - cron: '0 4 * * 1'
 
 permissions:
   contents: read
@@ -45,6 +48,9 @@ jobs:
 
       - name: Type-check project
         run: task typecheck
+
+      - name: Validate cross-browser parity manifest
+        run: task test:parity
 
   tests:
     name: Unit, integration tests and coverage
@@ -182,6 +188,57 @@ jobs:
       - name: Run Chromium extension smoke tests
         run: task test:e2e:chromium
 
+      - name: Upload Playwright failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-chromium-failure-${{ github.run_id }}
+          path: |
+            test-results/**
+            playwright-report/**
+          retention-days: 14
+
+  e2e-firefox-webext:
+    name: Firefox web-ext smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs:
+      - quality
+      - build
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Task
+        uses: go-task/setup-task@v1
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: task install:ci
+
+      - name: Install Firefox (Playwright runtime)
+        run: task playwright:install:firefox
+
+      - name: Download built extension artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: extension-dist
+          path: dist
+
+      - name: Run Firefox web-ext smoke test
+        run: task test:e2e:firefox
+        env:
+          # Use Playwright-managed Firefox on Linux CI; no Dev Edition available
+          FIREFOX_BINARY: ''
+
   e2e-chromium-devnet:
     name: Playwright Chromium E2E (devnet)
     runs-on: ubuntu-latest
@@ -236,67 +293,6 @@ jobs:
 
       - name: Run Chromium devnet E2E tests
         run: task test:e2e:chromium:devnet
-
-      - name: Stop devnet stack
-        if: always()
-        run: task devnet:down
-
-  e2e-firefox-devnet:
-    name: Playwright Firefox E2E (devnet)
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    needs:
-      - quality
-      - tests
-      - build
-    steps:
-      - name: Checkout repository (with submodules)
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Install Task
-        uses: go-task/setup-task@v1
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20.19.0
-          cache: pnpm
-
-      - name: Install dependencies
-        run: task install:ci
-
-      - name: Get Playwright version
-        id: pw-version
-        run: echo "version=$(pnpm list @playwright/test --json | jq -r '.[0].dependencies["@playwright/test"].version')" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Playwright browsers
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-firefox-${{ runner.os }}-v${{ steps.pw-version.outputs.version }}
-          restore-keys: playwright-firefox-${{ runner.os }}-
-
-      - name: Install Playwright Firefox with system dependencies
-        run: task playwright:install:firefox
-
-      - name: Download built extension artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: extension-dist
-          path: dist
-
-      - name: Start devnet stack
-        run: task devnet:up
-
-      - name: Run Firefox devnet E2E tests
-        run: task test:e2e:firefox:devnet
-        env:
-          FIREFOX_EXTENSION_E2E: '1'
 
       - name: Stop devnet stack
         if: always()

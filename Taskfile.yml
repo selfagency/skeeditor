@@ -219,17 +219,19 @@ tasks:
       - task: 'devnet:ensure'
       - cmd: ./node_modules/.bin/playwright test {{.CLI_ARGS}}
 
+  test:parity:
+    desc: Validate cross-browser journey parity manifest
+    cmd: node scripts/check-parity.mjs
+
   test:e2e:list:
     desc: List Playwright end-to-end tests
     cmd: ./node_modules/.bin/playwright test --list {{.CLI_ARGS}}
 
   test:e2e:local:
     desc: Run local Playwright extension tests without devnet projects
-    cmd: >-
-      ./node_modules/.bin/playwright test
-      --project=chromium-extension
-      --project=firefox-extension
-      {{.CLI_ARGS}}
+    cmds:
+      - task: 'test:e2e:chromium'
+      - task: 'test:e2e:firefox'
 
   test:e2e:project:
     internal: true
@@ -247,11 +249,11 @@ tasks:
           PROJECT: chromium-extension
 
   test:e2e:firefox:
-    desc: Run Playwright Firefox extension tests
+    desc: Run Firefox extension smoke checks via web-ext
     cmds:
-      - task: 'test:e2e:project'
-        vars:
-          PROJECT: firefox-extension
+      - task: 'playwright:install:firefox'
+      - task: 'build:firefox'
+      - cmd: node test/e2e/firefox-webext-smoke.mjs
 
   test:e2e:chromium:devnet:
     desc: Run Playwright Chromium devnet tests

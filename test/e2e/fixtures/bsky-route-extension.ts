@@ -43,12 +43,15 @@ interface MockApplyWritesResult {
   results: Array<Record<string, unknown>>;
 }
 
-export const makeMockGetRecordResult = (text = OWN_POST_TEXT): MockGetRecordResult => ({
+export const makeMockGetRecordResult = (
+  text = OWN_POST_TEXT,
+  createdAt = '2026-03-25T12:00:00.000Z',
+): MockGetRecordResult => ({
   uri: TEST_AT_URI,
   value: {
     $type: 'app.bsky.feed.post',
     text,
-    createdAt: '2026-03-25T12:00:00.000Z',
+    createdAt,
   },
   cid: 'bafyreigwqwhe2jxohagozazfbrf6dxgzphvkg3d3lg7uxdvepsimqyclka',
 });
