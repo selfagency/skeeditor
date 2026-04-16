@@ -406,3 +406,46 @@ test-result data to Codecov when `CODECOV_TOKEN` is available.
 4. **Bug fix** → write a test that reproduces the bug before fixing it.
 
 See [Contributing](./contributing) for the TDD workflow requirements.
+
+---
+
+## Adding a new E2E journey test
+
+1. **Assign a journey ID** — open `docs/dev/e2e-journey-matrix.md` and add a new row with the next available `J-NNN` ID, a title, the Chrome path, and any Firefox status.
+2. **Add the Chrome test** — implement the test in `test/e2e/chrome.spec.ts` (or a dedicated spec file for complex journeys). Use the fixture helpers in `test/e2e/fixtures/` rather than raw Playwright APIs for extension storage access.
+3. **Update the parity manifest** — add a matching entry to `test/e2e/journey-parity.json`. If Firefox coverage is blocked, add a `waiver` object with a reason and an expiry date. Set the expiry no more than 90 days out.
+4. **Run the parity check** — `task test:parity` must pass before committing.
+5. **Run the full Chromium suite** — `task test:e2e:chromium` must pass locally.
+6. **Commit** — reference the journey ID in the commit message.
+
+For the waiver mechanism, Firefox-blocked journeys use:
+
+```json
+"waiver": {
+  "reason": "<why Firefox automation is blocked>",
+  "expiresOn": "YYYY-MM-DD"
+}
+```
+
+The parity check warns 14 days before expiry and fails on the expiry date.
+
+---
+
+## Known limitations and non-goals
+
+### Firefox full-journey automation
+
+Playwright does not support loading Manifest V2 extensions via the standard `launchPersistentContext` API when `--headless` is active. Firefox E2E coverage in this cycle uses a web-ext smoke harness (`test/e2e/firefox-webext-smoke.mjs`) that verifies the extension launches and initializes, but does not drive full UI flows. Full Firefox journey automation requires either:
+
+- A Playwright Firefox channel that supports headless extension loading, or
+- A non-headless CI environment.
+
+All journeys without Firefox coverage are tracked in `test/e2e/journey-parity.json` with waivers that expire 2026-06-30.
+
+### Safari automation
+
+Safari extension automation requires a signed macOS app wrapper and the Safari WebDriver protocol. There is no automated E2E coverage for Safari in this project. Safari testing is manual-only (see the smoke-test checklist above). This is a deliberate non-goal given the overhead of Safari-specific tooling.
+
+### Devnet E2E scope
+
+Devnet tests (`test/e2e/chrome-devnet.spec.ts`) exercise real network saves against a local ATProto devnet stack. They run in CI but are not gating for all PRs — only on push to `main` and on scheduled runs. Devnet tests are intentionally excluded from `task test:e2e:local` to keep local iteration fast.
