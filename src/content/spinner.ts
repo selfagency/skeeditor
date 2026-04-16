@@ -1,3 +1,5 @@
+import { createStyleElement } from '../shared/utils/dom';
+
 export class SkeeditorSpinner extends HTMLElement {
   private readonly root: ShadowRoot;
 
@@ -20,8 +22,16 @@ export class SkeeditorSpinner extends HTMLElement {
 
   private render(): void {
     const label = this.getAttribute('label') ?? 'Loading';
-    this.root.innerHTML = `
-      <style>
+    const spinner = document.createElement('span');
+    spinner.className = 'spinner';
+    spinner.setAttribute('aria-hidden', 'true');
+
+    const labelElement = document.createElement('span');
+    labelElement.className = 'spinner-label';
+    labelElement.textContent = label;
+
+    this.root.replaceChildren(
+      createStyleElement(`
         :host {
           display: inline-flex;
           align-items: center;
@@ -41,15 +51,10 @@ export class SkeeditorSpinner extends HTMLElement {
         @keyframes skeeditor-spin {
           to { transform: rotate(360deg); }
         }
-      </style>
-      <span class="spinner" aria-hidden="true"></span>
-      <span class="spinner-label"></span>
-    `;
-
-    const labelElement = this.root.querySelector<HTMLElement>('.spinner-label');
-    if (labelElement) {
-      labelElement.textContent = label;
-    }
+      `),
+      spinner,
+      labelElement,
+    );
   }
 }
 

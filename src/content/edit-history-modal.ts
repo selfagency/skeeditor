@@ -1,7 +1,7 @@
 import globalStyles from '../shadow-styles.css?inline';
+import { createStyleElement, createSvgNode } from '../shared/utils/dom';
 
-const HISTORY_MODAL_TEMPLATE = `
-  <style>
+const HISTORY_MODAL_STYLES = `
     :host {
       display: flex;
       flex-direction: column;
@@ -74,35 +74,40 @@ const HISTORY_MODAL_TEMPLATE = `
         color: oklch(70% 0.02 264.4);
       }
     }
-  </style>
-  <div class="edit-modal-container" role="dialog" aria-modal="true" aria-labelledby="history-modal-title">
-    <div class="edit-modal-header">
-      <span class="edit-modal-title" id="history-modal-title">This post was edited</span>
-      <button class="edit-modal-close close-button" type="button" aria-label="Close">
-        <svg viewBox="0 0 24 24" class="size-5 fill-current" aria-hidden="true">
-          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-        </svg>
-      </button>
-    </div>
-    <div class="edit-modal-body">
-      <div class="history-meta">
-        <svg fill="none" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-          <path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="M15.439 3.148a1 1 0 0 1 .41.645l.568 3.22a7 7 0 1 1-6.174 10.97L4.32 19.027a1 1 0 0 1-1.159-.811L1.078 6.398a1 1 0 0 1 .81-1.158l12.803-2.258a1 1 0 0 1 .748.166ZM9.325 16.114A7 7 0 0 1 9 14c0-1.56.51-3 1.372-4.164l-6.456 1.139 1.041 5.909 4.368-.77ZM3.568 9.005l10.833-1.91-.347-1.97L3.22 7.036l.347 1.97ZM16 9a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0 2a1 1 0 0 1 1 1v1.586l1.374 1.374a1 1 0 0 1-1.414 1.414l-1.667-1.667A1 1 0 0 1 15 14v-2a1 1 0 0 1 1-1Z"/>
-        </svg>
-        <span class="history-original-date">Originally posted on <strong></strong></span>
-      </div>
-      <p class="loading-text" style="padding:0; text-align:left;">
-        Showing the original version saved by skeeditor before edits were applied.
-      </p>
-      <div class="history-versions-container">
-        <div class="loading-text">Loading edit history…</div>
-      </div>
-    </div>
-    <div class="edit-modal-footer">
-      <button class="edit-modal-btn edit-modal-btn-cancel close-footer-button" type="button">Close</button>
-    </div>
-  </div>
 `;
+
+function createCloseIcon(): SVGSVGElement {
+  const icon = createSvgNode('svg', {
+    viewBox: '0 0 24 24',
+    class: 'size-5 fill-current',
+    'aria-hidden': 'true',
+  });
+  icon.appendChild(
+    createSvgNode('path', {
+      d: 'M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
+    }),
+  );
+  return icon;
+}
+
+function createHistoryMetaIcon(): SVGSVGElement {
+  const icon = createSvgNode('svg', {
+    fill: 'none',
+    viewBox: '0 0 24 24',
+    width: '16',
+    height: '16',
+    'aria-hidden': 'true',
+  });
+  icon.appendChild(
+    createSvgNode('path', {
+      fill: 'currentColor',
+      'fill-rule': 'evenodd',
+      'clip-rule': 'evenodd',
+      d: 'M15.439 3.148a1 1 0 0 1 .41.645l.568 3.22a7 7 0 1 1-6.174 10.97L4.32 19.027a1 1 0 0 1-1.159-.811L1.078 6.398a1 1 0 0 1 .81-1.158l12.803-2.258a1 1 0 0 1 .748.166ZM9.325 16.114A7 7 0 0 1 9 14c0-1.56.51-3 1.372-4.164l-6.456 1.139 1.041 5.909 4.368-.77ZM3.568 9.005l10.833-1.91-.347-1.97L3.22 7.036l.347 1.97ZM16 9a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0 2a1 1 0 0 1 1 1v1.586l1.374 1.374a1 1 0 0 1-1.414 1.414l-1.667-1.667A1 1 0 0 1 15 14v-2a1 1 0 0 1 1-1Z',
+    }),
+  );
+  return icon;
+}
 
 export class EditHistoryModal {
   public readonly element: HTMLElement;
@@ -116,16 +121,68 @@ export class EditHistoryModal {
   public constructor() {
     this.element = document.createElement('edit-history-modal');
     const shadow = this.element.attachShadow({ mode: 'open' });
-    shadow.innerHTML = HISTORY_MODAL_TEMPLATE;
+
+    const container = document.createElement('div');
+    container.className = 'edit-modal-container';
+    container.setAttribute('role', 'dialog');
+    container.setAttribute('aria-modal', 'true');
+    container.setAttribute('aria-labelledby', 'history-modal-title');
+
+    const header = document.createElement('div');
+    header.className = 'edit-modal-header';
+    const title = document.createElement('span');
+    title.className = 'edit-modal-title';
+    title.id = 'history-modal-title';
+    title.textContent = 'This post was edited';
+    const closeButton = document.createElement('button');
+    closeButton.className = 'edit-modal-close close-button';
+    closeButton.type = 'button';
+    closeButton.setAttribute('aria-label', 'Close');
+    closeButton.appendChild(createCloseIcon());
+    header.append(title, closeButton);
+
+    const body = document.createElement('div');
+    body.className = 'edit-modal-body';
+    const historyMeta = document.createElement('div');
+    historyMeta.className = 'history-meta';
+    historyMeta.append(createHistoryMetaIcon());
+    const historyDate = document.createElement('span');
+    historyDate.className = 'history-original-date';
+    historyDate.append('Originally posted on ');
+    const strong = document.createElement('strong');
+    historyDate.appendChild(strong);
+    historyMeta.appendChild(historyDate);
+
+    const explainer = document.createElement('p');
+    explainer.className = 'loading-text';
+    explainer.style.padding = '0';
+    explainer.style.textAlign = 'left';
+    explainer.textContent = 'Showing the original version saved by skeeditor before edits were applied.';
+
+    const versionsContainer = document.createElement('div');
+    versionsContainer.className = 'history-versions-container';
+    const loadingText = document.createElement('div');
+    loadingText.className = 'loading-text';
+    loadingText.textContent = 'Loading edit history…';
+    versionsContainer.appendChild(loadingText);
+    body.append(historyMeta, explainer, versionsContainer);
+
+    const footer = document.createElement('div');
+    footer.className = 'edit-modal-footer';
+    const closeFooterButton = document.createElement('button');
+    closeFooterButton.className = 'edit-modal-btn edit-modal-btn-cancel close-footer-button';
+    closeFooterButton.type = 'button';
+    closeFooterButton.textContent = 'Close';
+    footer.appendChild(closeFooterButton);
+
+    container.append(header, body, footer);
+    shadow.replaceChildren(createStyleElement(HISTORY_MODAL_STYLES), container);
     this.element.style.display = 'none';
 
-    this.versionsContainer = shadow.querySelector<HTMLElement>('.history-versions-container');
-    this.originalDateStrong = shadow.querySelector<HTMLElement>('.history-original-date strong');
+    this.versionsContainer = versionsContainer;
+    this.originalDateStrong = strong;
 
-    const closeButton = shadow.querySelector<HTMLButtonElement>('.close-button');
     closeButton?.addEventListener('click', this.closeBound);
-
-    const closeFooterButton = shadow.querySelector<HTMLButtonElement>('.close-footer-button');
     closeFooterButton?.addEventListener('click', this.closeBound);
 
     this.element.addEventListener('keydown', this.handleKeydownBound);

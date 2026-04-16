@@ -35,7 +35,16 @@ export default defineConfig({
     ...(ctx.browser === 'chrome' && { minimum_chrome_version: '120' }),
     ...(ctx.browser === 'firefox' && {
       browser_specific_settings: {
-        gecko: { id: 'skeeditor@selfagency.dev', strict_min_version: '125.0' },
+        gecko: {
+          id: 'skeeditor@selfagency.dev',
+          strict_min_version: '140.0',
+          data_collection_permissions: {
+            required: ['authenticationInfo', 'personalCommunications'],
+          },
+        },
+        gecko_android: {
+          strict_min_version: '142.0',
+        },
       },
     }),
   }),

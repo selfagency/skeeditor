@@ -5,7 +5,7 @@
  * --------------------
  * The Firefox manifest uses `"background": { "scripts": ["…"] }` (non-persistent
  * background script). Firefox MV3 also supports `"service_worker"`, but the
- * scripts approach is used here for wider compatibility (Firefox 121+).
+ * scripts approach is used here for wider compatibility (Firefox 140+).
  * Like Chrome service workers, avoid in-memory state between event wake cycles.
  *
  * Polyfill
@@ -23,8 +23,9 @@
  * - `browser.tabs.hide` / `browser.tabs.show` are Firefox-only.
  * - `browser.runtime.getBrowserInfo()` is a Firefox-only API — used by
  *   `detectPlatform()` as the Firefox signal.
- * - `browser_specific_settings.gecko.strict_min_version: "121.0"` is set in the
- *   Firefox manifest.
+ * - `browser_specific_settings.gecko.strict_min_version: "140.0"` is set in the
+ *   Firefox desktop manifest, with `gecko_android.strict_min_version: "142.0"`
+ *   for Firefox on Android.
  * - Content script isolation is stricter: scripts run in an isolated world and
  *   cannot access page scripts' globals directly (same as Chrome).
  *
