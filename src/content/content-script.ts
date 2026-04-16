@@ -2,7 +2,6 @@ import { browser, type Browser } from 'wxt/browser';
 import { getHandleForDid } from '../shared/api/resolve-did';
 import { APP_BSKY_FEED_POST_COLLECTION, APP_NAME } from '../shared/constants';
 import { createLogger, DEBUG_ENABLED } from '../shared/logger';
-import { createSvgNode } from '../shared/utils/dom';
 import type {
   AuthListAccountsAccount,
   LabelReceivedNotification,
@@ -12,6 +11,7 @@ import type {
   RecreateRecordRequest,
 } from '../shared/messages';
 import { sendMessage } from '../shared/messages';
+import { createSvgNode } from '../shared/utils/dom';
 import { EditHistoryModal } from './edit-history-modal';
 import { EditModal } from './edit-modal';
 import {
@@ -969,8 +969,8 @@ const createEditButton = (): HTMLButtonElement => {
   button.setAttribute('aria-label', 'Edit post');
 
   const icon = createSvgNode('svg', {
-    width: '16',
-    height: '16',
+    width: '24',
+    height: '24',
     viewBox: '0 0 24 24',
     fill: 'none',
     stroke: 'currentColor',

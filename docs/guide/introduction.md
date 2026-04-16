@@ -19,7 +19,7 @@ For the full technical details on how things work under the hood, check out the 
 | Browser | Status         | Minimum version    |
 | ------- | -------------- | ------------------ |
 | Chrome  | ✅ Supported   | 120+               |
-| Firefox | ✅ Supported   | 125+               |
+| Firefox | ✅ Supported   | 140+               |
 | Safari  | 🔜 Coming soon | macOS 14+ (Sonoma) |
 
 ## 🚀 Current status
@@ -28,7 +28,7 @@ Skeeditor is in active development. The core edit flow — sign in, edit, save �
 
 ## 🚫 What Skeeditor does not do
 
-- **No data collection.** Skeeditor collects absolutely no user data, telemetry, analytics, or identifying information. We keep no records whatsoever — not even during the authentication flow through our website. Your data stays between you and Bluesky.
+- **No analytics or ad-tech tracking.** Skeeditor does not run telemetry or advertising trackers. It stores only what is needed locally for authentication/settings and sends only feature-required requests to Bluesky and documented Skeeditor services. See [Privacy Policy & Security](./privacy).
 - **No editing other people's posts.** You can only edit posts authored by accounts you've signed in with. Your typos are your own.
 - **No exceeding the post limit.** Skeeditor enforces Bluesky's 300-grapheme limit and shows an error if your edit is too long.
 

@@ -22,7 +22,7 @@ features:
     details: Click the edit button next to any of your own posts on bsky.app and edit the text right there — no copy-paste to a third-party site required.
   - icon: 🔒
     title: Secure by design
-    details: Authenticates with Bluesky via OAuth 2.0 + PKCE. Tokens are stored only in your browser's extension storage, never sent anywhere else.
+    details: Authenticates with Bluesky via OAuth 2.0 + PKCE. Tokens are stored in your browser extension storage and transmitted only when required for authenticated extension features.
   - icon: 🏷️
     title: Edited label via labeler
     details: Posts you edit are marked with an "edited" label via the Skeeditor labeler service. Other users who subscribe to the labeler can see which posts have been modified.

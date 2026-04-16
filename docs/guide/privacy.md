@@ -1,4 +1,7 @@
-# Privacy & Security
+# Privacy & Security (Plain-Language Guide)
+
+This page is the plain-language privacy and security guide.
+For legal/store compliance text, see the [Legal Privacy Policy](/legal/privacy-policy).
 
 ## What data Skeeditor stores
 
@@ -18,13 +21,14 @@ Skeeditor never asks for, receives, or stores your Bluesky password. The OAuth f
 
 ---
 
-## What data Skeeditor never collects
+## What Skeeditor does **not** collect
 
 - **No analytics.** There are no tracking scripts, no telemetry endpoints, no crash reporters. The extension makes zero outbound network requests to any analytics provider.
 - **No analytics or ad-tech services.** The extension does not call telemetry, tracking, or ad endpoints. It only calls Bluesky infrastructure plus clearly documented extension services (Skeeditor labeler and Slingshot read acceleration).
 - **No browsing history.** Skeeditor only activates on `bsky.app`. It does not read your history, open tabs list, or any other site's data.
 - **No clipboard access.** The editor pre-fills from the on-page post text. The extension never programmatically reads or writes your clipboard.
-- **No records kept.** We do not log, store, or retain any information about your posts, edits, or authentication — not even during the OAuth flow through our callback page.
+- **No analytics or ad profiling.** We do not build user profiles, run ad targeting, or collect behavioral analytics data.
+- **No sale of user data.** We do not sell or broker user data.
 
 ---
 
@@ -48,6 +52,12 @@ When labeler integration is active, Skeeditor sends the OAuth **access token** i
 All requests go over HTTPS/WSS to the hosts above. There are no analytics endpoints, hidden relay proxies, or advertising SDK calls.
 
 When notifying the labeler after a successful edit, Skeeditor forwards your OAuth **access token** in the `Authorization: Bearer` header so the labeler can verify your identity against your PDS. Your **refresh token is never sent** to the labeler or to any server other than your Bluesky authorization server.
+
+## Data controller / retention summary
+
+- Skeeditor is an extension that processes data primarily in your browser and sends required requests to Bluesky and the documented service endpoints above.
+- We do not run a telemetry pipeline for extension usage events.
+- Any data handling by third-party services (for example, Bluesky infrastructure) is governed by their own policies.
 
 For Firefox distribution, Skeeditor declares built-in data collection consent categories in the manifest for:
 

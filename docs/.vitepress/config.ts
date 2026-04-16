@@ -12,6 +12,7 @@ export default defineConfig({
 
     nav: [
       { text: 'User Guide', link: '/guide/introduction' },
+      { text: 'Privacy Policy', link: '/legal/privacy-policy' },
       { text: 'Developer Docs', link: '/dev/architecture' },
       { text: 'GitHub', link: 'https://github.com/selfagency/skeeditor' },
     ],
@@ -52,6 +53,12 @@ export default defineConfig({
             { text: 'Conflict Handling', link: '/dev/conflicts' },
             { text: 'Cross-Browser Platform', link: '/dev/platform' },
           ],
+        },
+      ],
+      '/legal/': [
+        {
+          text: 'Legal',
+          items: [{ text: 'Privacy Policy', link: '/legal/privacy-policy' }],
         },
       ],
     },

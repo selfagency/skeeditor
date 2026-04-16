@@ -42,9 +42,7 @@ task webext:lint:firefox
 ```
 
 1. Verify required public URLs are live:
-   - Privacy policy
-   - Support URL / issue tracker
-   - Homepage (optional but recommended)
+   Privacy policy (`https://docs.skeeditor.link/legal/privacy-policy`), support URL / issue tracker, and homepage (optional but recommended).
 
 ---
 
@@ -76,11 +74,7 @@ Safari uses the Xcode/App Store flow (no direct “upload extension zip” path)
 1. Open Chrome Web Store Developer Dashboard.
 2. Select existing listing (or create a new one once).
 3. Upload `release-artifacts/skeeditor-chrome.zip`.
-4. Complete/update listing metadata:
-   - Description
-   - Category
-   - Screenshots and promo assets
-   - Privacy policy URL
+4. Complete/update listing metadata: description, category, screenshots/promo assets, and Privacy policy URL (`https://docs.skeeditor.link/legal/privacy-policy`).
 5. Complete data use disclosures accurately.
 6. Submit for review.
 7. Publish (immediate or staged rollout).
@@ -99,10 +93,7 @@ Safari uses the Xcode/App Store flow (no direct “upload extension zip” path)
 1. Open AMO Developer Hub.
 2. Select existing add-on.
 3. Upload `release-artifacts/skeeditor-firefox.zip`.
-4. Confirm metadata and policy fields:
-   - Summary / description
-   - Privacy policy
-   - Permission rationale
+4. Confirm metadata and policy fields: summary/description, privacy policy (`https://docs.skeeditor.link/legal/privacy-policy`), and permission rationale.
 5. Submit for review and signing.
 
 ### Firefox checklist

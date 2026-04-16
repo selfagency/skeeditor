@@ -78,7 +78,7 @@ No. The extension uses OAuth 2.0 + PKCE. You authenticate directly on bsky.socia
 
 ### Does Skeeditor collect any data?
 
-No. Skeeditor collects absolutely no user data, telemetry, analytics, or identifying information. We keep no records whatsoever — not even during the authentication flow through our website. See [Privacy & Security](./privacy) for full details.
+Skeeditor does not run analytics or advertising trackers. It does process and store limited data in your browser (OAuth session tokens, account state, and settings) and transmits required data to Bluesky plus documented Skeeditor services used by extension features. See [Privacy & Security](./privacy) for plain-language details and the [Legal Privacy Policy](/legal/privacy-policy) for store/compliance text.
 
 ### Does Skeeditor send my posts to any server other than Bluesky?
 
