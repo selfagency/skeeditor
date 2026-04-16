@@ -155,6 +155,8 @@ task test:e2e:chromium
 task test:e2e:firefox
 ```
 
+`test:e2e:firefox` runs the web-ext-backed Firefox smoke harness (`test/e2e/firefox-webext-smoke.mjs`) in this cycle, since Playwright Firefox extension loading remains non-primary for full-journey coverage.
+
 List all tests without running:
 
 ```sh
