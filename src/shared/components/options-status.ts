@@ -1,3 +1,5 @@
+import { createStyleElement } from '../utils/dom';
+
 export class OptionsStatus extends HTMLElement {
   public static readonly observedAttributes = ['message', 'type'];
 
@@ -42,8 +44,11 @@ export class OptionsStatus extends HTMLElement {
           ? 'var(--color-error)'
           : 'var(--color-info)';
 
-    this.root.innerHTML = `
-      <style>
+    const message = document.createElement('p');
+    message.textContent = this.message;
+
+    this.root.replaceChildren(
+      createStyleElement(`
         :host { display: block; min-height: 1.25rem; }
         p {
           margin: 0;
@@ -51,13 +56,9 @@ export class OptionsStatus extends HTMLElement {
           color: ${colorVar};
           padding: 0 0.125rem;
         }
-      </style>
-      <p>${this.escapeHTML(this.message)}</p>
-    `;
-  }
-
-  private escapeHTML(text: string): string {
-    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      `),
+      message,
+    );
   }
 }
 

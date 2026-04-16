@@ -108,6 +108,7 @@ Safari uses the Xcode/App Store flow (no direct “upload extension zip” path)
 ### Firefox checklist
 
 - [ ] `browser_specific_settings.gecko.id` is stable
+- [ ] `browser_specific_settings.gecko.data_collection_permissions` accurately describes auth + post transmission
 - [ ] Upload passes AMO validation
 - [ ] Any warnings are reviewed and accepted or resolved
 - [ ] Signed version is published to the correct channel

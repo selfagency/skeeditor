@@ -1,6 +1,7 @@
 import './account-card';
 
 import type { AuthListAccountsAccount } from '../messages';
+import { createStyleElement } from '../utils/dom';
 
 export class SkeeditorAccountsList extends HTMLElement {
   private readonly root: ShadowRoot;
@@ -38,8 +39,16 @@ export class SkeeditorAccountsList extends HTMLElement {
   }
 
   private render(): void {
-    this.root.innerHTML = `
-      <style>
+    const surface = document.createElement('div');
+    surface.className = 'surface';
+    const list = document.createElement('ul');
+    list.id = 'accounts-list';
+    list.className = 'accounts-list';
+    list.setAttribute('role', 'list');
+    surface.appendChild(list);
+
+    this.root.replaceChildren(
+      createStyleElement(`
         :host { display: block; }
         .surface {
           overflow: hidden;
@@ -59,14 +68,9 @@ export class SkeeditorAccountsList extends HTMLElement {
         .accounts-list > li:not(:last-child) {
           border-bottom: 1px solid var(--color-border-subtle);
         }
-      </style>
-      <div class="surface">
-        <ul role="list" class="accounts-list" id="accounts-list"></ul>
-      </div>
-    `;
-
-    const list = this.root.getElementById('accounts-list');
-    if (!list) return;
+      `),
+      surface,
+    );
 
     for (const account of this._accounts) {
       const li = document.createElement('li');

@@ -1,4 +1,5 @@
 import globalStyles from '../shadow-styles.css?inline';
+import { createStyleElement, createSvgNode } from '../shared/utils/dom';
 
 const TOAST_DURATION_MS = 3000;
 const TOAST_EXIT_MS = 250;
@@ -71,19 +72,31 @@ export class SkeeditorToast extends HTMLElement {
   }
 
   private render(): void {
-    this.root.innerHTML = `
-      <style>${globalStyles}</style>
-      <div class="inline-flex items-center gap-2 whitespace-nowrap rounded-lg bg-zinc-900 px-4 py-2.5 text-sm/6 text-white shadow-lg">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-4 shrink-0 text-green-400">
-          <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/>
-        </svg>
-        <span id="toast-message"></span>
-      </div>`;
+    const container = document.createElement('div');
+    container.className =
+      'inline-flex items-center gap-2 whitespace-nowrap rounded-lg bg-zinc-900 px-4 py-2.5 text-sm/6 text-white shadow-lg';
 
-    const messageEl = this.root.getElementById('toast-message');
-    if (messageEl) {
-      messageEl.textContent = this.message;
-    }
+    const icon = createSvgNode('svg', {
+      viewBox: '0 0 20 20',
+      fill: 'currentColor',
+      class: 'size-4 shrink-0 text-green-400',
+      'aria-hidden': 'true',
+    });
+    icon.appendChild(
+      createSvgNode('path', {
+        'fill-rule': 'evenodd',
+        d: 'M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z',
+        'clip-rule': 'evenodd',
+      }),
+    );
+
+    const messageEl = document.createElement('span');
+    messageEl.id = 'toast-message';
+    messageEl.textContent = this.message;
+
+    container.append(icon, messageEl);
+
+    this.root.replaceChildren(createStyleElement(globalStyles), container);
   }
 }
 

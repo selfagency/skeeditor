@@ -1,4 +1,5 @@
 import globalStyles from '../../shadow-styles.css?inline';
+import { createStyleElement, createSvgNode } from '../utils/dom';
 
 function parseBooleanAttribute(value: string | null): boolean {
   if (value === null) return false;
@@ -7,19 +8,18 @@ function parseBooleanAttribute(value: string | null): boolean {
 }
 
 function createActiveIndicator(): SVGElement {
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 20 20');
-  svg.setAttribute('fill', 'currentColor');
-  svg.setAttribute('aria-label', 'Active account');
-  svg.setAttribute('role', 'img');
+  const svg = createSvgNode('svg', {
+    viewBox: '0 0 20 20',
+    fill: 'currentColor',
+    'aria-label': 'Active account',
+    role: 'img',
+  });
 
-  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  path.setAttribute(
-    'd',
-    'M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z',
-  );
-  path.setAttribute('fill-rule', 'evenodd');
-  path.setAttribute('clip-rule', 'evenodd');
+  const path = createSvgNode('path', {
+    d: 'M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z',
+    'fill-rule': 'evenodd',
+    'clip-rule': 'evenodd',
+  });
 
   svg.appendChild(path);
   return svg;
@@ -95,8 +95,8 @@ export class AccountCard extends HTMLElement {
   }
 
   private render(): void {
-    this.root.innerHTML = `
-      <style>
+    this.root.replaceChildren(
+      createStyleElement(`
         ${globalStyles}
         :host { display: block; }
         .account-row {
@@ -180,8 +180,8 @@ export class AccountCard extends HTMLElement {
           color: var(--color-danger-text);
         }
         .btn.danger:hover { background: var(--color-danger-hover); }
-      </style>
-    `;
+      `),
+    );
 
     if (!this.did) {
       return;

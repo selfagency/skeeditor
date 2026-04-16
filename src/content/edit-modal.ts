@@ -1,10 +1,10 @@
 import globalStyles from '../shadow-styles.css?inline';
 import { normalizeMediaFiles } from './post-editor';
 import { graphemeLength } from '../shared/utils/text';
+import { createStyleElement, createSvgNode } from '../shared/utils/dom';
 import './spinner';
 
-const EDIT_MODAL_TEMPLATE = `
-  <style>
+const EDIT_MODAL_STYLES = `
     :host {
       display: flex;
       flex-direction: column;
@@ -28,37 +28,21 @@ const EDIT_MODAL_TEMPLATE = `
       background: var(--color-success-bg);
       color: var(--color-success-text);
     }
-  </style>
-  <div class="edit-modal-container" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
-    <div class="edit-modal-header">
-      <span class="edit-modal-title" id="edit-modal-title">Edit Post</span>
-      <button class="edit-modal-close close-button" type="button" aria-label="Close">
-        <svg viewBox="0 0 24 24" class="size-5 fill-current" aria-hidden="true">
-          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-        </svg>
-      </button>
-    </div>
-    <div class="edit-modal-body">
-      <div class="loading-state hidden" aria-live="polite">
-        <skeeditor-spinner label="Loading latest post…"></skeeditor-spinner>
-      </div>
-      <div>
-        <textarea aria-label="Edit post content" class="edit-modal-textarea"></textarea>
-      </div>
-      <div class="edit-modal-char-count char-count"></div>
-      <div class="media-upload" style="display:flex;flex-direction:column;gap:0.5rem;">
-        <input type="file" accept="image/*,video/mp4" multiple class="hidden">
-        <button class="upload-button" style="border-radius:0.375rem;background:var(--color-secondary-bg);padding:0.375rem 0.625rem;font-size:0.875rem;font-weight:600;color:var(--color-secondary-text);border:1px solid var(--color-secondary-border);cursor:pointer;" type="button">Add Media</button>
-        <div class="media-preview" style="display:flex;flex-wrap:wrap;gap:0.5rem;"></div>
-      </div>
-      <div class="status-message hidden" style="border-radius:0.375rem;padding:0.5rem 0.75rem;font-size:0.875rem;" aria-live="polite"></div>
-    </div>
-    <div class="edit-modal-footer">
-      <button class="edit-modal-btn edit-modal-btn-cancel cancel-button" type="button">Cancel</button>
-      <button class="edit-modal-btn edit-modal-btn-save save-button" type="button" disabled>Save</button>
-    </div>
-  </div>
 `;
+
+function createCloseIcon(): SVGSVGElement {
+  const icon = createSvgNode('svg', {
+    viewBox: '0 0 24 24',
+    class: 'size-5 fill-current',
+    'aria-hidden': 'true',
+  });
+  icon.appendChild(
+    createSvgNode('path', {
+      d: 'M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
+    }),
+  );
+  return icon;
+}
 // Bluesky's post limit is 300 graphemes (user-perceived characters)
 const MAX_POST_LENGTH = 300;
 
@@ -99,27 +83,114 @@ export class EditModal {
   private initialize(): void {
     if (this.textarea) return;
     const shadow = this.element.shadowRoot!;
-    shadow.innerHTML = EDIT_MODAL_TEMPLATE;
+
+    const container = document.createElement('div');
+    container.className = 'edit-modal-container';
+    container.setAttribute('role', 'dialog');
+    container.setAttribute('aria-modal', 'true');
+    container.setAttribute('aria-labelledby', 'edit-modal-title');
+
+    const header = document.createElement('div');
+    header.className = 'edit-modal-header';
+    const title = document.createElement('span');
+    title.className = 'edit-modal-title';
+    title.id = 'edit-modal-title';
+    title.textContent = 'Edit Post';
+    const closeButton = document.createElement('button');
+    closeButton.className = 'edit-modal-close close-button';
+    closeButton.type = 'button';
+    closeButton.setAttribute('aria-label', 'Close');
+    closeButton.appendChild(createCloseIcon());
+    header.append(title, closeButton);
+
+    const body = document.createElement('div');
+    body.className = 'edit-modal-body';
+    const loadingState = document.createElement('div');
+    loadingState.className = 'loading-state hidden';
+    loadingState.setAttribute('aria-live', 'polite');
+    const spinner = document.createElement('skeeditor-spinner');
+    spinner.setAttribute('label', 'Loading latest post…');
+    loadingState.appendChild(spinner);
+
+    const textareaWrapper = document.createElement('div');
+    const textarea = document.createElement('textarea');
+    textarea.className = 'edit-modal-textarea';
+    textarea.setAttribute('aria-label', 'Edit post content');
+    textareaWrapper.appendChild(textarea);
+
+    const charCount = document.createElement('div');
+    charCount.className = 'edit-modal-char-count char-count';
+
+    const mediaUpload = document.createElement('div');
+    mediaUpload.className = 'media-upload';
+    mediaUpload.style.display = 'flex';
+    mediaUpload.style.flexDirection = 'column';
+    mediaUpload.style.gap = '0.5rem';
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*,video/mp4';
+    fileInput.multiple = true;
+    fileInput.className = 'hidden';
+    const uploadButton = document.createElement('button');
+    uploadButton.className = 'upload-button';
+    uploadButton.type = 'button';
+    uploadButton.textContent = 'Add Media';
+    uploadButton.style.borderRadius = '0.375rem';
+    uploadButton.style.background = 'var(--color-secondary-bg)';
+    uploadButton.style.padding = '0.375rem 0.625rem';
+    uploadButton.style.fontSize = '0.875rem';
+    uploadButton.style.fontWeight = '600';
+    uploadButton.style.color = 'var(--color-secondary-text)';
+    uploadButton.style.border = '1px solid var(--color-secondary-border)';
+    uploadButton.style.cursor = 'pointer';
+    const mediaPreview = document.createElement('div');
+    mediaPreview.className = 'media-preview';
+    mediaPreview.style.display = 'flex';
+    mediaPreview.style.flexWrap = 'wrap';
+    mediaPreview.style.gap = '0.5rem';
+    mediaUpload.append(fileInput, uploadButton, mediaPreview);
+
+    const statusMessage = document.createElement('div');
+    statusMessage.className = 'status-message hidden';
+    statusMessage.style.borderRadius = '0.375rem';
+    statusMessage.style.padding = '0.5rem 0.75rem';
+    statusMessage.style.fontSize = '0.875rem';
+    statusMessage.setAttribute('aria-live', 'polite');
+
+    body.append(loadingState, textareaWrapper, charCount, mediaUpload, statusMessage);
+
+    const footer = document.createElement('div');
+    footer.className = 'edit-modal-footer';
+    const cancelButton = document.createElement('button');
+    cancelButton.className = 'edit-modal-btn edit-modal-btn-cancel cancel-button';
+    cancelButton.type = 'button';
+    cancelButton.textContent = 'Cancel';
+    const saveButton = document.createElement('button');
+    saveButton.className = 'edit-modal-btn edit-modal-btn-save save-button';
+    saveButton.type = 'button';
+    saveButton.disabled = true;
+    saveButton.textContent = 'Save';
+    footer.append(cancelButton, saveButton);
+
+    container.append(header, body, footer);
+    shadow.replaceChildren(createStyleElement(EDIT_MODAL_STYLES), container);
+
     this.element.style.display = 'none';
-    this.textarea = shadow.querySelector<HTMLTextAreaElement>('textarea');
-    this.charCount = shadow.querySelector<HTMLElement>('.char-count');
-    this.saveButton = shadow.querySelector<HTMLButtonElement>('.save-button');
-    this.uploadButton = shadow.querySelector<HTMLButtonElement>('.upload-button');
-    this.fileInput = shadow.querySelector<HTMLInputElement>('input[type="file"]');
-    this.mediaPreview = shadow.querySelector<HTMLElement>('.media-preview');
-    this.statusMessage = shadow.querySelector<HTMLElement>('.status-message');
-    this.loadingState = shadow.querySelector<HTMLElement>('.loading-state');
+    this.textarea = textarea;
+    this.charCount = charCount;
+    this.saveButton = saveButton;
+    this.uploadButton = uploadButton;
+    this.fileInput = fileInput;
+    this.mediaPreview = mediaPreview;
+    this.statusMessage = statusMessage;
+    this.loadingState = loadingState;
 
     if (this.textarea) {
       this.textarea.addEventListener('input', this.handleInputBound);
     }
-
-    const closeButton = shadow.querySelector<HTMLButtonElement>('.close-button');
     if (closeButton) {
       closeButton.addEventListener('click', this.closeBound);
     }
-
-    const cancelButton = shadow.querySelector<HTMLButtonElement>('.cancel-button');
     if (cancelButton) {
       cancelButton.addEventListener('click', this.closeBound);
     }

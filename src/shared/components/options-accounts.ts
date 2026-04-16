@@ -1,6 +1,7 @@
 import './accounts-list';
 import type { AuthListAccountsAccount } from '../messages';
 import { sendMessage } from '../messages';
+import { createStyleElement } from '../utils/dom';
 import { showOptionsToast } from './options-toast';
 import type { SkeeditorAccountsList } from './accounts-list';
 
@@ -20,8 +21,51 @@ export class OptionsAccounts extends HTMLElement {
   }
 
   private render(): void {
-    this.root.innerHTML = `
-      <style>
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    const header = document.createElement('div');
+    header.className = 'card-header';
+    const title = document.createElement('h2');
+    title.textContent = 'Accounts';
+    header.appendChild(title);
+
+    const listSection = document.createElement('div');
+    listSection.className = 'card-section';
+    const accountsContainer = document.createElement('div');
+    accountsContainer.id = 'accounts-container';
+    accountsContainer.className = 'accounts-state';
+    const loadingText = document.createElement('p');
+    loadingText.className = 'empty-text';
+    loadingText.textContent = 'Loading accounts…';
+    accountsContainer.appendChild(loadingText);
+    listSection.appendChild(accountsContainer);
+
+    const addSection = document.createElement('div');
+    addSection.className = 'card-section add-section';
+    const addTitle = document.createElement('h3');
+    addTitle.textContent = 'Add account';
+    const addField = document.createElement('div');
+    const addLabel = document.createElement('label');
+    addLabel.htmlFor = 'add-pds-url';
+    addLabel.textContent = 'PDS URL';
+    const addInput = document.createElement('input');
+    addInput.type = 'url';
+    addInput.id = 'add-pds-url';
+    addInput.value = 'https://bsky.social';
+    addInput.placeholder = 'https://bsky.social';
+    addField.append(addLabel, addInput);
+    const addButton = document.createElement('button');
+    addButton.className = 'add-btn';
+    addButton.id = 'add-account';
+    addButton.type = 'button';
+    addButton.textContent = 'Add account';
+    addSection.append(addTitle, addField, addButton);
+
+    card.append(header, listSection, addSection);
+
+    this.root.replaceChildren(
+      createStyleElement(`
         :host { display: block; }
         .card {
           overflow: hidden;
@@ -92,26 +136,11 @@ export class OptionsAccounts extends HTMLElement {
           box-shadow: 0 1px 2px 0 oklch(0% 0 none / 0.05);
         }
         button.add-btn:hover { background: var(--color-secondary-bg-hover); }
-      </style>
-      <div class="card">
-        <div class="card-header"><h2>Accounts</h2></div>
-        <div class="card-section">
-          <div id="accounts-container" class="accounts-state">
-            <p class="empty-text">Loading accounts…</p>
-          </div>
-        </div>
-        <div class="card-section add-section">
-          <h3>Add account</h3>
-          <div>
-            <label for="add-pds-url">PDS URL</label>
-            <input type="url" id="add-pds-url" value="https://bsky.social" placeholder="https://bsky.social" />
-          </div>
-          <button class="add-btn" id="add-account" type="button">Add account</button>
-        </div>
-      </div>
-    `;
+      `),
+      card,
+    );
 
-    this.accountsContainer = this.root.getElementById('accounts-container');
+    this.accountsContainer = accountsContainer;
   }
 
   private attachHandlers(): void {

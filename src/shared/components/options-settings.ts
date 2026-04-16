@@ -1,5 +1,6 @@
 import { EDIT_TIME_LIMIT_MAX, EDIT_TIME_LIMIT_MIN, EDIT_TIME_LIMIT_OPTIONS } from '../constants';
 import { sendMessage } from '../messages';
+import { createStyleElement } from '../utils/dom';
 import { showOptionsToast } from './options-toast';
 
 const formatEditTimeLimitLabel = (minutes: number): string => {
@@ -25,12 +26,87 @@ export class OptionsSettings extends HTMLElement {
   }
 
   private render(): void {
-    const editTimeLimitOptions = EDIT_TIME_LIMIT_OPTIONS.map(
-      value => `<option value="${value}">${formatEditTimeLimitLabel(value)}</option>`,
-    ).join('');
+    const card = document.createElement('div');
+    card.className = 'card';
 
-    this.root.innerHTML = `
-      <style>
+    const header = document.createElement('div');
+    header.className = 'card-header';
+    const title = document.createElement('h2');
+    title.textContent = 'Extension Settings';
+    header.appendChild(title);
+
+    const body = document.createElement('div');
+    body.className = 'card-body';
+
+    const editTimeLimitSection = document.createElement('div');
+    const editTimeLimitLabel = document.createElement('label');
+    editTimeLimitLabel.htmlFor = 'edit-time-limit';
+    editTimeLimitLabel.textContent = 'Edit time limit';
+    const editTimeLimitSelect = document.createElement('select');
+    editTimeLimitSelect.id = 'edit-time-limit';
+    const noLimitOption = document.createElement('option');
+    noLimitOption.value = '';
+    noLimitOption.textContent = 'No limit';
+    editTimeLimitSelect.appendChild(noLimitOption);
+    for (const value of EDIT_TIME_LIMIT_OPTIONS) {
+      const option = document.createElement('option');
+      option.value = String(value);
+      option.textContent = formatEditTimeLimitLabel(value);
+      editTimeLimitSelect.appendChild(option);
+    }
+    editTimeLimitSection.append(editTimeLimitLabel, editTimeLimitSelect);
+
+    const editTimeLimitHint = document.createElement('p');
+    editTimeLimitHint.className = 'hint';
+    editTimeLimitHint.textContent = 'When set, posts older than the selected window cannot be edited.';
+
+    const saveStrategySection = document.createElement('div');
+    const saveStrategyLabel = document.createElement('label');
+    saveStrategyLabel.htmlFor = 'save-strategy';
+    saveStrategyLabel.textContent = 'How Skeeditor saves an edit';
+    const saveStrategySelect = document.createElement('select');
+    saveStrategySelect.id = 'save-strategy';
+    for (const [value, label] of [
+      ['recreate', 'Recreate record atomically'],
+      ['edit', 'Edit record in place'],
+    ] as const) {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = label;
+      saveStrategySelect.appendChild(option);
+    }
+    saveStrategySection.append(saveStrategyLabel, saveStrategySelect);
+
+    const saveStrategyHint = document.createElement('p');
+    saveStrategyHint.className = 'hint';
+    const recreateStrong = document.createElement('strong');
+    recreateStrong.textContent = 'Recreate record';
+    const createdAtCode = document.createElement('code');
+    createdAtCode.textContent = 'createdAt';
+    const editStrong = document.createElement('strong');
+    editStrong.textContent = 'Edit record';
+    saveStrategyHint.append(
+      recreateStrong,
+      ' is the recommended default because it performs an atomic delete-and-create at the same record key with a fresh ',
+      createdAtCode,
+      ', which is what reliably makes Bluesky/AppView surface the change across clients. This also means the recreated post loses its existing likes and reposts. ',
+      editStrong,
+      " keeps the existing record identity and preserves the original post timestamp, but Bluesky may not visibly refresh its cached view. Skeeditor users and other appviews that do not rely on Bluesky's cache can still see the changed text sooner.",
+    );
+
+    const buttonRow = document.createElement('div');
+    const saveButton = document.createElement('button');
+    saveButton.className = 'save-btn';
+    saveButton.id = 'save-settings';
+    saveButton.type = 'button';
+    saveButton.textContent = 'Save Settings';
+    buttonRow.appendChild(saveButton);
+
+    body.append(editTimeLimitSection, editTimeLimitHint, saveStrategySection, saveStrategyHint, buttonRow);
+    card.append(header, body);
+
+    this.root.replaceChildren(
+      createStyleElement(`
         :host { display: block; }
         .card {
           overflow: hidden;
@@ -87,48 +163,13 @@ export class OptionsSettings extends HTMLElement {
         }
         button.save-btn:hover { background: var(--color-primary-hover); }
         button.save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-      </style>
-      <div class="card">
-        <div class="card-header"><h2>Extension Settings</h2></div>
-        <div class="card-body">
-          <div>
-            <label for="edit-time-limit">Edit time limit</label>
-            <select id="edit-time-limit">
-              <option value="">No limit</option>
-              ${editTimeLimitOptions}
-            </select>
-          </div>
-          <p class="hint">
-            When set, posts older than the selected window cannot be edited.
-          </p>
+      `),
+      card,
+    );
 
-          <div>
-            <label for="save-strategy">How Skeeditor saves an edit</label>
-            <select id="save-strategy">
-              <option value="recreate">Recreate record atomically</option>
-              <option value="edit">Edit record in place</option>
-            </select>
-          </div>
-          <p class="hint">
-            <strong>Recreate record</strong> is the recommended default because it performs an atomic
-            delete-and-create at the same record key with a fresh <code>createdAt</code>, which is what
-            reliably makes Bluesky/AppView surface the change across clients. This also means the recreated
-            post loses its existing likes and reposts. <strong>Edit record</strong>
-            keeps the existing record identity and preserves the original post timestamp, but Bluesky may
-            not visibly refresh its cached view. Skeeditor users and other appviews that do not rely on
-            Bluesky's cache can still see the changed text sooner.
-          </p>
-
-          <div>
-            <button class="save-btn" id="save-settings" type="button">Save Settings</button>
-          </div>
-        </div>
-      </div>
-    `;
-
-    this.editTimeLimitSelect = this.root.getElementById('edit-time-limit') as HTMLSelectElement;
-    this.saveStrategySelect = this.root.getElementById('save-strategy') as HTMLSelectElement;
-    this.saveButton = this.root.getElementById('save-settings') as HTMLButtonElement;
+    this.editTimeLimitSelect = editTimeLimitSelect;
+    this.saveStrategySelect = saveStrategySelect;
+    this.saveButton = saveButton;
   }
 
   private attachHandlers(): void {

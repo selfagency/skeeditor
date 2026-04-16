@@ -1,3 +1,5 @@
+import { createStyleElement } from '../utils/dom';
+
 const TOAST_DURATION_MS = 3000;
 const TOAST_EXIT_MS = 200;
 
@@ -73,8 +75,12 @@ export class OptionsToast extends HTMLElement {
           ? { bg: 'var(--color-error-bg)', fg: 'var(--color-error-text)' }
           : { bg: 'var(--color-primary-soft-bg)', fg: 'var(--color-text-primary)' };
 
-    this.root.innerHTML = `
-      <style>
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = this.message;
+
+    this.root.replaceChildren(
+      createStyleElement(`
         :host { display: block; }
         .toast {
           max-width: min(24rem, calc(100vw - 2rem));
@@ -87,9 +93,9 @@ export class OptionsToast extends HTMLElement {
           font-size: 0.875rem;
           line-height: 1.4;
         }
-      </style>
-      <div class="toast">${this.message.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')}</div>
-    `;
+      `),
+      toast,
+    );
   }
 }
 

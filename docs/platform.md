@@ -115,7 +115,7 @@ if (platform.isFirefox) {
 | Browser | Manifest key            | Notes                                           |
 | :------ | :---------------------- | :---------------------------------------------- |
 | Chrome  | `"service_worker": "…"` | Non-persistent, MV3 only                        |
-| Firefox | `"scripts": ["…"]`      | Non-persistent background script (Firefox 125+) |
+| Firefox | `"scripts": ["…"]`      | Non-persistent background script (Firefox 140+) |
 | Safari  | `"service_worker": "…"` | Non-persistent, mirrors Chrome                  |
 
 **Do not store in-memory state between wake cycles.** Use `browser.storage.local`
