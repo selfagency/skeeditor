@@ -1,0 +1,23 @@
+Taskfile.yml
+  99c2cc1de9ebd4be 181
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "e2a465019ba8e6ff760f2d9c91d54bec67f32d5e",
+  "prompts": {
+    "99c2cc1de9ebd4be": {
+      "agent_id": {
+        "tool": "github-copilot-tab",
+        "id": "ai_tab-1776345793143",
+        "model": "default"
+      },
+      "human_author": "Daniel Sieradski",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    }
+  }
+}
