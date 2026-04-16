@@ -1,0 +1,50 @@
+.vscode/launch.json
+  0a6c7ba5e99ffb69 15
+  9f57ca10cd072c22 13,16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "fc938d41628aff66f0ce01ff8314f6e71b4256c3",
+  "prompts": {
+    "0a6c7ba5e99ffb69": {
+      "agent_id": {
+        "tool": "github-copilot-tab",
+        "id": "ai_tab-1776300615996",
+        "model": "default"
+      },
+      "human_author": "Daniel Sieradski",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "933cc4d86f84f34e": {
+      "agent_id": {
+        "tool": "github-copilot-tab",
+        "id": "ai_tab-1776301754023",
+        "model": "default"
+      },
+      "human_author": "Daniel Sieradski",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 0,
+      "overriden_lines": 1
+    },
+    "9f57ca10cd072c22": {
+      "agent_id": {
+        "tool": "github-copilot-tab",
+        "id": "ai_tab-1776300603158",
+        "model": "default"
+      },
+      "human_author": "Daniel Sieradski",
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 1,
+      "accepted_lines": 2,
+      "overriden_lines": 1
+    }
+  }
+}
