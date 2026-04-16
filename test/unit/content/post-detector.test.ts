@@ -134,6 +134,35 @@ describe('post-detector', () => {
     expect(Array.from(findPosts())).toHaveLength(2);
   });
 
+  it('should detect posts from generic containers using options-button + permalink fallback', () => {
+    document.body.innerHTML = `
+      <div class="feed-root">
+        <div class="generic-card">
+          <div class="header">
+            <a href="https://bsky.app/profile/alice.bsky.social">alice</a>
+            <a href="https://bsky.app/profile/alice.bsky.social/post/3fallback">· 2h</a>
+          </div>
+          <div class="body">Fallback post text</div>
+          <div class="actions">
+            <button aria-label="Reply (0 replies)" type="button"></button>
+            <button aria-label="Open share menu" type="button"></button>
+            <button aria-label="Open post options menu" type="button"></button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const posts = Array.from(findPosts());
+
+    expect(posts).toHaveLength(1);
+    expect(posts[0]).toMatchObject({
+      atUri: 'at://alice.bsky.social/app.bsky.feed.post/3fallback',
+      repo: 'alice.bsky.social',
+      collection: 'app.bsky.feed.post',
+      rkey: '3fallback',
+    });
+  });
+
   it('should detect when a post belongs to the given DID', () => {
     document.body.innerHTML = '<article data-at-uri="at://did:plc:alice123/app.bsky.feed.post/3abc"></article>';
     const article = document.querySelector('article');

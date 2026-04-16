@@ -226,6 +226,42 @@ describe('content-script', () => {
     expect(document.querySelector('[data-skeeditor-edit-button]')).toBeTruthy();
   });
 
+  it('should inject an edit button when a normal own post contains repost action controls', async () => {
+    document.body.innerHTML = `
+      <article role="article" data-testid="feedItem-by-did:plc:alice123">
+        <a href="https://bsky.app/profile/alice.bsky.social/post/3abc">
+          <p data-testid="postText">Hello from my own post</p>
+        </a>
+        <div data-testid="postButtonInline">
+          <button data-testid="replyBtn" type="button"></button>
+          <button data-testid="repostBtn" type="button"></button>
+          <button data-testid="repostCount" type="button"></button>
+          <button data-testid="postDropdownBtn" aria-label="Open post options menu" type="button"></button>
+        </div>
+      </article>
+    `;
+
+    const sendMessage = vi.fn(async request => {
+      if (request.type === 'AUTH_GET_STATUS') {
+        return {
+          authenticated: true,
+          did: 'did:plc:alice123',
+          handle: 'alice.bsky.social',
+          expiresAt: Date.now() + 60_000,
+        };
+      }
+
+      return { ok: true };
+    });
+
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    await import('@src/content/content-script');
+    await flushMicrotasks(3);
+
+    expect(document.querySelector('[data-skeeditor-edit-button]')).toBeTruthy();
+  });
+
   it('should not inject an edit button for another account post just because it mentions the active account', async () => {
     document.body.innerHTML = `
       <article role="article" data-at-uri="at://did:plc:other456/app.bsky.feed.post/3xyz">
@@ -324,6 +360,47 @@ describe('content-script', () => {
     const actionRow = document.querySelector('.action-row');
     const editButton = document.querySelector('[data-skeeditor-edit-button]');
     const optionsButton = document.querySelector('button[aria-label="Open post options menu"]');
+
+    expect(editButton).toBeTruthy();
+    expect(actionRow?.contains(editButton)).toBe(true);
+    expect(editButton?.nextElementSibling).toBe(optionsButton);
+  });
+
+  it('should inject into the live action row when options button uses postDropdownBtn test id', async () => {
+    document.body.innerHTML = `
+      <article role="article">
+        <a href="https://bsky.app/profile/alice.bsky.social/post/3abc">
+          <p data-testid="post-text">Hello Bluesky</p>
+        </a>
+        <div class="action-row">
+          <button aria-label="Reply (0 replies)" type="button"></button>
+          <button aria-label="Open share menu" type="button"></button>
+          <button data-testid="postDropdownBtn" aria-label="More options" type="button" class="menu-btn"></button>
+        </div>
+      </article>
+    `;
+
+    const sendMessage = vi.fn(async request => {
+      if (request.type === 'AUTH_GET_STATUS') {
+        return {
+          authenticated: true,
+          did: 'did:plc:alice123',
+          handle: 'alice.bsky.social',
+          expiresAt: Date.now() + 60_000,
+        };
+      }
+
+      return { ok: true };
+    });
+
+    globalThis.browser.runtime.sendMessage = sendMessage as typeof globalThis.browser.runtime.sendMessage;
+
+    await import('@src/content/content-script');
+    await flushMicrotasks();
+
+    const actionRow = document.querySelector('.action-row');
+    const editButton = document.querySelector('[data-skeeditor-edit-button]');
+    const optionsButton = document.querySelector('button[data-testid="postDropdownBtn"]');
 
     expect(editButton).toBeTruthy();
     expect(actionRow?.contains(editButton)).toBe(true);

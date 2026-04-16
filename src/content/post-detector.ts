@@ -231,6 +231,32 @@ export function* findPosts(root: Document | HTMLElement = document): Generator<P
       yield info;
     }
   }
+
+  // Fallback for newer DOM variants where feed cards are generic containers
+  // (no article/data-testid/data-at-uri) but still expose post action buttons.
+  // Anchor on the options button, then walk upward to the nearest ancestor that
+  // contains a post permalink and can be parsed into a post URI.
+  const optionsButtons = root.querySelectorAll<HTMLElement>(
+    'button[aria-label="Open post options menu"], button[data-testid="postDropdownBtn"]',
+  );
+
+  for (const optionsButton of Array.from(optionsButtons)) {
+    const knownContainer = optionsButton.closest<HTMLElement>(POST_CONTAINER_SELECTORS);
+    if (knownContainer && yielded.has(knownContainer)) continue;
+
+    let container: HTMLElement | null = knownContainer ?? optionsButton.parentElement;
+    while (container && container !== document.body) {
+      if (container.querySelector('a[href*="/post/"]')) {
+        const info = extractPostInfo(container);
+        if (info && !yielded.has(info.element)) {
+          yielded.add(info.element);
+          yield info;
+        }
+        break;
+      }
+      container = container.parentElement as HTMLElement | null;
+    }
+  }
 }
 
 /**

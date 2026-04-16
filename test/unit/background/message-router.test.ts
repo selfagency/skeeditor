@@ -271,6 +271,31 @@ describe('handleMessage', () => {
       expect(store.set).not.toHaveBeenCalled();
       expect(result).toEqual({ authenticated: false });
     });
+
+    it('clears only the broken account when silent refresh fails with invalid refresh token', async () => {
+      const session = makeSession({ did: 'did:plc:broken', authServerUrl: 'https://bsky.social' });
+      const store = makeStoreMock(session);
+      store.isAccessTokenValid.mockResolvedValue(false);
+
+      store.clearForDid.mockImplementation(async () => {
+        store.get.mockResolvedValue(null);
+        store.isAccessTokenValid.mockResolvedValue(false);
+      });
+
+      const deps = makeDeps({
+        store,
+        refreshTokens: vi.fn().mockRejectedValue({
+          message: 'Invalid refresh token',
+          kind: 'token_refresh_failed',
+          status: 400,
+        }),
+      });
+
+      const result = await handleMessage({ type: 'AUTH_GET_STATUS' }, deps);
+
+      expect(store.clearForDid).toHaveBeenCalledWith('did:plc:broken');
+      expect(result).toEqual({ authenticated: false });
+    });
   });
 
   describe('AUTH_SIGN_IN', () => {
@@ -289,6 +314,35 @@ describe('handleMessage', () => {
         expect.any(String),
       );
       expect(vi.mocked(deps.openTab)).toHaveBeenCalledWith(authRequest.url);
+      expect(result).toEqual({ ok: true });
+    });
+
+    it('uses discovered authorization server endpoint when pdsUrl is a regional shard', async () => {
+      const authRequest = makeAuthRequest();
+      const buildAuthReq = vi.fn().mockResolvedValue(authRequest);
+      const deps = makeDeps({ buildAuthReq });
+
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        json: vi.fn().mockResolvedValue({ authorization_servers: ['https://bsky.social'] }),
+      } as unknown as Response);
+
+      const result = await handleMessage(
+        {
+          type: 'AUTH_SIGN_IN',
+          pdsUrl: 'https://puffball.us-east.host.bsky.network',
+        },
+        deps,
+      );
+
+      expect(buildAuthReq).toHaveBeenCalledWith(
+        expect.objectContaining({ authorizationEndpoint: 'https://bsky.social/oauth/authorize' }),
+      );
+      expect(vi.mocked(deps.storeAuthState)).toHaveBeenCalledWith(
+        authRequest.state,
+        authRequest.codeVerifier,
+        'https://bsky.social',
+      );
       expect(result).toEqual({ ok: true });
     });
   });

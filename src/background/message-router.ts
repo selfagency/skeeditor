@@ -384,6 +384,21 @@ function isValidDid(value: unknown): value is string {
   return isNonEmptyString(value) && /^did:[a-z]+:.+$/u.test(value);
 }
 
+function isInvalidRefreshTokenError(err: unknown): boolean {
+  if (err === null || typeof err !== 'object') {
+    return false;
+  }
+
+  const error = err as { kind?: unknown; status?: unknown; message?: unknown };
+  const message = typeof error.message === 'string' ? error.message.toLowerCase() : '';
+
+  return (
+    error.kind === 'token_refresh_failed' &&
+    (error.status === 400 || error.status === 401) &&
+    message.includes('refresh token')
+  );
+}
+
 interface GetRecordPayload {
   repo: string;
   collection: string;
@@ -532,15 +547,20 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
       const pdsUrl =
         message['pdsUrl'] && typeof message['pdsUrl'] === 'string' ? message['pdsUrl'] : await getCurrentPdsUrl();
 
+      // OAuth authorize/token endpoints are hosted on the authorization server
+      // (entryway), not necessarily on the selected PDS host/shard.
+      const authServerUrl = await resolveAuthServerForPds(pdsUrl);
+
       const authReq = await deps.buildAuthReq({
         clientId: BSKY_OAUTH_CLIENT_ID,
         redirectUri: deps.redirectUri,
         scope: BSKY_OAUTH_SCOPE,
-        authorizationEndpoint: getOAuthAuthorizeUrl(pdsUrl),
+        authorizationEndpoint: getOAuthAuthorizeUrl(authServerUrl),
       });
-      // Store PKCE state together with the chosen PDS URL so AUTH_CALLBACK
-      // can associate the URL with the DID once it is known.
-      await deps.storeAuthState(authReq.state, authReq.codeVerifier, pdsUrl);
+      // Store PKCE state together with the resolved authorization server URL.
+      // AUTH_CALLBACK uses this value for token exchange, then resolves and
+      // persists the account's actual PDS URL from the authenticated DID.
+      await deps.storeAuthState(authReq.state, authReq.codeVerifier, authServerUrl);
       await deps.openTab(authReq.url);
 
       return { ok: true };
@@ -683,6 +703,11 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
           }
         } catch (err) {
           console.warn('[AUTH_GET_STATUS] silent token refresh failed:', err);
+          if (isInvalidRefreshTokenError(err)) {
+            await deps.store.clearForDid(stored.did);
+            stored = await deps.store.get();
+            valid = await deps.store.isAccessTokenValid();
+          }
         }
       }
 

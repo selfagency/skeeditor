@@ -11,8 +11,8 @@ import type {
   RecreateRecordRequest,
 } from '../shared/messages';
 import { sendMessage } from '../shared/messages';
-import { EditModal } from './edit-modal';
 import { EditHistoryModal } from './edit-history-modal';
+import { EditModal } from './edit-modal';
 import {
   getCached,
   getCacheSize,
@@ -33,7 +33,7 @@ import {
   updatePostTimestamp,
   type PostInfo,
 } from './post-detector';
-import { buildUpdatedPostRecord, type EditablePostRecord, validateUpdatedPostRecord } from './post-editor';
+import { buildUpdatedPostRecord, validateUpdatedPostRecord, type EditablePostRecord } from './post-editor';
 import './styles.css';
 import { ensureToastRegistered } from './toast';
 
@@ -495,6 +495,13 @@ const ACTION_AREA_SELECTORS = [
   'button[data-testid="postDropdownBtn"]',
 ];
 
+const OPTIONS_BUTTON_SELECTORS = [
+  'button[aria-label="Open post options menu"]',
+  'button[data-testid="postDropdownBtn"]',
+  'button[aria-label*="options" i]',
+  'button[aria-label*="more" i]',
+];
+
 const POST_TEXT_CONTAINER_SELECTORS = [
   '[data-testid="postDetailedText"]',
   '[data-testid="post-text"]',
@@ -502,11 +509,7 @@ const POST_TEXT_CONTAINER_SELECTORS = [
   '[data-testid="post-content"]',
 ].join(', ');
 
-const REPOST_CONTEXT_SELECTORS = [
-  '[aria-label^="Reposted by "]',
-  '[data-testid*="repost"]',
-  '[data-testid*="socialContext"]',
-].join(', ');
+const REPOST_CONTEXT_SELECTORS = ['[aria-label^="Reposted by "]', '[data-testid*="socialContext"]'].join(', ');
 
 const isRepostItem = (postElement: HTMLElement): boolean =>
   postElement.querySelector(REPOST_CONTEXT_SELECTORS) !== null;
@@ -560,6 +563,8 @@ let scanScheduled = false;
 let scanTimer: ReturnType<typeof setTimeout> | null = null;
 let activeModal: EditModal | null = null;
 let activeHistoryModal: EditHistoryModal | null = null;
+let lastNoOwnPostsDiagnosticAt = 0;
+let lastNoVisiblePostsDiagnosticAt = 0;
 // Monotonically-increasing scan generation. Async fetch functions capture the
 // generation at dispatch time and abort their apply phase if a newer scan has
 // since fired, preventing stale results from overwriting fresher DOM state.
@@ -914,6 +919,16 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
 const hasActionArea = (postElement: HTMLElement): boolean =>
   ACTION_AREA_SELECTORS.some(selector => postElement.querySelector<HTMLElement>(selector) !== null);
 
+const findOptionsButton = (postElement: HTMLElement): HTMLElement | null => {
+  for (const selector of OPTIONS_BUTTON_SELECTORS) {
+    const button = postElement.querySelector<HTMLElement>(selector);
+    if (button) {
+      return button;
+    }
+  }
+  return null;
+};
+
 const waitForActionArea = (postElement: HTMLElement): Promise<void> => {
   if (hasActionArea(postElement)) {
     return Promise.resolve();
@@ -969,10 +984,16 @@ const adoptButtonPresentation = (button: HTMLButtonElement, referenceButton: HTM
 
 const placeEditButton = (postElement: HTMLElement, button: HTMLButtonElement): void => {
   // Find the options menu button (three dots) - we want to place edit right next to it
-  const optionsButton = postElement.querySelector<HTMLElement>('button[aria-label="Open post options menu"]');
+  const optionsButton = findOptionsButton(postElement);
   const optionsContainer = optionsButton?.parentElement;
 
   if (optionsContainer && optionsButton) {
+    log.debug('inject-place-options', {
+      optionsLabel: optionsButton.getAttribute('aria-label') ?? '',
+      optionsTestId: optionsButton.getAttribute('data-testid') ?? '',
+      containerClass: optionsContainer.className,
+      siblingButtonCount: optionsContainer.querySelectorAll('button').length,
+    });
     adoptButtonPresentation(button, optionsButton);
     if (optionsContainer.querySelectorAll('button').length > 1) {
       // Options button is a direct child of the action row — insert button directly
@@ -987,6 +1008,9 @@ const placeEditButton = (postElement: HTMLElement, button: HTMLButtonElement): v
       optionsContainer.parentElement?.insertBefore(editWrapper, optionsContainer);
     }
   } else {
+    log.debug('inject-place-fallback', {
+      hasPostButtonInline: postElement.querySelector('[data-testid="postButtonInline"]') !== null,
+    });
     // Fallback: find the action container with like/reply/repost buttons
     const actionContainer = postElement.querySelector<HTMLElement>('[data-testid="postButtonInline"]');
     if (actionContainer) {
@@ -999,6 +1023,10 @@ const placeEditButton = (postElement: HTMLElement, button: HTMLButtonElement): v
 
 const injectEditButton = (postElement: HTMLElement): void => {
   if (postElement.hasAttribute(POST_MARKER_ATTRIBUTE) || postElement.querySelector(`[${EDIT_BUTTON_ATTRIBUTE}]`)) {
+    log.debug('inject-skip-existing', {
+      marker: postElement.getAttribute(POST_MARKER_ATTRIBUTE) ?? null,
+      hasButton: postElement.querySelector(`[${EDIT_BUTTON_ATTRIBUTE}]`) !== null,
+    });
     return;
   }
 
@@ -1212,14 +1240,30 @@ const scanForPosts = (): void => {
 
   let visiblePosts = 0;
   let ownPosts = 0;
+  let skippedReposts = 0;
+  let skippedNotOwn = 0;
+  const notOwnSamples: Array<{ repo: string; dataTestId: string; profileLinks: string[] }> = [];
 
   // posts is always defined when currentDid !== null (see lazy guard above).
   for (const postInfo of posts ?? []) {
     visiblePosts += 1;
     if (isRepostItem(postInfo.element)) {
+      skippedReposts += 1;
       continue;
     }
     if (!isElementOwnPost(postInfo.element, postInfo.repo)) {
+      skippedNotOwn += 1;
+      if (notOwnSamples.length < 5) {
+        const profileLinks = Array.from(postInfo.element.querySelectorAll<HTMLAnchorElement>('a[href*="/profile/"]'))
+          .map(anchor => anchor.getAttribute('href') ?? anchor.href)
+          .filter(Boolean)
+          .slice(0, 3);
+        notOwnSamples.push({
+          repo: postInfo.repo,
+          dataTestId: postInfo.element.getAttribute('data-testid') ?? '',
+          profileLinks,
+        });
+      }
       continue;
     }
     ownPosts += 1;
@@ -1267,6 +1311,38 @@ const scanForPosts = (): void => {
       feedChildCount: feedEl?.children.length ?? 0,
       bodyChildCount: document.body.children.length,
       articleCount: document.querySelectorAll('article').length,
+    });
+  }
+
+  const now = Date.now();
+  if (currentDid !== null && visiblePosts === 0 && now - lastNoVisiblePostsDiagnosticAt > 5000) {
+    lastNoVisiblePostsDiagnosticAt = now;
+    const selectorCounts = {
+      dataAtUri: document.querySelectorAll('[data-at-uri]').length,
+      dataUri: document.querySelectorAll('[data-uri]').length,
+      roleArticle: document.querySelectorAll('[role="article"]').length,
+      article: document.querySelectorAll('article').length,
+      postText: document.querySelectorAll('[data-testid="postText"]').length,
+      optionsButtons: document.querySelectorAll('button[aria-label="Open post options menu"]').length,
+    };
+    console.warn(`${APP_NAME}: no visible posts detected during scan`, {
+      href: location.href,
+      currentDid,
+      currentHandle,
+      selectorCounts,
+    });
+  }
+
+  if (currentDid !== null && visiblePosts > 0 && ownPosts === 0 && now - lastNoOwnPostsDiagnosticAt > 5000) {
+    lastNoOwnPostsDiagnosticAt = now;
+    console.warn(`${APP_NAME}: visible posts found but none matched current account`, {
+      href: location.href,
+      currentDid,
+      currentHandle,
+      visiblePosts,
+      skippedReposts,
+      skippedNotOwn,
+      notOwnSamples,
     });
   }
 
