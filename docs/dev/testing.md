@@ -3,6 +3,7 @@
 Skeeditor has three test layers: unit, integration, and end-to-end. Each targets a different scope and uses a different tool.
 
 For E2E fixture conventions, readiness contracts, and deterministic setup rules, see [E2E Harness Contracts](./e2e-harness).
+For canonical cross-browser journey IDs, parity mapping, and CI acceptance criteria, see [E2E Journey Matrix](./e2e-journey-matrix).
 
 ---
 
