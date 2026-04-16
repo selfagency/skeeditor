@@ -178,6 +178,7 @@ tasks:
     cmds:
       - task: 'test:unit'
       - task: 'test:integration'
+      - task: 'test:e2e'
 
   test:unit:
     desc: Run unit tests

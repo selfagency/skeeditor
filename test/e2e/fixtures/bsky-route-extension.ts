@@ -138,6 +138,7 @@ export const test = chromiumBase.extend<BskyRouteFixtures>({
           did,
           session: {
             did,
+            handle: 'test.bsky.social',
             accessToken: 'mock-access-token',
             refreshToken: 'mock-refresh-token',
             expiresAt: Date.now() + 3_600_000,

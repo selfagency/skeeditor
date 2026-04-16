@@ -414,6 +414,10 @@ describe('handleMessage', () => {
     });
 
     it('exchanges code for tokens and stores session on successful callback', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: false,
+        headers: { get: vi.fn().mockReturnValue(null) },
+      } as unknown as Response);
       const deps = makeDeps({
         getAuthState: vi.fn().mockResolvedValue({ state: 'matching-state', codeVerifier: 'verifier' }),
       });
