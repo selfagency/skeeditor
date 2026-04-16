@@ -1,6 +1,12 @@
 import { browser } from 'wxt/browser';
-import { APP_NAME, BSKY_APP_ORIGIN, buildLabelerSubscribeWsUrl, LABELER_CURSOR_STORAGE_KEY } from '../shared/constants';
+import {
+  BSKY_APP_ORIGIN,
+  buildLabelerSubscribeWsUrl,
+  LABELER_BACKOFF_STORAGE_KEY,
+  LABELER_CURSOR_STORAGE_KEY,
+} from '../shared/constants';
 import type { LabelReceivedNotification } from '../shared/messages';
+import { createLogger } from '../shared/logger';
 
 // ── Labeler WebSocket subscription ────────────────────────────────────────────
 //
@@ -92,6 +98,7 @@ let labelerWsBackoff = LABELER_WS_MIN_BACKOFF_MS;
 let labelerWsRetryTimer: ReturnType<typeof setTimeout> | null = null;
 let labelerWsConnecting = false;
 let labelerCursor: number | null = null;
+const log = createLogger('labeler-ws');
 
 async function getStoredLabelerCursor(): Promise<number | null> {
   if (labelerCursor !== null) {
@@ -117,6 +124,21 @@ async function setStoredLabelerCursor(nextCursor: number): Promise<void> {
   await browser.storage.local.set({ [LABELER_CURSOR_STORAGE_KEY]: nextCursor });
 }
 
+async function getStoredLabelerBackoff(): Promise<number> {
+  const result = await browser.storage.local.get(LABELER_BACKOFF_STORAGE_KEY);
+  const value = result[LABELER_BACKOFF_STORAGE_KEY];
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Math.max(LABELER_WS_MIN_BACKOFF_MS, Math.min(value, LABELER_WS_MAX_BACKOFF_MS));
+  }
+  return LABELER_WS_MIN_BACKOFF_MS;
+}
+
+async function setStoredLabelerBackoff(backoffMs: number): Promise<void> {
+  if (!Number.isFinite(backoffMs)) return;
+  const clamped = Math.max(LABELER_WS_MIN_BACKOFF_MS, Math.min(backoffMs, LABELER_WS_MAX_BACKOFF_MS));
+  await browser.storage.local.set({ [LABELER_BACKOFF_STORAGE_KEY]: clamped });
+}
+
 function broadcastLabelReceived(uri: string): void {
   const msg: LabelReceivedNotification = { type: 'LABEL_RECEIVED', uri };
   void browser.tabs
@@ -140,6 +162,7 @@ async function openLabelerWs(): Promise<void> {
   labelerWsConnecting = true;
 
   try {
+    labelerWsBackoff = await getStoredLabelerBackoff();
     const cursor = await getStoredLabelerCursor();
     const ws = new WebSocket(buildLabelerSubscribeWsUrl(cursor));
     // ATProto subscribeLabels frames are binary CBOR, not text JSON.
@@ -147,8 +170,9 @@ async function openLabelerWs(): Promise<void> {
     labelerWs = ws;
 
     ws.onopen = () => {
-      console.log(APP_NAME + ': labeler WS connected');
+      log.debug('connected');
       labelerWsBackoff = LABELER_WS_MIN_BACKOFF_MS; // reset on successful connect
+      void setStoredLabelerBackoff(labelerWsBackoff);
     };
 
     ws.onmessage = (event: MessageEvent) => {
@@ -176,7 +200,7 @@ async function openLabelerWs(): Promise<void> {
           const val = l.get('val');
           const uri = l.get('uri');
           if (val === 'edited' && typeof uri === 'string' && uri.length > 0) {
-            console.log(APP_NAME + ': label received for', uri);
+            log.debug('label-received', { uri });
             broadcastLabelReceived(uri);
           }
         }
@@ -186,10 +210,11 @@ async function openLabelerWs(): Promise<void> {
     };
 
     ws.onclose = () => {
-      console.log(APP_NAME + ': labeler WS closed — reconnecting in', labelerWsBackoff + 'ms');
+      log.debug('closed-reconnecting', { backoffMs: labelerWsBackoff });
       labelerWs = null;
       labelerWsRetryTimer = setTimeout(() => {
         labelerWsBackoff = Math.min(labelerWsBackoff * 2, LABELER_WS_MAX_BACKOFF_MS);
+        void setStoredLabelerBackoff(labelerWsBackoff);
         void openLabelerWs();
       }, labelerWsBackoff);
     };
@@ -199,7 +224,7 @@ async function openLabelerWs(): Promise<void> {
       ws.close();
     };
   } catch (err) {
-    console.warn(APP_NAME + ': labeler WS init failed:', err);
+    log.error('init-failed', { message: err instanceof Error ? err.message : String(err) });
   } finally {
     labelerWsConnecting = false;
   }

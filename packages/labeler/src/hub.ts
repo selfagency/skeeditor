@@ -198,11 +198,13 @@ export class BroadcastHub implements DurableObject {
     const key = `label:${seq.toString().padStart(10, '0')}`;
     await this.state.storage.put<StoredLabel>(key, { seq, label });
 
-    // Evict oldest entries when ring is full
-    const keys = await this.state.storage.list({ prefix: 'label:' });
-    if (keys.size > RING_SIZE) {
-      const oldest = [...keys.keys()].slice(0, keys.size - RING_SIZE);
-      await this.state.storage.delete(oldest);
+    // Evict deterministic oldest entry once the ring exceeds capacity.
+    // Sequence numbers are monotonic, so when writing `seq`, the only record
+    // that can fall out of the fixed window is `seq - RING_SIZE`.
+    if (seq > RING_SIZE) {
+      const oldestSeq = seq - RING_SIZE;
+      const oldestKey = `label:${oldestSeq.toString().padStart(10, '0')}`;
+      await this.state.storage.delete(oldestKey);
     }
   }
 }

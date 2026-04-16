@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { encodeLabelFrame } from '../../../packages/labeler/src/label';
+import { LABELER_BACKOFF_STORAGE_KEY } from '@src/shared/constants';
 
 const flushPromises = async (count = 3): Promise<void> => {
   for (let i = 0; i < count; i += 1) {
@@ -92,5 +93,21 @@ describe('background labeler websocket', () => {
     await flushPromises();
 
     expect(globalThis.browser.storage.local.set).toHaveBeenCalledWith({ labelerCursor: 77 });
+  });
+
+  it('resets and persists reconnect backoff to minimum after a successful connection', async () => {
+    await globalThis.browser.storage.local.set({ [LABELER_BACKOFF_STORAGE_KEY]: 60_000 });
+
+    const { connectLabelerWs } = await import('@src/background/service-worker');
+    connectLabelerWs();
+    await flushPromises();
+
+    const socket = MockWebSocket.instances[0];
+    expect(socket).toBeTruthy();
+
+    socket!.emitOpen();
+    await flushPromises();
+
+    expect(globalThis.browser.storage.local.set).toHaveBeenCalledWith({ [LABELER_BACKOFF_STORAGE_KEY]: 2_000 });
   });
 });

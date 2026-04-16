@@ -1,7 +1,7 @@
 import { browser, type Browser } from 'wxt/browser';
 import { getHandleForDid } from '../shared/api/resolve-did';
 import { APP_BSKY_FEED_POST_COLLECTION, APP_NAME } from '../shared/constants';
-import { createLogger } from '../shared/logger';
+import { createLogger, DEBUG_ENABLED } from '../shared/logger';
 import type {
   AuthListAccountsAccount,
   LabelReceivedNotification,
@@ -57,6 +57,7 @@ function showToast(message: string): void {
 // ── Recent record cache (avoids stale GET_RECORD after a fresh save) ──────────
 
 const RECORD_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const RECENT_RECORD_CACHE_MAX_ENTRIES = 250;
 
 interface RecentRecordEntry {
   record: EditablePostRecord;
@@ -65,6 +66,27 @@ interface RecentRecordEntry {
 }
 
 const recentRecordsCache = new Map<string, RecentRecordEntry>();
+
+function purgeRecentRecordsCache(now = Date.now()): void {
+  for (const [key, entry] of recentRecordsCache) {
+    if (now - entry.savedAt >= RECORD_CACHE_TTL_MS) {
+      recentRecordsCache.delete(key);
+    }
+  }
+
+  if (recentRecordsCache.size <= RECENT_RECORD_CACHE_MAX_ENTRIES) {
+    return;
+  }
+
+  const entriesByAge = [...recentRecordsCache.entries()].sort((left, right) => left[1].savedAt - right[1].savedAt);
+  const overflowCount = recentRecordsCache.size - RECENT_RECORD_CACHE_MAX_ENTRIES;
+  for (let i = 0; i < overflowCount; i++) {
+    const key = entriesByAge[i]?.[0];
+    if (key !== undefined) {
+      recentRecordsCache.delete(key);
+    }
+  }
+}
 
 function applyEditedPostsFromCache(posts?: PostInfo[]): void {
   if (getCacheSize() === 0) return;
@@ -525,7 +547,7 @@ const isElementOwnPost = (postElement: HTMLElement, postRepo: string): boolean =
 };
 
 // Debug: Log when content script loads
-console.log(`${APP_NAME}: content script loaded on ${document.location.href}`);
+log.debug('content-script-module-loaded', { href: document.location.href });
 
 let mutationObserver: MutationObserver | null = null;
 let isApplyingCache = false;
@@ -573,13 +595,13 @@ const isPutRecordConflictResponse = (response: PutRecordResponse): response is P
 
 const refreshAuthState = async (): Promise<void> => {
   try {
-    console.log(`${APP_NAME}: querying background for auth status...`);
+    log.debug('auth-status-request');
     const status = await sendMessage({ type: 'AUTH_GET_STATUS' });
-    console.log(`${APP_NAME}: received auth status response:`, status);
+    log.debug('auth-status-response', status);
     currentDid = status.authenticated ? status.did : null;
     currentHandle = status.authenticated ? (status.handle ?? null) : null;
     setIdentity(currentDid, currentHandle);
-    console.log(`${APP_NAME}: currentDid=${currentDid}, currentHandle=${currentHandle}`);
+    log.debug('auth-state-updated', { currentDid, currentHandle });
   } catch (err) {
     console.error(`${APP_NAME}: failed to load auth state`, err);
     currentDid = null;
@@ -837,6 +859,7 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
     // text on React re-renders. No setTimeout hack needed.
     setCached(normalizedAtUri, text, initialRecordText);
     recentRecordsCache.set(normalizedAtUri, { record: validatedRecord, cid: writeResponse.cid, savedAt: Date.now() });
+    purgeRecentRecordsCache();
     const toastMsg = saveStrategy === 'recreate' ? 'Edit saved. Post recreated.' : 'Edit saved.';
     showToast(toastMsg);
     console.info(`${APP_NAME}: edit saved`, { atUri: normalizedAtUri, uri: writeResponse.uri, cid: writeResponse.cid });
@@ -846,6 +869,7 @@ const handleEditClick = async (postElement: HTMLElement): Promise<void> => {
 
   // Use the in-memory record cache when a save just happened (avoids stale AppView data from GET_RECORD).
   const nowMs = Date.now();
+  purgeRecentRecordsCache(nowMs);
   const cachedEntry = recentRecordsCache.get(normalizedAtUri);
 
   if (cachedEntry !== undefined && nowMs - cachedEntry.savedAt < RECORD_CACHE_TTL_MS) {
@@ -1165,7 +1189,7 @@ const scanForPosts = (): void => {
   // (and edited badges on own posts)
   interceptArchivedPostButtons(posts);
 
-  console.log(`${APP_NAME}: scanning for posts, currentDid=${currentDid}, currentHandle=${currentHandle}`);
+  log.debug('scan-start', { currentDid, currentHandle });
 
   // Trigger 2: detect "Edited" badges in the DOM and fetch from Slingshot.
   // This runs async — the MO path will apply the results once they land in cache.
@@ -1181,7 +1205,7 @@ const scanForPosts = (): void => {
 
   // No authenticated DID → don't inject any edit buttons.
   if (currentDid === null) {
-    console.log(`${APP_NAME}: no auth session, skipping edit button injection`);
+    log.debug('scan-no-auth-session-skip-injection');
     log.debug('scan-no-auth');
     return;
   }
@@ -1203,7 +1227,7 @@ const scanForPosts = (): void => {
     injectEditButton(postInfo.element);
   }
 
-  if (visiblePosts === 0) {
+  if (visiblePosts === 0 && DEBUG_ENABLED) {
     // Dump DOM diagnostics so we can see WHY no posts matched
     const diagnosticSelectors = [
       '[data-at-uri]',

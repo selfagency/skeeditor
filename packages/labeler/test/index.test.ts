@@ -18,7 +18,7 @@ const makeEnv = (overrides: Partial<Env> = {}): Env => ({
 });
 
 describe('labeler worker routes', () => {
-  it('answers CORS preflight for emitLabel with DPoP allowed', async () => {
+  it('answers emitLabel preflight without exposing permissive CORS headers', async () => {
     const response = await worker.fetch(
       new Request('https://labeler.skeeditor.link/xrpc/tools.skeeditor.emitLabel', {
         method: 'OPTIONS',
@@ -32,13 +32,10 @@ describe('labeler worker routes', () => {
     );
 
     expect(response.status).toBe(204);
-    expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
-    expect(response.headers.get('Access-Control-Allow-Methods')).toContain('POST');
-    expect(response.headers.get('Access-Control-Allow-Headers')).toContain('Authorization');
-    expect(response.headers.get('Access-Control-Allow-Headers')).toContain('Content-Type');
-    expect(response.headers.get('Access-Control-Allow-Headers')).toContain('DPoP');
-    expect(response.headers.get('Access-Control-Allow-Headers')).toContain('dpop');
-    expect(response.headers.get('Access-Control-Max-Age')).toBe('86400');
+    expect(response.headers.get('Access-Control-Allow-Origin')).toBeNull();
+    expect(response.headers.get('Access-Control-Allow-Methods')).toBeNull();
+    expect(response.headers.get('Access-Control-Allow-Headers')).toBeNull();
+    expect(response.headers.get('Access-Control-Max-Age')).toBeNull();
   });
 
   it('serves getServices with a detailed view for the configured labeler DID', async () => {

@@ -139,5 +139,21 @@ describe('edited-post-cache', () => {
 
       expect(cache.getCacheSize()).toBeGreaterThanOrEqual(2);
     });
+
+    it('keeps mappings coherent after switching active account identity', async () => {
+      const cache = await import('@src/content/edited-post-cache');
+
+      cache.setIdentity('did:plc:alice123', 'alice.bsky.social');
+      cache.setCached('at://alice.bsky.social/app.bsky.feed.post/3alice', 'alice text');
+
+      cache.setIdentity('did:plc:bob123', 'bob.bsky.social');
+      cache.setCached('at://bob.bsky.social/app.bsky.feed.post/3bob', 'bob text');
+
+      const aliceViaDid = cache.getCached('at://did:plc:alice123/app.bsky.feed.post/3alice');
+      const bobViaDid = cache.getCached('at://did:plc:bob123/app.bsky.feed.post/3bob');
+
+      expect(aliceViaDid?.text).toBe('alice text');
+      expect(bobViaDid?.text).toBe('bob text');
+    });
   });
 });

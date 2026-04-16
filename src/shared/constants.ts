@@ -19,7 +19,10 @@ const DEFAULT_SETTINGS: ExtensionSettings = {
 export const EDIT_TIME_LIMIT_OPTIONS = [0.5, 1, 3, 5, 15, 30] as const;
 
 const getStorage = (): typeof browser.storage.local => {
-  return browser.storage.local ?? browser.storage.sync;
+  if (!browser.storage.local) {
+    throw new Error('browser.storage.local is unavailable');
+  }
+  return browser.storage.local;
 };
 
 export const EDIT_TIME_LIMIT_MIN = 0.5;
@@ -157,6 +160,9 @@ export const LABELER_SUBSCRIBE_WS_BASE_URL = 'wss://labeler.skeeditor.link/xrpc/
 
 /** storage.local key for the last label sequence processed by the background WebSocket */
 export const LABELER_CURSOR_STORAGE_KEY = 'labelerCursor';
+
+/** storage.local key for persisted labeler websocket reconnect backoff (ms) */
+export const LABELER_BACKOFF_STORAGE_KEY = 'labelerBackoffMs';
 
 export function buildLabelerSubscribeWsUrl(cursor: number | null): string {
   if (cursor === null || !Number.isFinite(cursor) || cursor < 0) {

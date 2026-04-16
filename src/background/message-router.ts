@@ -5,6 +5,7 @@ import { createDpopProof, loadOrCreateDpopKeyPair } from '../shared/auth/dpop';
 
 import { getHandleForDid, getPdsUrlForDid } from '../shared/api/resolve-did';
 import type {
+  CreateRecordParams,
   GetRecordResult,
   PutRecordResult,
   PutRecordWithSwapResult,
@@ -48,14 +49,34 @@ import type {
 // caching per-DID prepares for future per-account key support.
 // The cache is reset when the SW is terminated.
 const dpopKeyPairCache = new Map<string, CryptoKeyPair>();
+const DPOP_KEY_CACHE_MAX_ENTRIES = 32;
+const LABELER_EMIT_TIMEOUT_MS = 5_000;
 
 const log = createLogger('background');
+
+async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit, timeoutMs = LABELER_EMIT_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 async function getDpopKeyPair(did?: string): Promise<CryptoKeyPair> {
   const cacheKey = did ?? '__default__';
   const cached = dpopKeyPairCache.get(cacheKey);
   if (cached !== undefined) return cached;
   const keyPair = await loadOrCreateDpopKeyPair();
+
+  if (dpopKeyPairCache.size >= DPOP_KEY_CACHE_MAX_ENTRIES) {
+    const oldestKey = dpopKeyPairCache.keys().next().value;
+    if (typeof oldestKey === 'string') {
+      dpopKeyPairCache.delete(oldestKey);
+    }
+  }
+
   dpopKeyPairCache.set(cacheKey, keyPair);
   return keyPair;
 }
@@ -82,7 +103,7 @@ function emitLabelTrigger(
     const body = JSON.stringify({ uri, cid, did });
 
     if (dpopEnabled === false) {
-      return fetch(LABELER_EMIT_URL, {
+      return fetchWithTimeout(LABELER_EMIT_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -98,7 +119,7 @@ function emitLabelTrigger(
 
     const makeRequest = async (nonce?: string): Promise<Response> => {
       const proof = await createDpopProof(keyPair, 'GET', sessionUrl, accessToken, nonce);
-      return fetch(LABELER_EMIT_URL, {
+      return fetchWithTimeout(LABELER_EMIT_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -762,13 +783,13 @@ export async function handleMessage(message: unknown, deps: RouterDeps): Promise
           ...(stored.dpopEnabled !== undefined && { dpopEnabled: stored.dpopEnabled }),
         });
 
-        const params: any = {
+        const params: CreateRecordParams = {
           repo: message['repo'],
           collection: message['collection'],
           record: message['record'],
         };
-        if (message['rkey'] !== undefined) params.rkey = message['rkey'];
-        if (message['validate'] !== undefined) params.validate = message['validate'];
+        if (typeof message['rkey'] === 'string') params.rkey = message['rkey'];
+        if (typeof message['validate'] === 'boolean') params.validate = message['validate'];
 
         const result = await client.createRecord(params);
         return {

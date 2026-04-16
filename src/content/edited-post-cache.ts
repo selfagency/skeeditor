@@ -207,6 +207,20 @@ export function getCacheSize(): number {
   return cache.size;
 }
 
+function extractRecordText(payload: unknown): string | null {
+  if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) {
+    return null;
+  }
+
+  const value = (payload as Record<string, unknown>)['value'];
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+
+  const text = (value as Record<string, unknown>)['text'];
+  return typeof text === 'string' ? text : null;
+}
+
 // ── Slingshot fetch ───────────────────────────────────────────────────────────
 
 async function fetchFromSlingshot(repo: string, collection: string, rkey: string): Promise<string | null> {
@@ -228,9 +242,8 @@ async function fetchFromSlingshot(repo: string, collection: string, rkey: string
       return null;
     }
 
-    const data = (await response.json()) as { value?: { text?: unknown } };
-    const text = data.value?.text;
-    const resolvedText = typeof text === 'string' ? text : null;
+    const data = (await response.json()) as unknown;
+    const resolvedText = extractRecordText(data);
     log.debug('slingshot-done', { repo: resolvedRepo, collection, rkey, textLength: resolvedText?.length ?? 0 });
     return resolvedText;
   } catch {
