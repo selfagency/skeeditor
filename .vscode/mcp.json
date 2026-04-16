@@ -7,6 +7,10 @@
     "tasks": {
       "command": "mcp-taskfile-server",
       "type": "stdio"
+    },
+    "browsermcp": {
+      "command": "npx",
+      "args": ["@browsermcp/mcp@latest"]
     }
   }
 }
