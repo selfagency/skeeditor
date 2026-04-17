@@ -1,0 +1,14 @@
+scripts/release.mjs
+  h_5cf1e2c1161853 6-7,13-14,32,47,62,115-217,265-269,291,335-347,351-352
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.0",
+  "base_commit_sha": "f0eb4df1d07181ded1370744f8eeeaf9e716bcce",
+  "prompts": {},
+  "humans": {
+    "h_5cf1e2c1161853": {
+      "author": "Daniel Sieradski"
+    }
+  }
+}
