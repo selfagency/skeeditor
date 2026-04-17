@@ -12,7 +12,6 @@ export default defineConfig({
 
     nav: [
       { text: 'User Guide', link: '/guide/introduction' },
-      { text: 'Privacy Policy', link: '/legal/privacy-policy' },
       { text: 'Developer Docs', link: '/dev/architecture' },
       { text: 'GitHub', link: 'https://github.com/selfagency/skeeditor' },
     ],
@@ -71,7 +70,7 @@ export default defineConfig({
     },
 
     footer: {
-      message: 'Released under the MIT License.',
+      message: '[Privacy Policy](/legal/privacy-policy) · Released under the MIT License.',
       copyright: 'Copyright © selfagency',
     },
 
