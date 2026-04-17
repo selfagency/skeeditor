@@ -3,11 +3,15 @@
 import { execFile, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
+
+/** 1Password item ID for the Chrome extension RSA signing key. */
+const OP_CHROME_SIGNING_ITEM_ID = 'k2e6zzyibs5elf67v7pptdwa24';
 
 /** Flag names whose immediately-following argument must not appear in logs. */
 const SENSITIVE_FLAGS = new Set(['--api-key', '--api-secret', '--client-secret', '--refresh-token']);
@@ -25,6 +29,7 @@ function redactArgs(args) {
  * skipChecks: boolean;
  * skipTests: boolean;
  * skipSafari: boolean;
+ * skipChromePublish: boolean;
  * preBuilt: boolean;
  * artifactsDir: string;
  * versionOverride?: string;
@@ -39,6 +44,7 @@ const options = {
   skipChecks: false,
   skipTests: false,
   skipSafari: false,
+  skipChromePublish: false,
   preBuilt: false,
   artifactsDir: 'release-artifacts',
 };
@@ -53,6 +59,7 @@ for (let i = 2; i < process.argv.length; i += 1) {
   else if (arg === '--skip-checks') options.skipChecks = true;
   else if (arg === '--skip-tests') options.skipTests = true;
   else if (arg === '--skip-safari') options.skipSafari = true;
+  else if (arg === '--skip-chrome-publish') options.skipChromePublish = true;
   else if (arg === '--pre-built') options.preBuilt = true;
   else if (arg === '--artifacts-dir') {
     const next = process.argv[i + 1];
@@ -105,6 +112,109 @@ async function runTask(taskName, args = [], extraEnv = {}) {
   await run(taskPath, [taskName, ...args], extraEnv);
 }
 
+/**
+ * Retrieves the Chrome extension RSA private key PEM.
+ * Supports two methods in order of precedence:
+ * 1. CHROME_SIGNING_KEY_PATH: path to a .pem file
+ * 2. CHROME_SIGNING_KEY_PEM: base64-encoded PEM content
+ * 3. 1Password CLI: run `op item get k2e6zzyibs5elf67v7pptdwa24 --fields notesPlain`
+ * @returns {Promise<string>} PEM-encoded RSA private key
+ */
+async function fetchChromeSigningKey() {
+  /** @param {string} raw */
+  const normalizePem = raw => {
+    const trimmed = raw.trim();
+
+    // Some `op item get ... --fields notesPlain` outputs can be JSON-quoted,
+    // e.g. "-----BEGIN...\\n...". Parse/unquote when possible.
+    let unquoted = trimmed;
+    if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (typeof parsed === 'string') {
+          unquoted = parsed;
+        }
+      } catch {
+        unquoted = trimmed.slice(1, -1);
+      }
+    }
+
+    // Handle escaped newlines from quoted outputs.
+    const normalized = unquoted.includes('\n') ? unquoted.replace(/\\n/g, '\n') : unquoted;
+    return normalized.trim();
+  };
+
+  // Method 1: Direct file path
+  if (process.env['CHROME_SIGNING_KEY_PATH']) {
+    const pemPath = process.env['CHROME_SIGNING_KEY_PATH'];
+    try {
+      return normalizePem(await readFile(pemPath, 'utf8'));
+    } catch (err) {
+      throw new Error(`Failed to read CHROME_SIGNING_KEY_PATH: ${pemPath}\n${err.message}`);
+    }
+  }
+
+  // Method 2: Base64-encoded PEM
+  if (process.env['CHROME_SIGNING_KEY_PEM']) {
+    try {
+      return normalizePem(Buffer.from(process.env['CHROME_SIGNING_KEY_PEM'], 'base64').toString('utf8'));
+    } catch (err) {
+      throw new Error(`Failed to decode CHROME_SIGNING_KEY_PEM from base64\n${err.message}`);
+    }
+  }
+
+  // Method 3: 1Password CLI
+  try {
+    const { stdout } = await execFileAsync('op', ['item', 'get', OP_CHROME_SIGNING_ITEM_ID, '--fields', 'notesPlain']);
+    return normalizePem(stdout);
+  } catch (err) {
+    throw new Error(
+      `Failed to retrieve Chrome signing key from 1Password CLI:\n${err.message}\n\n` +
+        'Provide one of:\n' +
+        '  1. CHROME_SIGNING_KEY_PATH=/path/to/key.pem\n' +
+        '  2. CHROME_SIGNING_KEY_PEM=<base64-encoded-pem>\n' +
+        '  3. Install 1Password CLI (op) and run: op signin',
+    );
+  }
+}
+
+/**
+ * Packs dist/chrome as a signed CRX using the Chrome binary and the provided PEM key.
+ * @param {string} version - Release version string used to name the output file
+ * @param {string} pemContent - RSA private key in PEM format
+ * @returns {Promise<string>} Absolute path to the generated .crx artifact
+ */
+async function packAsCrx(version, pemContent) {
+  const extDir = resolve(rootDir, 'dist/chrome');
+
+  // Verify the extension directory exists
+  try {
+    await stat(extDir);
+  } catch {
+    throw new Error(`Extension directory not found: ${extDir}\nEnsure 'task build:chrome' completed successfully.`);
+  }
+
+  const chromeBin = process.env['CHROME_EXECUTABLE'] ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+
+  const tmpDir = await mkdtemp(join(tmpdir(), 'skeeditor-crx-'));
+  const pemPath = join(tmpDir, 'key.pem');
+  try {
+    await writeFile(pemPath, pemContent, { mode: 0o600 });
+
+    await execFileAsync(chromeBin, [`--pack-extension=${extDir}`, `--pack-extension-key=${pemPath}`]);
+
+    // Chrome outputs dist/chrome.crx as a sibling to the dist/chrome directory
+    const generatedCrx = resolve(rootDir, 'dist/chrome.crx');
+    const outputCrx = join(artifactsDir, `skeeditor-${version}-chrome.crx`);
+    await writeFile(outputCrx, await readFile(generatedCrx));
+    await rm(generatedCrx, { force: true });
+
+    return outputCrx;
+  } finally {
+    await rm(tmpDir, { recursive: true, force: true });
+  }
+}
+
 async function zipDir(inputDir, outputZip) {
   await rm(outputZip, { force: true });
   await execFileAsync('zip', ['-r', outputZip, '.'], {
@@ -148,7 +258,15 @@ async function buildArtifacts(version) {
   await zipDir(resolve(rootDir, 'dist/firefox'), firefoxZip);
   await writeFile(edgeZip, await readFile(chromeZip));
 
-  const artifacts = [chromeZip, firefoxZip, edgeZip];
+  // Sign Chrome extension as CRX (required for Chrome Web Store protected updates)
+  let chromeCrx = null;
+  if (!options.dryRun && (options.publishChrome || options.skipChromePublish)) {
+    logStep('Signing Chrome extension as CRX');
+    const pemContent = await fetchChromeSigningKey();
+    chromeCrx = await packAsCrx(version, pemContent);
+  }
+
+  const artifacts = [chromeZip, firefoxZip, edgeZip, ...(chromeCrx ? [chromeCrx] : [])];
   const manifest = [];
   for (const artifact of artifacts) {
     const stats = await stat(artifact);
@@ -166,11 +284,11 @@ async function buildArtifacts(version) {
   );
   process.stdout.write(`[release] Artifacts written to ${artifactsDir}\n`);
 
-  return { chromeZip, firefoxZip, edgeZip };
+  return { chromeZip, chromeCrx, firefoxZip, edgeZip };
 }
 
-async function publishChrome(chromeZip) {
-  if (!options.publishChrome) return;
+async function publishChrome(chromeZip, chromeCrx) {
+  if (!options.publishChrome || options.skipChromePublish) return;
   if (options.dryRun) {
     process.stdout.write('[release] Dry run: skipping Chrome publish\n');
     return;
@@ -210,15 +328,28 @@ async function publishChrome(chromeZip) {
     throw new Error('Chrome OAuth token missing access_token');
   }
 
-  const zipBytes = await readFile(chromeZip);
+  // Prefer signed CRX upload (required for Chrome Web Store protected updates).
+  // Fall back to ZIP if CRX was not produced (e.g. dry-run or skipped signing).
+  const uploadFile = chromeCrx ?? chromeZip;
+  const uploadFileBytes = await readFile(uploadFile);
+  const uploadHeaders = chromeCrx
+    ? {
+        Authorization: `Bearer ${accessToken}`,
+        'x-goog-api-version': '2',
+        'X-Goog-Upload-Protocol': 'raw',
+        'X-Goog-Upload-File-Name': basename(chromeCrx),
+        'Content-Type': 'application/octet-stream',
+      }
+    : {
+        Authorization: `Bearer ${accessToken}`,
+        'x-goog-api-version': '2',
+        'Content-Type': 'application/zip',
+      };
+
   const uploadRes = await fetch(`https://www.googleapis.com/upload/chromewebstore/v1.1/items/${extensionId}`, {
     method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'x-goog-api-version': '2',
-      'Content-Type': 'application/zip',
-    },
-    body: zipBytes,
+    headers: uploadHeaders,
+    body: uploadFileBytes,
   });
 
   if (!uploadRes.ok) {
@@ -326,9 +457,9 @@ async function main() {
 
   logStep(`Starting release for version ${version}${options.dryRun ? ' (dry-run)' : ''}`);
   await verifyReleaseChecks();
-  const { chromeZip, firefoxZip, edgeZip } = await buildArtifacts(version);
+  const { chromeZip, chromeCrx, firefoxZip, edgeZip } = await buildArtifacts(version);
 
-  await publishChrome(chromeZip);
+  await publishChrome(chromeZip, chromeCrx);
   await publishFirefox();
   await publishEdge(edgeZip);
 
