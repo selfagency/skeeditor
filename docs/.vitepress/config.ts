@@ -70,8 +70,8 @@ export default defineConfig({
     },
 
     footer: {
-      message: '[Privacy Policy](/legal/privacy-policy) · Released under the MIT License.',
-      copyright: 'Copyright © selfagency',
+      message: '<a href="/legal/privacy-policy">Privacy Policy</a> · Released under the MIT License.',
+      copyright: 'Copyright ©2026 The Self Agency LLC',
     },
 
     search: { provider: 'local' },
