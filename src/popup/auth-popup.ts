@@ -272,6 +272,17 @@ class AuthPopup extends HTMLElement {
     return footer;
   }
 
+  private async openSettingsPage(): Promise<void> {
+    try {
+      await browser.runtime.openOptionsPage();
+      return;
+    } catch (error) {
+      console.warn('openOptionsPage failed; falling back to options URL tab', error);
+    }
+
+    await browser.tabs.create({ url: browser.runtime.getURL('options/index.html') });
+  }
+
   private attachHandlers(): void {
     this.shadow.getElementById('sign-in')?.addEventListener('click', () => {
       const pdsUrlInput = this.shadow.getElementById('pds-url') as HTMLInputElement | null;
@@ -280,7 +291,7 @@ class AuthPopup extends HTMLElement {
     });
 
     this.shadow.getElementById('open-settings')?.addEventListener('click', () => {
-      void browser.runtime.openOptionsPage();
+      void this.openSettingsPage();
     });
 
     this.shadow.getElementById('subscribe-labeler')?.addEventListener('click', () => {
