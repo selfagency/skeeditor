@@ -2,6 +2,9 @@
 
 > **The edit button Bluesky never gave you. Until now.**
 
+[![Firefox Add-Ons](https://github.com/user-attachments/assets/0c810948-e205-4fba-9cee-806ae51e4aed)](https://addons.mozilla.org/en-US/firefox/addon/skeeditor/) [![Chrome Web Store](https://github.com/user-attachments/assets/4ba208db-62fc-4cfa-8633-9f535ffe1a59)](https://chromewebstore.google.com/detail/skeeditor/dnknngadgpghjahniojcolbdmngbfcne?authuser=2&hl=en)
+
+
 You know the feeling — you hit post, look at it for 0.3 seconds, and spot a typo. Or a bad take that needs a _slightly_ less bad take. So you copy your post text, delete the post, and re-post it without the error, only to spot another error. And as you sit there, stewing in frustration, you cry out, "WHY IS THERE NO EDIT BUTTON?!"
 
 **Skeeditor** is a cross-browser extension that adds a real, working **✏️ Edit** button to your posts on [bsky.app](https://bsky.app). Click it, fix your regrets, save. Done. No copy-paste gymnastics, no deleting and reposting, no shame spiral.
