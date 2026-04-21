@@ -7,6 +7,7 @@ priority: high
 created_at: 2026-04-21T12:49:29Z
 updated_at: 2026-04-21T12:55:20Z
 branch: "bugfix/skeeditor-c4o9-popup-settings-link-prod"
+pr: 101
 ---
 
 ## Context
