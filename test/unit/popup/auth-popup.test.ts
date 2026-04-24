@@ -374,6 +374,23 @@ describe('auth-popup Web Component', () => {
       expect(vi.mocked(browser.runtime.openOptionsPage)).toHaveBeenCalled();
     });
 
+    it('falls back to opening options URL in a tab when openOptionsPage rejects', async () => {
+      mockSendMessage([makeAccount({ isActive: true })]);
+      vi.mocked(browser.runtime.openOptionsPage).mockRejectedValue(new Error('not supported in packaged context'));
+
+      const el = createElement();
+      await attach(el);
+
+      el.shadowRoot?.querySelector<HTMLButtonElement>('#open-settings')?.click();
+      await flushPromises();
+
+      expect(vi.mocked(browser.runtime.openOptionsPage)).toHaveBeenCalled();
+      expect(vi.mocked(browser.runtime.getURL)).toHaveBeenCalledWith('options/index.html');
+      expect(vi.mocked(browser.tabs.create)).toHaveBeenCalledWith({
+        url: 'chrome-extension://test/options/index.html',
+      });
+    });
+
     it('shows a "Report a bug" link pointing to the GitHub issue template', async () => {
       mockSendMessage([makeAccount({ isActive: true })]);
 
